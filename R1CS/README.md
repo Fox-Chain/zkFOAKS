@@ -1,6 +1,6 @@
 # Fox's R1CS
 
-R1CS(Rank-1 Constraint System) uses halo2's circuit as input.
+R1CS(Rank-1 Constraint System) used in Fox.
 
 ## Build guide
 
