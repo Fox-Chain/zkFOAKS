@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+    "infrastructure",
+    "linear_gkr"
+]
