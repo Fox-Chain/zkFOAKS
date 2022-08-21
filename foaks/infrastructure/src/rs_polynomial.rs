@@ -3,13 +3,13 @@ use std::borrow::Cow;
 use crate::utility::my_log;
 use linear_gkr::prime_field::FieldElement;
 
-static mut static_dst: [Vec<FieldElement>; 3] = [Vec::new(), Vec::new(), Vec::new()];
-static mut static_twiddle_factor: Vec<FieldElement> = Vec::new();
-static mut static_inv_twiddle_factor: Vec<FieldElement> = Vec::new();
+static mut STATIC_DST: [Vec<FieldElement>; 3] = [Vec::new(), Vec::new(), Vec::new()];
+static mut STATIC_TWIDDLE_FACTOR: Vec<FieldElement> = Vec::new();
+static mut STATIC_INV_TWIDDLE_FACTOR: Vec<FieldElement> = Vec::new();
 
 const MAX_ORDER: usize = 28;
 
-static mut static_twiddle_factor_size: usize = 0;
+static mut STATIC_TWIDDLE_FACTOR_SIZE: usize = 0;
 
 /// Safety:
 /// This function should only be called if it is certain that
@@ -22,37 +22,37 @@ static mut static_twiddle_factor_size: usize = 0;
 /// inv_twiddle_factor
 /// twiddle_factor_size
 unsafe fn init_scratch_pad(order: usize) {
-    static_dst[0].reserve(order);
-    static_dst[1].reserve(order);
-    static_dst[2].reserve(order);
+    STATIC_DST[0].reserve(order);
+    STATIC_DST[1].reserve(order);
+    STATIC_DST[2].reserve(order);
 
-    static_twiddle_factor.reserve(order);
-    static_twiddle_factor_size = order;
-    static_inv_twiddle_factor.reserve(order);
+    STATIC_TWIDDLE_FACTOR.reserve(order);
+    STATIC_TWIDDLE_FACTOR_SIZE = order;
+    STATIC_INV_TWIDDLE_FACTOR.reserve(order);
 
     let rou = FieldElement::get_root_of_unity(my_log(order).expect("Log order not power of two"))
         .expect("Log order too high");
     let inv_rou = rou.inverse();
 
-    static_twiddle_factor.push(FieldElement::real_one());
-    static_inv_twiddle_factor.push(FieldElement::real_one());
+    STATIC_TWIDDLE_FACTOR.push(FieldElement::real_one());
+    STATIC_INV_TWIDDLE_FACTOR.push(FieldElement::real_one());
 
-    let mut prev_twiddle_factor = static_twiddle_factor[0];
-    let mut prev_inv_twiddle_factor = static_inv_twiddle_factor[0];
+    let mut prev_twiddle_factor = STATIC_TWIDDLE_FACTOR[0];
+    let mut prev_inv_twiddle_factor = STATIC_INV_TWIDDLE_FACTOR[0];
     for _ in 1..order {
         prev_twiddle_factor = rou * prev_twiddle_factor;
         prev_inv_twiddle_factor = inv_rou * prev_inv_twiddle_factor;
 
-        static_twiddle_factor.push(prev_twiddle_factor);
-        static_inv_twiddle_factor.push(prev_inv_twiddle_factor);
+        STATIC_TWIDDLE_FACTOR.push(prev_twiddle_factor);
+        STATIC_INV_TWIDDLE_FACTOR.push(prev_inv_twiddle_factor);
     }
 }
 
 /// Safety: Same as init_scratch_pad
 unsafe fn delete_scratch_pad() {
-    std::mem::take(&mut static_dst[0]);
-    std::mem::take(&mut static_dst[1]);
-    std::mem::take(&mut static_twiddle_factor);
+    std::mem::take(&mut STATIC_DST[0]);
+    std::mem::take(&mut STATIC_DST[1]);
+    std::mem::take(&mut STATIC_TWIDDLE_FACTOR);
 }
 
 /// Safety:
@@ -112,19 +112,19 @@ unsafe fn fast_fourier_transform(
             // the current function does, but we should consider doing the outer loop
             // as a parallel for if it is possible - that is, each j loop should
             // undoubtedly be accessing disjoint memory.
-            static_dst[log_coefficient & 1][(j << log_coefficient) | i] = coefficient;
+            STATIC_DST[log_coefficient & 1][(j << log_coefficient) | i] = coefficient;
         }
 
         {
-            let twiddle_size = static_twiddle_factor_size;
+            let twiddle_size = STATIC_TWIDDLE_FACTOR_SIZE;
             for dep in (log_coefficient - 1)..=0 {
                 let blk_size = 1 << (log_order - dep);
                 let half_blk_size = blk_size >> 1;
                 let cur = dep & 1;
                 let pre = cur ^ 1;
 
-                let cur_ptr = &mut static_dst[cur];
-                let pre_ptr = &mut static_dst[pre];
+                let cur_ptr = &mut STATIC_DST[cur];
+                let pre_ptr = &mut STATIC_DST[pre];
 
                 assert!(!std::ptr::eq(cur_ptr, pre_ptr));
 
@@ -147,7 +147,7 @@ unsafe fn fast_fourier_transform(
         }
     }
 
-    result[..order].copy_from_slice(&static_dst[0][..order]);
+    result[..order].copy_from_slice(&STATIC_DST[0][..order]);
 }
 
 pub unsafe fn inverse_fast_fourier_transform(
@@ -218,7 +218,7 @@ pub unsafe fn inverse_fast_fourier_transform(
         coefficient_len,
         inv_rou,
         dst,
-        &mut static_inv_twiddle_factor[..],
+        &mut STATIC_INV_TWIDDLE_FACTOR[..],
     );
 
     let inv_n = FieldElement::from_real(order.try_into().unwrap()).inverse();
