@@ -2,5 +2,6 @@
 
 members = [
     "infrastructure",
-    "linear_gkr"
+    "linear_gkr",
+    "intrinsics"
 ]

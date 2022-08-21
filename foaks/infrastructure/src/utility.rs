@@ -1,10 +1,11 @@
+#[derive(Debug)]
 pub enum Log2Error {
     NotPowerOfTwo,
 }
 
-pub fn mylog(x: i64) -> Result<i32, Log2Error> {
+pub fn my_log(x: usize) -> Result<usize, Log2Error> {
     for i in 0..64 {
-        if 1i64 << i == x {
+        if 1usize << i == x {
             return Ok(i);
         }
     }
