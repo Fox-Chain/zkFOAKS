@@ -1,4 +1,5 @@
 pub mod error;
+pub mod ops;
 
 use std::sync::atomic::AtomicBool;
 
@@ -19,7 +20,10 @@ pub fn my_mod(x: u64) -> u64 {
 }
 
 pub fn my_mult(x: u64, y: u64) -> u64 {
-    unimplemented!()
+    // return a value between [0, 2PRIME) = x * y mod PRIME
+    // return ((hi << 3) | (lo >> 61)) + (lo & PRIME)
+    let (lo, hi) = x.widening_mul(y);
+    ((hi << 3) | (lo >> 61)) + (lo & PRIME)
 }
 
 mod intrinsics {
@@ -62,8 +66,8 @@ pub fn packed_my_mod(x: i256) -> i256 {
     intrinsics::i256::srl(&x, 61) + (x & MOD.as_i256())
 }
 
-#[derive(Serialize, Default)]
-struct FieldElement {
+#[derive(Serialize, Default, PartialEq, Eq)]
+pub struct FieldElement {
     pub real: u64,
     pub img: u64,
 }
@@ -79,28 +83,33 @@ impl FieldElement {
 
     pub fn from_real(real: u64) -> Self {
         let real = real % MOD;
-        FieldElement { img: 0, real }
+        Self { img: 0, real }
+    }
+
+    pub fn from_img(img: u64) -> Self {
+        let img = img % MOD;
+        Self { img, real: 0 }
     }
 
     pub fn new(real: u64, img: u64) -> Self {
-        FieldElement { img, real }
+        Self { img, real }
+    }
+
+    pub fn sum_parts(&self) -> u64 {
+        self.real + self.img
     }
 }
 
-impl core::ops::Add for FieldElement {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        let mut ret = FieldElement::new(self.real + rhs.real, self.img + rhs.img);
-
-        if MOD <= ret.real {
-            ret.real -= MOD;
-        }
-
-        if MOD <= ret.img {
-            ret.img -= MOD;
-        }
-
-        ret
+fn verify_lt_mod_once(mut a: u64) -> u64 {
+    if a >= MOD {
+        a -= MOD;
     }
+    a
+}
+
+fn verify_lt_mod_many(mut a: u64) -> u64 {
+    while a >= MOD {
+        a -= MOD;
+    }
+    a
 }
