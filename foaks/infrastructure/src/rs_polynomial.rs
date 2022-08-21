@@ -164,9 +164,15 @@ pub unsafe fn inverse_fast_fourier_transform(
 
     let sub_eval: Cow<[FieldElement]> = {
         if coefficient_len != order {
-            Cow::from(&evaluations[..order]).to_owned()
+            let mut sub_eval = Vec::with_capacity(coefficient_len);
+
+            for i in 0..coefficient_len {
+                sub_eval[i] = evaluations[i * (order / coefficient_len)];
+            }
+
+            Cow::Owned(sub_eval)
         } else {
-            Cow::from(evaluations)
+            Cow::Borrowed(evaluations)
         }
     };
 
