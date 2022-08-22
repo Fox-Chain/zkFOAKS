@@ -3,5 +3,6 @@
 members = [
     "infrastructure",
     "linear_gkr",
-    "intrinsics"
+    "intrinsics",
+    "prime_field"
 ]
