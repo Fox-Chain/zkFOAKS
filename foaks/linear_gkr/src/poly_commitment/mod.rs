@@ -1,3 +1,7 @@
+use std::ops::DerefMut;
+use std::sync::atomic::{self, AtomicBool, AtomicI64, AtomicUsize};
+use std::sync::RwLock;
+
 use prime_field::FieldElement;
 
 use infrastructure::constants::*;
@@ -5,33 +9,33 @@ use infrastructure::my_hash::HashDigest;
 use infrastructure::rs_polynomial::{self, fast_fourier_transform, inverse_fast_fourier_transform};
 use infrastructure::utility;
 
-static mut TWIDDLE_FACTOR: Vec<FieldElement> = Vec::new();
-static mut INV_TWIDDLE_FACTOR: Vec<FieldElement> = Vec::new();
-static mut TWIDDLE_FACTOR_SIZE: i64 = 0;
+static TWIDDLE_FACTOR: RwLock<Vec<FieldElement>> = RwLock::new(Vec::new());
+static INV_TWIDDLE_FACTOR: RwLock<Vec<FieldElement>> = RwLock::new(Vec::new());
+static TWIDDLE_FACTOR_SIZE: AtomicI64 = AtomicI64::new(0);
 
-static mut INNER_PROD_EVALS: Vec<FieldElement> = Vec::new();
+static INNER_PROD_EVALS: RwLock<Vec<FieldElement>> = RwLock::new(Vec::new());
 
-static mut L_COEF: Vec<FieldElement> = Vec::new();
-static mut L_EVAL: Vec<FieldElement> = Vec::new();
-static mut Q_COEF: Vec<FieldElement> = Vec::new();
-static mut Q_EVAL: Vec<FieldElement> = Vec::new();
+static L_COEF: RwLock<Vec<FieldElement>> = RwLock::new(Vec::new());
+static L_EVAL: RwLock<Vec<FieldElement>> = RwLock::new(Vec::new());
+static Q_COEF: RwLock<Vec<FieldElement>> = RwLock::new(Vec::new());
+static Q_EVAL: RwLock<Vec<FieldElement>> = RwLock::new(Vec::new());
 
-static mut LQ_COEF: Vec<FieldElement> = Vec::new();
-static mut LQ_EVAL: Vec<FieldElement> = Vec::new();
-static mut H_COEF: Vec<FieldElement> = Vec::new();
-static mut H_EVAL: Vec<FieldElement> = Vec::new();
+static LQ_COEF: RwLock<Vec<FieldElement>> = RwLock::new(Vec::new());
+static LQ_EVAL: RwLock<Vec<FieldElement>> = RwLock::new(Vec::new());
+static H_COEF: RwLock<Vec<FieldElement>> = RwLock::new(Vec::new());
+static H_EVAL: RwLock<Vec<FieldElement>> = RwLock::new(Vec::new());
 
-static mut H_EVAL_ARR: Vec<FieldElement> = Vec::new();
+static H_EVAL_ARR: RwLock<Vec<FieldElement>> = RwLock::new(Vec::new());
 
-static mut L_COEF_LEN: usize = 0;
-static mut L_EVAL_LEN: usize = 0;
-static mut Q_COEF_LEN: usize = 0;
-static mut Q_EVAL_LEN: usize = 0;
+static L_COEF_LEN: AtomicUsize = AtomicUsize::new(0);
+static L_EVAL_LEN: AtomicUsize = AtomicUsize::new(0);
+static Q_COEF_LEN: AtomicUsize = AtomicUsize::new(0);
+static Q_EVAL_LEN: AtomicUsize = AtomicUsize::new(0);
 
-static mut SLICE_SIZE: usize = 0;
-static mut SLICE_COUNT: usize = 0;
-static mut SLICE_REAL_ELE_CNT: usize = 0;
-static mut PRE_PREPARE_EXECUTED: bool = false;
+static SLICE_SIZE: AtomicUsize = AtomicUsize::new(0);
+static SLICE_COUNT: AtomicUsize = AtomicUsize::new(0);
+static SLICE_REAL_ELE_CNT: AtomicUsize = AtomicUsize::new(0);
+static PRE_PREPARE_EXECUTED: AtomicBool = AtomicBool::new(false);
 
 struct LdtCommitment {
     commitment_hash: HashDigest,
@@ -50,31 +54,43 @@ impl PolyCommitProver {
     /// TODO
     ///
     /// Cannot yet determine the safety of these global static accesses
-    pub unsafe fn commit_private_array(
+    pub fn commit_private_array(
         &mut self,
         private_array: &[FieldElement],
         log_array_length: usize,
     ) -> HashDigest {
+        use atomic::Ordering::SeqCst;
+
         self.total_time = 0.;
 
-        PRE_PREPARE_EXECUTED = true;
-        SLICE_COUNT = 1 << LOG_SLICE_NUMBER;
-        SLICE_SIZE = 1 << (log_array_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
-        SLICE_REAL_ELE_CNT = SLICE_SIZE >> RS_CODE_RATE;
+        PRE_PREPARE_EXECUTED.store(true, SeqCst);
 
-        L_EVAL_LEN = SLICE_COUNT * SLICE_SIZE;
-        L_EVAL.reserve(L_EVAL_LEN);
+        let slice_count = 1 << LOG_SLICE_NUMBER;
+        SLICE_COUNT.store(slice_count, SeqCst);
 
-        let mut tmp = Vec::<FieldElement>::with_capacity(SLICE_REAL_ELE_CNT);
+        let slice_size = 1 << (log_array_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+        SLICE_SIZE.store(slice_size, SeqCst);
 
-        rs_polynomial::init_scratch_pad(SLICE_SIZE * SLICE_COUNT);
+        let slice_real_ele_cnt = slice_size >> RS_CODE_RATE;
+        SLICE_REAL_ELE_CNT.store(slice_real_ele_cnt, SeqCst);
 
-        for i in 0..SLICE_COUNT {
+        let l_eval_len = slice_count * slice_size;
+        L_EVAL_LEN.store(l_eval_len, SeqCst);
+
+        let mut l_eval = L_EVAL.write().unwrap();
+        l_eval.reserve(l_eval_len);
+
+        let mut tmp = Vec::<FieldElement>::with_capacity(SLICE_REAL_ELE_CNT.load(SeqCst));
+
+        let order = slice_size * slice_count;
+        rs_polynomial::init_scratch_pad(order);
+
+        for i in 0..slice_count {
             let mut all_zero = true;
             let zero = FieldElement::zero();
 
-            for j in 0..SLICE_REAL_ELE_CNT {
-                if private_array[i * SLICE_REAL_ELE_CNT + j] == zero {
+            for j in 0..slice_real_ele_cnt {
+                if private_array[i * slice_real_ele_cnt + j] == zero {
                     continue;
                 }
                 all_zero = false;
@@ -82,26 +98,26 @@ impl PolyCommitProver {
             }
 
             if all_zero {
-                for j in 0..SLICE_SIZE {
-                    L_EVAL[i * SLICE_SIZE + j] = zero;
+                for j in 0..slice_size {
+                    l_eval[i * slice_size + j] = zero;
                 }
             } else {
                 inverse_fast_fourier_transform(
-                    &private_array[i * SLICE_REAL_ELE_CNT..],
-                    SLICE_REAL_ELE_CNT,
-                    SLICE_REAL_ELE_CNT,
-                    FieldElement::get_root_of_unity(utility::my_log(SLICE_REAL_ELE_CNT).unwrap())
+                    &private_array[i * slice_real_ele_cnt..],
+                    slice_real_ele_cnt,
+                    slice_real_ele_cnt,
+                    FieldElement::get_root_of_unity(utility::my_log(slice_real_ele_cnt).unwrap())
                         .unwrap(),
                     &mut tmp[..],
                 );
 
                 fast_fourier_transform(
                     &tmp[..],
-                    SLICE_REAL_ELE_CNT,
-                    SLICE_SIZE,
-                    FieldElement::get_root_of_unity(utility::my_log(SLICE_SIZE).unwrap()).unwrap(),
-                    &mut L_EVAL[i * SLICE_SIZE..],
-                    &mut rs_polynomial::TWIDDLE_FACTOR[..],
+                    slice_real_ele_cnt,
+                    slice_size,
+                    FieldElement::get_root_of_unity(utility::my_log(slice_size).unwrap()).unwrap(),
+                    &mut l_eval[i * slice_size..],
+                    &mut rs_polynomial::TWIDDLE_FACTOR.write().unwrap().deref_mut()[..],
                 )
             }
         }

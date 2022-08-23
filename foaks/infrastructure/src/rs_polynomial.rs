@@ -1,66 +1,85 @@
 use std::borrow::Cow;
+use std::ops::{Deref, DerefMut};
+use std::sync::RwLock;
+
+use rayon::prelude::*;
 
 use crate::utility::my_log;
 use prime_field::FieldElement;
 
-static mut DST: [Vec<FieldElement>; 3] = [Vec::new(), Vec::new(), Vec::new()];
-pub static mut TWIDDLE_FACTOR: Vec<FieldElement> = Vec::new();
-static mut INV_TWIDDLE_FACTOR: Vec<FieldElement> = Vec::new();
+static DST: [RwLock<Vec<FieldElement>>; 3] = [
+    RwLock::new(Vec::new()),
+    RwLock::new(Vec::new()),
+    RwLock::new(Vec::new()),
+];
+pub static TWIDDLE_FACTOR: RwLock<Vec<FieldElement>> = RwLock::new(Vec::new());
+static INV_TWIDDLE_FACTOR: RwLock<Vec<FieldElement>> = RwLock::new(Vec::new());
 
 const MAX_ORDER: usize = 28;
 
-static mut TWIDDLE_FACTOR_SIZE: usize = 0;
+static TWIDDLE_FACTOR_SIZE: RwLock<usize> = RwLock::new(0);
 
-/// # Safety
-///
-/// This function should only be called if it is certain that
-/// no other thread is accessing the used data concurrently, up
-/// until the function has completed
-///
-/// Used data:
-/// dst
-/// twiddle_factor
-/// inv_twiddle_factor
-/// twiddle_factor_size
-pub unsafe fn init_scratch_pad(order: usize) {
-    DST[0].reserve(order);
-    DST[1].reserve(order);
-    DST[2].reserve(order);
+pub fn init_scratch_pad(order: usize) {
+    DST.iter().for_each(|dst_i| {
+        dst_i.try_write().unwrap().reserve(order);
+    });
 
-    TWIDDLE_FACTOR.reserve(order);
-    TWIDDLE_FACTOR_SIZE = order;
-    INV_TWIDDLE_FACTOR.reserve(order);
+    let mut twiddle_factor = TWIDDLE_FACTOR.write().unwrap();
+    twiddle_factor.reserve(order);
+
+    let mut twiddle_factor_size = TWIDDLE_FACTOR_SIZE.write().unwrap();
+    *twiddle_factor_size = order;
+
+    let mut inv_twiddle_factor = INV_TWIDDLE_FACTOR.write().unwrap();
+    INV_TWIDDLE_FACTOR.try_write().unwrap().reserve(order);
 
     let rou = FieldElement::get_root_of_unity(my_log(order).expect("Log order not power of two"))
         .expect("Log order too high");
     let inv_rou = rou.inverse();
 
-    TWIDDLE_FACTOR.push(FieldElement::real_one());
-    INV_TWIDDLE_FACTOR.push(FieldElement::real_one());
+    twiddle_factor.push(FieldElement::real_one());
+    inv_twiddle_factor.push(FieldElement::real_one());
 
-    let mut prev_twiddle_factor = TWIDDLE_FACTOR[0];
-    let mut prev_inv_twiddle_factor = INV_TWIDDLE_FACTOR[0];
+    let mut prev_twiddle_factor = twiddle_factor[0];
+    let mut prev_inv_twiddle_factor = inv_twiddle_factor[0];
     for _ in 1..order {
         prev_twiddle_factor = rou * prev_twiddle_factor;
         prev_inv_twiddle_factor = inv_rou * prev_inv_twiddle_factor;
 
-        TWIDDLE_FACTOR.push(prev_twiddle_factor);
-        INV_TWIDDLE_FACTOR.push(prev_inv_twiddle_factor);
+        twiddle_factor.push(prev_twiddle_factor);
+        inv_twiddle_factor.push(prev_inv_twiddle_factor);
     }
 }
 
-/// # Safety
-/// Same as init_scratch_pad
-pub unsafe fn delete_scratch_pad() {
-    std::mem::take(&mut DST[0]);
-    std::mem::take(&mut DST[1]);
-    std::mem::take(&mut TWIDDLE_FACTOR);
+pub fn delete_scratch_pad() {
+    let mut dst = [DST[0].write().unwrap(), DST[1].write().unwrap()];
+
+    std::mem::take(&mut *dst[0]);
+    std::mem::take(&mut *dst[1]);
+
+    let mut twiddle_factor = TWIDDLE_FACTOR.write().unwrap();
+    std::mem::take(&mut *twiddle_factor);
 }
 
-/// # Safety
-/// Accesses to dst and twiddle_factor_size by this function may
-/// only occur if no other threads are accessing them concurrently
-pub unsafe fn fast_fourier_transform(
+struct UnsafeSendSyncRawPtr<T>(*mut T);
+unsafe impl<T> Sync for UnsafeSendSyncRawPtr<T> {}
+unsafe impl<T> Send for UnsafeSendSyncRawPtr<T> {}
+
+impl<T> Deref for UnsafeSendSyncRawPtr<T> {
+    type Target = *mut T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T> DerefMut for UnsafeSendSyncRawPtr<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+pub fn fast_fourier_transform(
     coefficients: &[FieldElement],
     coefficient_len: usize,
     order: usize,
@@ -99,61 +118,84 @@ pub unsafe fn fast_fourier_transform(
     assert!(log_coefficient <= log_order);
 
     let blk_sz = order / coefficient_len;
-    for j in 0..blk_sz {
+
+    let mut dst_lock = [
+        DST[0].write().unwrap(),
+        DST[1].write().unwrap(),
+        DST[2].write().unwrap(),
+    ];
+
+    let dst = [
+        UnsafeSendSyncRawPtr(&mut *dst_lock[0] as *mut Vec<FieldElement>),
+        UnsafeSendSyncRawPtr(&mut *dst_lock[1] as *mut Vec<FieldElement>),
+        UnsafeSendSyncRawPtr(&mut *dst_lock[2] as *mut Vec<FieldElement>),
+    ];
+
+    (0..blk_sz).into_par_iter().for_each(|j| {
         for (i, coefficient) in coefficients
             .iter()
             .copied()
             .enumerate()
             .take(coefficient_len)
         {
-            // SAFETY:
-            // TODO
-            //
-            // This should be fine as long as nobody else accesses this memory while
-            // the current function does, but we should consider doing the outer loop
-            // as a parallel for if it is possible - that is, each j loop should
-            // undoubtedly be accessing disjoint memory.
-            DST[log_coefficient & 1][(j << log_coefficient) | i] = coefficient;
+            let dst_cur = &dst[log_coefficient & 1];
+
+            // Safety:
+            // Different threads will all access the same dst[log_coefficient & 1] field element vec,
+            // but they access disjoint indices within the vec
+            let dst = unsafe { &mut *(**dst_cur).cast::<Vec<FieldElement>>() };
+            dst[(j << log_coefficient) | i] = coefficient;
         }
+    });
 
-        {
-            let twiddle_size = TWIDDLE_FACTOR_SIZE;
-            for dep in (log_coefficient - 1)..=0 {
-                let blk_size = 1 << (log_order - dep);
-                let half_blk_size = blk_size >> 1;
-                let cur = dep & 1;
-                let pre = cur ^ 1;
+    for lock in dst_lock {
+        drop(lock);
+    }
 
-                let cur_ptr = &mut DST[cur];
-                let pre_ptr = &mut DST[pre];
+    {
+        let twiddle_size = *TWIDDLE_FACTOR_SIZE.read().unwrap();
+        for dep in (log_coefficient - 1)..=0 {
+            let blk_size = 1 << (log_order - dep);
+            let half_blk_size = blk_size >> 1;
+            let cur = dep & 1;
+            let pre = cur ^ 1;
 
-                assert!(!std::ptr::eq(cur_ptr, pre_ptr));
+            assert!(cur != pre);
 
-                let gap = (twiddle_size / order) * (1 << dep);
-                assert!(twiddle_size % order == 0);
-                {
-                    for k in 0..(blk_size / 2) {
-                        let double_k = k & (half_blk_size - 1);
-                        let x = twiddle_fac[k * gap];
-                        for j in 0..(1 << dep) {
-                            let l_value = pre_ptr[(double_k << (dep + 1)) | j];
-                            let r_value = x * pre_ptr[(double_k << (dep + 1) | (1 << dep)) | j];
+            let cur_ptr_lock = &mut DST[cur].write().unwrap();
+            let pre_ptr_lock = &mut DST[pre].write().unwrap();
 
-                            cur_ptr[(k << dep) | j] = l_value + r_value;
-                            cur_ptr[((k + blk_size / 2) << dep) | j] = l_value - r_value;
-                        }
+            let cur_ptr_raw = UnsafeSendSyncRawPtr(&mut **cur_ptr_lock as *mut Vec<FieldElement>);
+            let pre_ptr_raw = UnsafeSendSyncRawPtr(&mut **pre_ptr_lock as *mut Vec<FieldElement>);
+
+            let gap = (twiddle_size / order) * (1 << dep);
+            assert!(twiddle_size % order == 0);
+            {
+                (0..(blk_size / 2)).into_par_iter().for_each(|k| {
+                    // Safety:
+                    // Different threads will all access the same cur_ptr and pre_ptr field element vecs,
+                    // but they access disjoint indices within the vec so parallel access is okay
+                    let cur_ptr = unsafe { &mut *(*cur_ptr_raw).cast::<Vec<FieldElement>>() };
+                    let pre_ptr = unsafe { &mut *(*pre_ptr_raw).cast::<Vec<FieldElement>>() };
+
+                    let double_k = k & (half_blk_size - 1);
+                    let x = twiddle_fac[k * gap];
+                    for j in 0..(1 << dep) {
+                        let l_value = pre_ptr[(double_k << (dep + 1)) | j];
+                        let r_value = x * pre_ptr[(double_k << (dep + 1) | (1 << dep)) | j];
+
+                        cur_ptr[(k << dep) | j] = l_value + r_value;
+                        cur_ptr[((k + blk_size / 2) << dep) | j] = l_value - r_value;
                     }
-                }
+                });
             }
         }
     }
 
-    result[..order].copy_from_slice(&DST[0][..order]);
+    result[..order].copy_from_slice(&DST[0].read().unwrap()[..order]);
 }
 
-/// # Safety
-/// The same as `fast_fourier_transform`
-pub unsafe fn inverse_fast_fourier_transform(
+pub fn inverse_fast_fourier_transform(
     evaluations: &[FieldElement],
     mut coefficient_len: usize,
     mut order: usize,
@@ -215,19 +257,21 @@ pub unsafe fn inverse_fast_fourier_transform(
     }
     assert!(inv_rou * inv_rou == FieldElement::real_one());
 
+    let mut inv_twiddle_factor = INV_TWIDDLE_FACTOR.write().unwrap();
+
     fast_fourier_transform(
         &sub_eval[..],
         order,
         coefficient_len,
         inv_rou,
         dst,
-        &mut INV_TWIDDLE_FACTOR[..],
+        &mut inv_twiddle_factor.deref_mut()[..],
     );
 
     let inv_n = FieldElement::from_real(order.try_into().unwrap()).inverse();
     assert!(inv_n * FieldElement::from_real(order.try_into().unwrap()) == FieldElement::real_one());
 
-    for item in dst.iter_mut().take(coefficient_len) {
+    dst.par_iter_mut().take(coefficient_len).for_each(|item| {
         *item = *item * inv_n;
-    }
+    });
 }
