@@ -27,6 +27,8 @@ static H_EVAL: RwLock<Vec<FieldElement>> = RwLock::new(Vec::new());
 
 static H_EVAL_ARR: RwLock<Vec<FieldElement>> = RwLock::new(Vec::new());
 
+// TODO: atomics may not serve any useful purpose here,
+// consider changing to RwLock
 static L_COEF_LEN: AtomicUsize = AtomicUsize::new(0);
 static L_EVAL_LEN: AtomicUsize = AtomicUsize::new(0);
 static Q_COEF_LEN: AtomicUsize = AtomicUsize::new(0);
@@ -50,10 +52,6 @@ struct PolyCommitProver {
 }
 
 impl PolyCommitProver {
-    /// Safety:
-    /// TODO
-    ///
-    /// Cannot yet determine the safety of these global static accesses
     pub fn commit_private_array(
         &mut self,
         private_array: &[FieldElement],
