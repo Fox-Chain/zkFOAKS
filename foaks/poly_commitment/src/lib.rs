@@ -16,35 +16,34 @@ struct LdtCommitment {
 }
 
 #[derive(Default, Debug)]
-struct PolyCommitContext {
-    twiddle_factor: Vec<FieldElement>,
-    inv_twiddle_factor: Vec<FieldElement>,
-    twiddle_factor_size: usize,
-    inner_prod_evals: Vec<FieldElement>,
+pub struct PolyCommitContext {
+    pub twiddle_factor: Vec<FieldElement>,
+    pub inv_twiddle_factor: Vec<FieldElement>,
+    pub twiddle_factor_size: usize,
+    pub inner_prod_evals: Vec<FieldElement>,
 
-    l_coef: Vec<FieldElement>,
-    l_coef_len: usize,
+    pub l_coef: Vec<FieldElement>,
+    pub l_coef_len: usize,
 
-    l_eval: Vec<FieldElement>,
-    l_eval_len: usize,
+    pub l_eval: Vec<FieldElement>,
+    pub l_eval_len: usize,
+    pub q_coef: Vec<FieldElement>,
+    pub q_coef_len: usize,
 
-    q_coef: Vec<FieldElement>,
-    q_coef_len: usize,
+    pub q_eval: Vec<FieldElement>,
+    pub q_eval_len: usize,
 
-    q_eval: Vec<FieldElement>,
-    q_eval_len: usize,
+    pub lq_coef: Vec<FieldElement>,
+    pub lq_eval: Vec<FieldElement>,
+    pub h_coef: Vec<FieldElement>,
+    pub h_eval: Vec<FieldElement>,
 
-    lq_coef: Vec<FieldElement>,
-    lq_eval: Vec<FieldElement>,
-    h_coef: Vec<FieldElement>,
-    h_eval: Vec<FieldElement>,
+    pub h_eval_arr: Vec<FieldElement>,
 
-    h_eval_arr: Vec<FieldElement>,
-
-    slice_size: usize,
-    slice_count: usize,
-    slice_real_ele_cnt: usize,
-    pre_prepare_executed: bool,
+    pub slice_size: usize,
+    pub slice_count: usize,
+    pub slice_real_ele_cnt: usize,
+    pub pre_prepare_executed: bool,
 }
 
 struct PolyCommitProver {
