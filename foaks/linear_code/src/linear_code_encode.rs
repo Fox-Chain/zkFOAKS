@@ -6,17 +6,20 @@ use crate::expanders::C;
 use crate::expanders::D;
 
 // TODO: check initialization
-pub static mut scratch: Vec<Vec<Vec<FieldElement>>> = vec![Vec::new(), Vec::new()];
+pub static mut scratch: Vec<Vec<Vec<FieldElement>>> = Vec::new();
 pub static mut __encode_initialized: bool = false;
 
 #[inline]
 pub unsafe fn encode(
-    src: Vec<FieldElement>,
+    src: &mut Vec<FieldElement>,
     dst: &mut [FieldElement],
     n: i64,
     dep_: Option<usize>
 ) -> i64 {
     let dep = dep_.unwrap_or(0);
+    if scratch.len() < 2 {
+        scratch = vec![Vec::new(), Vec::new()];
+    }
     if !__encode_initialized {
         __encode_initialized = true;
         let mut i = 0i64;
@@ -53,7 +56,7 @@ pub unsafe fn encode(
     }
     // recursion
     // TODO
-    let L = encode(scratch[1][dep], &mut scratch[0][dep][(n as usize)..((n + R) as usize)], R, Some(dep + 1));
+    let L = encode(&mut scratch[1][dep], &mut scratch[0][dep][(n as usize)..((n + R) as usize)], R, Some(dep + 1));
     assert_eq![D[dep].L, L];
     // R consumed
     let R = D[dep].R;

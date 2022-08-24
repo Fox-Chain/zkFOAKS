@@ -36,7 +36,7 @@ pub fn generate_random_expander(
     R: i64,
     d: i64
 ) -> Graph {
-    let mut ret: Graph;
+    let mut ret: Graph = Graph::default();
     ret.degree = d as i32;
     ret.neighbor.resize(L as usize, Vec::new());
     ret.weight.resize(L as usize, Vec::new());
@@ -50,7 +50,8 @@ pub fn generate_random_expander(
         for j in 0..(d as usize) {
             let target: i64 = rand::random::<i64>() % R;
             // TODO
-            let weight: FieldElement = prime_field::random();
+            // let weight: FieldElement = prime_field::random();
+            let weight = FieldElement::default();
             ret.neighbor[i][j] = target;
             ret.r_neighbor[target as usize].push(i as i64);
             ret.r_weight[target as usize].push(weight);
