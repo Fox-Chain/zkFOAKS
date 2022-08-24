@@ -56,7 +56,7 @@ pub fn packed_my_mod(x: i256) -> i256 {
     intrinsics::i256::srl(&x, 61) + (x & MOD.as_i256())
 }
 
-#[derive(Serialize, Default, PartialEq, Eq, Copy, Clone)]
+#[derive(Serialize, Default, Debug, PartialEq, Eq, Copy, Clone)]
 pub struct FieldElement {
     pub real: u64,
     pub img: u64,
@@ -73,6 +73,19 @@ impl FieldElement {
 
     pub fn size(&self) -> usize {
         std::mem::size_of::<Self>()
+    }
+
+    pub fn new_random() -> Self {
+        let real = rand::random::<u64>() % MOD;
+        let img = rand::random::<u64>() % MOD;
+
+        Self::new(real, img)
+    }
+
+    pub fn new_random_real_only() -> Self {
+        let real = rand::random::<u64>() % MOD;
+
+        Self::new(real, 0)
     }
 
     pub const fn from_real(real: u64) -> Self {
@@ -133,6 +146,10 @@ impl FieldElement {
         }
 
         Ok(rou)
+    }
+
+    pub fn random() -> Self {
+        unimplemented!()
     }
 }
 
