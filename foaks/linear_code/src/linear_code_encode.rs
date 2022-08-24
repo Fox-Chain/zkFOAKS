@@ -52,7 +52,8 @@ pub unsafe fn encode(
         }
     }
     // recursion
-    let L = encode(scratch[1][dep], &mut scratch[0][dep][n..R], R, Some(dep + 1));
+    // TODO
+    let L = encode(scratch[1][dep], &mut scratch[0][dep][(n as usize)..((n + R) as usize)], R, Some(dep + 1));
     assert_eq![D[dep].L, L];
     // R consumed
     let R = D[dep].R;
@@ -70,5 +71,5 @@ pub unsafe fn encode(
         dst[i] = scratch[0][dep][i];
     }
     // return
-    n + L + R
+    return n + L + R;
 }

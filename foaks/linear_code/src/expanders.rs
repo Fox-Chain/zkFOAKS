@@ -72,7 +72,7 @@ pub unsafe fn expander_init(n: i64, dep: Option<i32>) -> i64 {
         let mut dep_ = dep.unwrap_or(0i32);
         C[dep_ as usize] = generate_random_expander(n, ((alpha * (n as f64)) as i64), cn as i64);
         let L: i64 = expander_init(((alpha * (n as f64)) as i64), Some(dep_ + 1i32));
-        D[dep_ as usize] = generate_random_expander(L, (((n as f64) *  (r - 1f64) - (L as f64)) as i64), dn);
+        D[dep_ as usize] = generate_random_expander(L, (((n as f64) *  (r - 1f64) - (L as f64)) as i64), dn as i64);
         n + L + (((n as f64) * (r - 1f64) - (L as f64)) as i64)
     }
 }
