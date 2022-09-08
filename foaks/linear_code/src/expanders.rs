@@ -20,7 +20,7 @@ pub struct Graph {
     pub weight: Vec<Vec<FieldElement>>,
     pub r_weight: Vec<Vec<FieldElement>>,
     pub L: i64,
-    pub R: i64
+    pub R: i64,
 }
 
 // TODO
@@ -31,11 +31,7 @@ pub static mut C: Vec<Graph> = Vec::new();
 pub static mut D: Vec<Graph> = Vec::new();
 
 #[inline]
-pub fn generate_random_expander(
-    L: i64,
-    R: i64,
-    d: i64
-) -> Graph {
+pub fn generate_random_expander(L: i64, R: i64, d: i64) -> Graph {
     let mut ret: Graph = Graph::default();
     ret.degree = d as i32;
     ret.neighbor.resize(L as usize, Vec::new());
@@ -73,7 +69,11 @@ pub unsafe fn expander_init(n: i64, dep: Option<i32>) -> i64 {
         let mut dep_ = dep.unwrap_or(0i32);
         C[dep_ as usize] = generate_random_expander(n, ((alpha * (n as f64)) as i64), cn as i64);
         let L: i64 = expander_init(((alpha * (n as f64)) as i64), Some(dep_ + 1i32));
-        D[dep_ as usize] = generate_random_expander(L, (((n as f64) *  (r - 1f64) - (L as f64)) as i64), dn as i64);
+        D[dep_ as usize] = generate_random_expander(
+            L,
+            (((n as f64) * (r - 1f64) - (L as f64)) as i64),
+            dn as i64,
+        );
         n + L + (((n as f64) * (r - 1f64) - (L as f64)) as i64)
     }
 }

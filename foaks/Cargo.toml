@@ -5,5 +5,7 @@ members = [
     "linear_gkr",
     "linear_code",
     "intrinsics",
-    "prime_field"
+    "poly_commitment",
+    "prime_field",
+    "vpd"
 ]

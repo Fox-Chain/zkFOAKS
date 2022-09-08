@@ -10,3 +10,4 @@ ethnum = "1.2.2"
 serde = { version = "1.0.143", features = ["serde_derive"] }
 intrinsics = { path = "../intrinsics" }
 bincode = "1.3.3"
+rand = "0.8.5"
