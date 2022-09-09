@@ -146,3 +146,6 @@ impl Ord for Variable {
         self.partial_cmp(other).unwrap()
     }
 }
+pub fn add_one(x: u8) -> u8 {
+    x + 1
+}

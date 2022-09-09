@@ -1242,4 +1242,9 @@ mod tests {
 
         Ok(())
     }
+
+    // ISNOTLAST*[lastAccess*(addr'-addr-(step'-step))+(step'-step)]∈ INCS, INCS >=1
+    // x = lastAccess*(addr'-addr-(step'-step))
+    // y = ISNOTLAST*[x+(step'-step)]
+    // y >= 1
 }
