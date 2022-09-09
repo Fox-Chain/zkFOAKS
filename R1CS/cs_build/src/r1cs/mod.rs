@@ -6,9 +6,9 @@ use ark_std::vec::Vec;
 pub type Result<T> = core::result::Result<T, SynthesisError>;
 
 #[macro_use]
-mod impl_lc;
-mod constraint_system;
-mod error;
+pub mod impl_lc;
+pub mod constraint_system;
+pub mod error;
 #[cfg(feature = "std")]
 mod trace;
 
