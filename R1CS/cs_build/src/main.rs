@@ -23,24 +23,36 @@ use std::{fs::File, io::Write};
 
 use ark_test_curves::bls12_381::Fr;
 mod mem_gen;
-use mem_gen::{lastAccess_matrix_gen, matrix_gen};
+use mem_gen::*;
+fn print_type_of<T>(_: &T) {
+    println!("{}", std::any::type_name::<T>())
+}
 
 fn main() {
-    // let u = read_user_from_file("./src/data/test.json").unwrap();
-    // let the_file = "./src/data/test.json";
-    // let u: Data = serde_json::from_str(the_file).expect("JSON was not well-formatted");
-    let file = File::open("./src/data/trace.json").expect("file should open read only");
+    let file = File::open("./src/data/mem_test.json").expect("file should open read only");
     let json: serde_json::Value =
         serde_json::from_reader(file).expect("file should be proper JSON");
     let data = json.get("data").expect("file should have data key");
-    println!("{:#?}", data);
-    let a_in: u8 = serde_json::from_value(data["a"].clone()).unwrap();
-    let b_in: u8 = serde_json::from_value(data["b"].clone()).unwrap();
-    let c_in: u8 = serde_json::from_value(data["c"].clone()).unwrap();
-    let mat = matrix_gen(a_in, b_in, c_in);
+    // println!(
+    //     "{:#?}",
+    //     data.as_array().unwrap().len()
+    // );
+    let mem_table_len = data.as_array().unwrap().len();
 
-    let lastAccess_check = lastAccess_matrix_gen(1);
-    // let mut file_mat = File::create("./mat6.txt").expect("error");
-    // let output_mat = format!("{:#?}", lastAccess_check);
+    // check mOp/mWr/lastAccess = 1 or 0
+    let mOp_in = data.as_array().unwrap()[0]["mOp"].as_u64().unwrap();
+    let mat = boolean_check_matrix_gen(mOp_in);
+
+    // check Constraint: (1-lastAccess)*(addr'-addr)=0
+    let lastAccess = data.as_array().unwrap()[0]["lastAccess"].as_u64().unwrap();
+    let addr_p = data.as_array().unwrap()[1]["address"].as_u64().unwrap();
+    let addr = data.as_array().unwrap()[0]["address"].as_u64().unwrap();
+    let mat2 = addr_inc_check_matrix_gen(lastAccess, addr_p, addr);
+
+    // check Constraint: (1-mOp)*(mWr)=0
+    let mWr_in = data.as_array().unwrap()[0]["mWr"].as_u64().unwrap();
+    let mat3 = mOp_mWr_check_matrix_gen(mOp_in, mWr_in);
+    // let mut file_mat = File::create("./mat9.txt").expect("error");
+    // let output_mat = format!("{:#?}", mat3);
     // file_mat.write_all(output_mat.as_bytes());
 }
