@@ -52,7 +52,19 @@ fn main() {
     // check Constraint: (1-mOp)*(mWr)=0
     let mWr_in = data.as_array().unwrap()[0]["mWr"].as_u64().unwrap();
     let mat3 = mOp_mWr_check_matrix_gen(mOp_in, mWr_in);
-    // let mut file_mat = File::create("./mat9.txt").expect("error");
-    // let output_mat = format!("{:#?}", mat3);
-    // file_mat.write_all(output_mat.as_bytes());
+
+    // check Constraint: (1-mOp'*mWr')(1-lastAccess)(val[0..7]'-val[0..7])=0
+    let mOp_p_in = data.as_array().unwrap()[1]["mOp"].as_u64().unwrap();
+    let mWr_p_in = data.as_array().unwrap()[1]["mWr"].as_u64().unwrap();
+    let val_p0 = data.as_array().unwrap()[1]["val0"].as_u64().unwrap();
+    let val_p1 = data.as_array().unwrap()[1]["val1"].as_u64().unwrap();
+    let val_p2 = data.as_array().unwrap()[1]["val2"].as_u64().unwrap();
+    let val_p3 = data.as_array().unwrap()[1]["val3"].as_u64().unwrap();
+    let val_0 = data.as_array().unwrap()[0]["val0"].as_u64().unwrap();
+    let val_1 = data.as_array().unwrap()[0]["val1"].as_u64().unwrap();
+    let val_2 = data.as_array().unwrap()[0]["val2"].as_u64().unwrap();
+    let val_3 = data.as_array().unwrap()[0]["val3"].as_u64().unwrap();
+    let mat4 = update_value_check_matrix_gen(
+        mOp_p_in, mWr_p_in, val_p0, val_p1, val_p2, val_p3, val_0, val_1, val_2, val_3,
+    );
 }
