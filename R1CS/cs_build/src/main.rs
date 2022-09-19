@@ -65,6 +65,6 @@ fn main() {
     let val_2 = data.as_array().unwrap()[0]["val2"].as_u64().unwrap();
     let val_3 = data.as_array().unwrap()[0]["val3"].as_u64().unwrap();
     let mat4 = update_value_check_matrix_gen(
-        mOp_p_in, mWr_p_in, val_p0, val_p1, val_p2, val_p3, val_0, val_1, val_2, val_3,
+        mOp_p_in, mWr_p_in, lastAccess, val_p0, val_p1, val_p2, val_p3, val_0, val_1, val_2, val_3,
     );
 }
