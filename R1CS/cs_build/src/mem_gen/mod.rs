@@ -164,7 +164,7 @@ pub fn update_value_check_matrix_gen(
 
     assert!(cs.is_satisfied().is_ok());
     let matrices = cs.to_matrices().unwrap();
-    // 1, out, mid_1, mid_2, mWr, mOpr, lastAccess, val_p, val
+    // 1, out, mid_1, mid_2, mOpr, mWr, lastAccess, val_p, val
     // A [0, 0, 0, 0, 1, 0, 0, 0]
     //   [1, 0, -1, 0, 1, 0, 0, 0, 0]
     //   [0, 0, 0, 1, 0, 0, 0, 0, 0]

@@ -72,7 +72,7 @@ In this doc, the data structure used in R1CS constraint system and matrices gene
    // matrix = [[(a,b),(c,d)],[],[],[],...[]]
     // number of 1D element = number of rows in matrix
     // 2D elements = (value, index)
-   matrix_A= [[(1,2)],[(1,3)],[(1,2),(1,4)],[(5,0),(1,5)]
+   matrix_A= [[(1,2)],[(1,3)],[(1,2),(1,4)],[(5,0),(1,5)]]
    matrix_B=...
    matrix_C=...
    A_non_zero=6
