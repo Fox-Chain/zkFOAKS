@@ -301,7 +301,7 @@ pub fn update_value_check_mul_matrix_gen(
     //   [0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
     //   [0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
     // C [0, 0, 1, 0, 0, 0, 0, 0, 0, 0]
-    //   [0, 0, 0, 1, 0, 1, 0, 0, 0, 0]
+    //   [0, 0, 0, 1, 0, 0, 0, 0, 0, 0]
     //   [0, 0, 0, 0, 1, 0, 0, 0, 0, 0]
     //   [0, 1, 0, 0, 0, 0, 0, 0, 0, 0]
     assert_eq!(matrices.a[0], vec![(Fr::from(1u64), 5)]);
@@ -314,10 +314,7 @@ pub fn update_value_check_mul_matrix_gen(
     assert_eq!(matrices.b[3], vec![(Fr::from(1u64), 9)]);
 
     assert_eq!(matrices.c[0], vec![(Fr::from(1u64), 2)]);
-    assert_eq!(
-        matrices.c[1],
-        vec![(Fr::from(1u64), 3), (Fr::from(1u64), 5)]
-    );
+    assert_eq!(matrices.c[1], vec![(Fr::from(1u64), 3)]);
     assert_eq!(matrices.c[2], vec![(Fr::from(1u64), 4)]);
     assert_eq!(matrices.c[3], vec![(Fr::from(1u64), 1)]);
     matrices
