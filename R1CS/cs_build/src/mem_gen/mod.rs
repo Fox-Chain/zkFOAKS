@@ -320,4 +320,5 @@ pub fn update_value_check_mul_matrix_gen(
     );
     assert_eq!(matrices.c[2], vec![(Fr::from(1u64), 4)]);
     assert_eq!(matrices.c[3], vec![(Fr::from(1u64), 1)]);
+    matrices
 }
