@@ -76,4 +76,10 @@ fn main() {
         mOp_p_in, mWr_p_in, lastAccess, val_p0, val_p1, val_p2, val_p3, val_p4, val_p5, val_p6,
         val_p7, val_0, val_1, val_2, val_3, val_4, val_5, val_6, val_7,
     );
+
+    // Constraint: (1-mOp'*mWr')lastAccess(val'[0..3])(val'[4..7])=0
+    let mat5 = update_value_check_mul_matrix_gen(
+        mOp_p_in, mWr_p_in, lastAccess, val_p0, val_p1, val_p2, val_p3, val_p4, val_p5, val_p6,
+        val_p7,
+    );
 }
