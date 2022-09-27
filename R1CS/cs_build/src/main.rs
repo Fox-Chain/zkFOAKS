@@ -60,11 +60,20 @@ fn main() {
     let val_p1 = data.as_array().unwrap()[1]["val1"].as_u64().unwrap();
     let val_p2 = data.as_array().unwrap()[1]["val2"].as_u64().unwrap();
     let val_p3 = data.as_array().unwrap()[1]["val3"].as_u64().unwrap();
+    let val_p4 = data.as_array().unwrap()[1]["val4"].as_u64().unwrap();
+    let val_p5 = data.as_array().unwrap()[1]["val5"].as_u64().unwrap();
+    let val_p6 = data.as_array().unwrap()[1]["val6"].as_u64().unwrap();
+    let val_p7 = data.as_array().unwrap()[1]["val7"].as_u64().unwrap();
     let val_0 = data.as_array().unwrap()[0]["val0"].as_u64().unwrap();
     let val_1 = data.as_array().unwrap()[0]["val1"].as_u64().unwrap();
     let val_2 = data.as_array().unwrap()[0]["val2"].as_u64().unwrap();
     let val_3 = data.as_array().unwrap()[0]["val3"].as_u64().unwrap();
+    let val_4 = data.as_array().unwrap()[0]["val4"].as_u64().unwrap();
+    let val_5 = data.as_array().unwrap()[0]["val5"].as_u64().unwrap();
+    let val_6 = data.as_array().unwrap()[0]["val6"].as_u64().unwrap();
+    let val_7 = data.as_array().unwrap()[0]["val7"].as_u64().unwrap();
     let mat4 = update_value_check_matrix_gen(
-        mOp_p_in, mWr_p_in, lastAccess, val_p0, val_p1, val_p2, val_p3, val_0, val_1, val_2, val_3,
+        mOp_p_in, mWr_p_in, lastAccess, val_p0, val_p1, val_p2, val_p3, val_p4, val_p5, val_p6,
+        val_p7, val_0, val_1, val_2, val_3, val_4, val_5, val_6, val_7,
     );
 }
