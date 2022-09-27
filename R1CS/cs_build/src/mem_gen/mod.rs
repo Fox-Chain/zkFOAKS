@@ -290,4 +290,34 @@ pub fn update_value_check_mul_matrix_gen(
 
     assert!(cs.is_satisfied().is_ok());
     let matrices = cs.to_matrices().unwrap();
+
+    // one, out, mid_1, mid_2, mid_3, mOp, mWr, lastAccess, val_p1, val_p2
+    // A [0, 0, 0, 0, 0, 1, 0, 0, 0, 0]
+    //   [1, 0, -1, 0, 0, 0, 0, 0, 0, 0]
+    //   [0, 0, 0, 1, 0, 0, 0, 0, 0, 0]
+    //   [0, 0, 0, 0, 1, 0, 0, 0, 0, 0]
+    // B [0, 0, 0, 0, 0, 0, 1, 0, 0, 0]
+    //   [0, 0, 0, 0, 0, 0, 0, 1, 0, 0]
+    //   [0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
+    //   [0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+    // C [0, 0, 1, 0, 0, 0, 0, 0, 0, 0]
+    //   [0, 0, 0, 1, 0, 1, 0, 0, 0, 0]
+    //   [0, 0, 0, 0, 1, 0, 0, 0, 0, 0]
+    //   [0, 1, 0, 0, 0, 0, 0, 0, 0, 0]
+    assert_eq!(matrices.a[0], vec![(Fr::from(1u64), 5)]);
+    assert_eq!(matrices.a[2], vec![(Fr::from(1u64), 3)]);
+    assert_eq!(matrices.a[3], vec![(Fr::from(1u64), 4)]);
+
+    assert_eq!(matrices.b[0], vec![(Fr::from(1u64), 6)]);
+    assert_eq!(matrices.b[1], vec![(Fr::from(1u64), 7)]);
+    assert_eq!(matrices.b[2], vec![(Fr::from(1u64), 8)]);
+    assert_eq!(matrices.b[3], vec![(Fr::from(1u64), 9)]);
+
+    assert_eq!(matrices.c[0], vec![(Fr::from(1u64), 2)]);
+    assert_eq!(
+        matrices.c[1],
+        vec![(Fr::from(1u64), 3), (Fr::from(1u64), 5)]
+    );
+    assert_eq!(matrices.c[2], vec![(Fr::from(1u64), 4)]);
+    assert_eq!(matrices.c[3], vec![(Fr::from(1u64), 1)]);
 }
