@@ -66,20 +66,22 @@ fn main() {
 
     // check mOp/mWr/lastAccess = 1 or 0
     let mat = boolean_check_matrix_gen(mOp_in);
+    let mat2 = boolean_check_matrix_gen(mWr_in);
+    let mat3 = boolean_check_matrix_gen(lastAccess);
 
     // check Constraint: (1-lastAccess)*(addr'-addr)=0
-    let mat2 = addr_inc_check_matrix_gen(lastAccess, addr_p, addr);
+    let mat4 = addr_inc_check_matrix_gen(lastAccess, addr_p, addr);
 
     // check Constraint: (1-mOp)*(mWr)=0
-    let mat3 = mOp_mWr_check_matrix_gen(mOp_in, mWr_in);
+    let mat5 = mOp_mWr_check_matrix_gen(mOp_in, mWr_in);
 
     // check Constraint: (1-mOp'*mWr')(1-lastAccess)(val[0..7]'-val[0..7])=0
-    let mat4 = update_value_check_matrix_gen(
+    let mat6 = update_value_check_matrix_gen(
         mOp_p_in, mWr_p_in, lastAccess, val_p0, val_p1, val_p2, val_p3, val_p4, val_p5, val_p6,
         val_p7, val_0, val_1, val_2, val_3, val_4, val_5, val_6, val_7,
     );
     // Constraint: (1-mOp'*mWr')lastAccess(val'[0..3])(val'[4..7])=0
-    let mat5 = update_value_check_mul_matrix_gen(
+    let mat7 = update_value_check_mul_matrix_gen(
         mOp_p_in, mWr_p_in, lastAccess, val_p0, val_p1, val_p2, val_p3, val_p4, val_p5, val_p6,
         val_p7,
     );
