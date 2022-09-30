@@ -39,21 +39,12 @@ fn main() {
     // );
     let mem_table_len = data.as_array().unwrap().len();
 
-    // check mOp/mWr/lastAccess = 1 or 0
+    // Read memory op data from json
     let mOp_in = data.as_array().unwrap()[0]["mOp"].as_u64().unwrap();
-    let mat = boolean_check_matrix_gen(mOp_in);
-
-    // check Constraint: (1-lastAccess)*(addr'-addr)=0
     let lastAccess = data.as_array().unwrap()[0]["lastAccess"].as_u64().unwrap();
     let addr_p = data.as_array().unwrap()[1]["address"].as_u64().unwrap();
     let addr = data.as_array().unwrap()[0]["address"].as_u64().unwrap();
-    let mat2 = addr_inc_check_matrix_gen(lastAccess, addr_p, addr);
-
-    // check Constraint: (1-mOp)*(mWr)=0
     let mWr_in = data.as_array().unwrap()[0]["mWr"].as_u64().unwrap();
-    let mat3 = mOp_mWr_check_matrix_gen(mOp_in, mWr_in);
-
-    // check Constraint: (1-mOp'*mWr')(1-lastAccess)(val[0..7]'-val[0..7])=0
     let mOp_p_in = data.as_array().unwrap()[1]["mOp"].as_u64().unwrap();
     let mWr_p_in = data.as_array().unwrap()[1]["mWr"].as_u64().unwrap();
     let val_p0 = data.as_array().unwrap()[1]["val0"].as_u64().unwrap();
@@ -72,8 +63,26 @@ fn main() {
     let val_5 = data.as_array().unwrap()[0]["val5"].as_u64().unwrap();
     let val_6 = data.as_array().unwrap()[0]["val6"].as_u64().unwrap();
     let val_7 = data.as_array().unwrap()[0]["val7"].as_u64().unwrap();
-    let mat4 = update_value_check_matrix_gen(
+
+    // check mOp/mWr/lastAccess = 1 or 0
+    let mat = boolean_check_matrix_gen(mOp_in);
+    let mat2 = boolean_check_matrix_gen(mWr_in);
+    let mat3 = boolean_check_matrix_gen(lastAccess);
+
+    // check Constraint: (1-lastAccess)*(addr'-addr)=0
+    let mat4 = addr_inc_check_matrix_gen(lastAccess, addr_p, addr);
+
+    // check Constraint: (1-mOp)*(mWr)=0
+    let mat5 = mOp_mWr_check_matrix_gen(mOp_in, mWr_in);
+
+    // check Constraint: (1-mOp'*mWr')(1-lastAccess)(val[0..7]'-val[0..7])=0
+    let mat6 = update_value_check_matrix_gen(
         mOp_p_in, mWr_p_in, lastAccess, val_p0, val_p1, val_p2, val_p3, val_p4, val_p5, val_p6,
         val_p7, val_0, val_1, val_2, val_3, val_4, val_5, val_6, val_7,
+    );
+    // Constraint: (1-mOp'*mWr')lastAccess(val'[0..3])(val'[4..7])=0
+    let mat7 = update_value_check_mul_matrix_gen(
+        mOp_p_in, mWr_p_in, lastAccess, val_p0, val_p1, val_p2, val_p3, val_p4, val_p5, val_p6,
+        val_p7,
     );
 }
