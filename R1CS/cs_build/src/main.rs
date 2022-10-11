@@ -33,10 +33,7 @@ fn main() {
     let json: serde_json::Value =
         serde_json::from_reader(file).expect("file should be proper JSON");
     let data = json.get("data").expect("file should have data key");
-    // println!(
-    //     "{:#?}",
-    //     data.as_array().unwrap().len()
-    // );
+    // println!("{:#?}",data.as_array().unwrap().len());
     let mem_table_len = data.as_array().unwrap().len();
 
     // Read memory op data from json
