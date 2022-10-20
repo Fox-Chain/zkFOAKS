@@ -27,22 +27,26 @@ pub struct Graph {
 
 // pub static mut C: [Graph; 100] = [Graph::default(); 100];
 // pub static mut D: [Graph; 100] = [Graph::default(); 100];
-pub static mut C: Vec<Graph> = Vec::new();
-pub static mut D: Vec<Graph> = Vec::new();
+
+// TODO this can be something like
+// this https://crates.io/crates/lazy_static or this https://github.com/matklad/once_cell
+
+pub static mut C: Vec<Graph> = Vec::new(); // TODO this can actually be lazy_cell
+pub static mut D: Vec<Graph> = Vec::new(); // TODO this can actually be lazy_cell
 
 #[inline]
 pub fn generate_random_expander(L: i64, R: i64, d: i64) -> Graph {
     let mut ret: Graph = Graph::default();
-    ret.degree = d as i32;
-    ret.neighbor.resize(L as usize, Vec::new());
-    ret.weight.resize(L as usize, Vec::new());
+    ret.degree = i32::try_from(d).unwrap();
+    ret.neighbor.truncate(L as usize);
+    ret.weight.truncate(L as usize);
 
-    ret.r_neighbor.resize(R as usize, Vec::new());
-    ret.r_weight.resize(R as usize, Vec::new());
+    ret.r_neighbor.truncate(R as usize);
+    ret.r_weight.truncate(R as usize);
 
     for i in 0..(L as usize) {
-        ret.neighbor[i].resize(d as usize, 0i64);
-        ret.weight[i].resize(d as usize, FieldElement::default());
+        ret.neighbor[i].truncate(d as usize);
+        ret.weight[i].truncate(d as usize);
         for j in 0..(d as usize) {
             let target: i64 = rand::random::<i64>() % R;
             // TODO
@@ -74,6 +78,6 @@ pub unsafe fn expander_init(n: i64, dep: Option<i32>) -> i64 {
             (((n as f64) * (r - 1f64) - (L as f64)) as i64),
             dn as i64,
         );
-        n + L + (((n as f64) * (r - 1f64) - (L as f64)) as i64)
+        n + L + (((n as f64) * (r - 1.0) - (L as f64)) as i64)
     }
 }
