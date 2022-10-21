@@ -9,16 +9,13 @@ pub static mut size_after_padding: usize = 0;
 
 pub unsafe fn hash_single_field_element(x: FieldElement) -> HashDigest {
     let mut data = [HashDigest::default(); 2];
-    // let mut res = HashDigest::default();
     copy_nonoverlapping(
         std::ptr::addr_of!(x) as *const i128,
         std::ptr::addr_of_mut!(data[0].h0),
         size_of_val(&x),
     );
     assert_eq!(size_of_val(&x), size_of_val(&data[0].h0));
-    // my_hash(data, &mut res);
     my_hash(data)
-    // res
 }
 
 pub unsafe fn hash_double_field_element_merkle_damgard(
@@ -27,7 +24,6 @@ pub unsafe fn hash_double_field_element_merkle_damgard(
     prev_hash: HashDigest,
 ) -> HashDigest {
     let mut data = [HashDigest::default(); 2];
-    // let mut res = HashDigest::default();
     data[0] = prev_hash;
     let mut element = [x, y];
     copy_nonoverlapping(
@@ -36,9 +32,7 @@ pub unsafe fn hash_double_field_element_merkle_damgard(
         size_of_val(&data[1]),
     );
     assert_eq!(size_of_val(&data[1]), size_of_val(&element));
-    // my_hash(data, &mut res);
     my_hash(data)
-    // res
 }
 
 pub unsafe fn create_tree(
