@@ -2,14 +2,15 @@ use crate::lc;
 use crate::r1cs::*;
 use std::{fs::File, io::Write};
 
+use ark_groth16::*;
 use ark_test_curves::bls12_381::Fr;
-
 pub struct MemoryCircuit {
     data_a: u64,
     data_b: u64,
 }
 
 impl<ConstraintF: Field> ConstraintSynthesizer<ConstraintF> for Memory {
+    // TODO: substitute generate_constraints with different constraints generation function
     fn generate_constraints(
         self,
         cs: ConstraintSystemRef<ConstraintF>,
@@ -22,9 +23,15 @@ where
     E: PairingEngine,
 {
     let rng = &mut test_rng();
-    let params =
-        generate_random_parameters::<E, _, _>(MySillyCircuit { a: None, b: None }, rng).unwrap();
-
+    let params = generate_random_parameters::<E, _, _>(
+        MemoryCircuit {
+            data_a: None,
+            data_b: None,
+        },
+        rng,
+    )
+    .unwrap();
+    // TODO: get proving key
     let pvk = prepare_verifying_key::<E>(&params.vk);
 
     for _ in 0..n_iters {
@@ -34,9 +41,9 @@ where
         c.mul_assign(&b);
 
         let proof = create_random_proof(
-            MySillyCircuit {
-                a: Some(a),
-                b: Some(b),
+            MemoryCircuit {
+                data_a: Some(a),
+                data_b: Some(b),
             },
             &params,
             rng,
@@ -47,6 +54,13 @@ where
         assert!(!verify_proof(&pvk, &proof, &[a]).unwrap());
     }
 }
+
+// TODO: use SNARK implementation for Groth16 from lib.rs
+// fn circuit_specific_setup
+// fn prove
+// fn process_vk
+// fn verify_with_processed_vk
+
 // A*B=C
 pub fn matrix_gen(a_in: u8, b_in: u8, c_in: u8) -> ConstraintMatrices<Fr> {
     let cs = ConstraintSystem::<Fr>::new_ref();

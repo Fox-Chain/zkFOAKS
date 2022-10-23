@@ -18,7 +18,8 @@ serde = { version = "1.0.104", features = ["derive"] }
 serde_derive = "1.0.117"
 serde_json = "1.0.59"
 ark-test-curves = { version = "^0.3.0", default-features = false, features = [ "bls12_381_scalar_field" ] }
-
+ark-snark = { version = "^0.3.0", default-features = false }
+ark-groth16 = { version = "^0.3.0" }
 [features]
 default = []
 std = [ "ark-std/std", "ark-ff/std", "tracing-subscriber", "tracing/std" ]

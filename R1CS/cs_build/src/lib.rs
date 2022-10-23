@@ -17,6 +17,14 @@ extern crate ark_std;
 
 pub mod r1cs;
 
+impl ConstraintSysthesizer<F> for r1cs{
+    fn generate_constraints(self,
+        cs: ConstraintSystemRef<ConstraintF>,
+    )->Result<(),SynthesisError>{
+        Ok(())
+    }
+}
+
 pub fn snark_proof_generation() {
     use ark_bls12_381::Bls12_381;
     use ark_groth16::Groth16;
