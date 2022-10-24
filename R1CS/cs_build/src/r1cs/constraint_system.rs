@@ -337,7 +337,7 @@ impl<F: Field> ConstraintSystem<F> {
                     // `new_lc_map` since a LC can only depend on other
                     // LCs with lower indices, which we have transformed.
                     //
-                    let lc = transformed_lc_map
+                    let lc: &_ = transformed_lc_map
                         .get(&lc_index)
                         .expect("should be inlined");
                     transformed_lc.extend((lc * coeff).0.into_iter());

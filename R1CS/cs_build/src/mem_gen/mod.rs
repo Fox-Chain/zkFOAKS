@@ -4,56 +4,56 @@ use std::{fs::File, io::Write};
 
 use ark_groth16::*;
 use ark_test_curves::bls12_381::Fr;
-pub struct MemoryCircuit {
-    data_a: u64,
-    data_b: u64,
-}
+// pub struct MemoryCircuit {
+//     data_a: u64,
+//     data_b: u64,
+// }
 
-impl<ConstraintF: Field> ConstraintSynthesizer<ConstraintF> for Memory {
-    // TODO: substitute generate_constraints with different constraints generation function
-    fn generate_constraints(
-        self,
-        cs: ConstraintSystemRef<ConstraintF>,
-    ) -> Result<(), SynthesisError> {
-    }
-}
+// impl<ConstraintF: Field> ConstraintSynthesizer<ConstraintF> for Memory {
+//     // TODO: substitute generate_constraints with different constraints generation function
+//     fn generate_constraints(
+//         self,
+//         cs: ConstraintSystemRef<ConstraintF>,
+//     ) -> Result<(), SynthesisError> {
+//     }
+// }
 
-fn test_proof_and_verify<E>(n_inters: usize)
-where
-    E: PairingEngine,
-{
-    let rng = &mut test_rng();
-    let params = generate_random_parameters::<E, _, _>(
-        MemoryCircuit {
-            data_a: None,
-            data_b: None,
-        },
-        rng,
-    )
-    .unwrap();
-    // TODO: get proving key
-    let pvk = prepare_verifying_key::<E>(&params.vk);
+// fn test_proof_and_verify<E>(n_inters: usize)
+// where
+//     E: PairingEngine,
+// {
+//     let rng = &mut test_rng();
+//     let params = generate_random_parameters::<E, _, _>(
+//         MemoryCircuit {
+//             data_a: None,
+//             data_b: None,
+//         },
+//         rng,
+//     )
+//     .unwrap();
+//     // TODO: get proving key
+//     let pvk = prepare_verifying_key::<E>(&params.vk);
 
-    for _ in 0..n_iters {
-        let a = E::Fr::rand(rng);
-        let b = E::Fr::rand(rng);
-        let mut c = a;
-        c.mul_assign(&b);
+//     for _ in 0..n_iters {
+//         let a = E::Fr::rand(rng);
+//         let b = E::Fr::rand(rng);
+//         let mut c = a;
+//         c.mul_assign(&b);
 
-        let proof = create_random_proof(
-            MemoryCircuit {
-                data_a: Some(a),
-                data_b: Some(b),
-            },
-            &params,
-            rng,
-        )
-        .unwrap();
+//         let proof = create_random_proof(
+//             MemoryCircuit {
+//                 data_a: Some(a),
+//                 data_b: Some(b),
+//             },
+//             &params,
+//             rng,
+//         )
+//         .unwrap();
 
-        assert!(verify_proof(&pvk, &proof, &[c]).unwrap());
-        assert!(!verify_proof(&pvk, &proof, &[a]).unwrap());
-    }
-}
+//         assert!(verify_proof(&pvk, &proof, &[c]).unwrap());
+//         assert!(!verify_proof(&pvk, &proof, &[a]).unwrap());
+//     }
+//}
 
 // TODO: use SNARK implementation for Groth16 from lib.rs
 // fn circuit_specific_setup
