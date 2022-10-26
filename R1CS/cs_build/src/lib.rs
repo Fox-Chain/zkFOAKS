@@ -15,6 +15,7 @@
 #[macro_use]
 extern crate ark_std;
 
+pub mod groth16;
 pub mod r1cs;
 
 // impl ConstraintSysthesizer<F> for r1cs{

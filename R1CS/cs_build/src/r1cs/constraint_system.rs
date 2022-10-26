@@ -1028,6 +1028,13 @@ mod tests {
     use std::{fs::File, io::Write};
 
     #[test]
+    fn test_struct_correct() {
+        //let sample = sampleModule { a: 2, b: 3, c: 1 };
+        let a = 2;
+        assert_eq!(a, 2);
+        println!("here")
+    }
+    #[test]
     fn matrix_generation() -> crate::r1cs::Result<()> {
         let cs = ConstraintSystem::<Fr>::new_ref();
         let two = Fr::one() + Fr::one();

@@ -2,7 +2,10 @@ use crate::lc;
 use crate::r1cs::*;
 use std::{fs::File, io::Write};
 
-use ark_groth16::*;
+// adding this line will cause error in src\r1cs\constraint_system.rs:343:43
+// transformed_lc.extend((lc * coeff).0.into_iter());
+//                        ^^^^^^^^^^^^ cannot infer type
+//use ark_groth16::*;
 use ark_test_curves::bls12_381::Fr;
 // pub struct MemoryCircuit {
 //     data_a: u64,
