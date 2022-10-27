@@ -1,10 +1,12 @@
 use infrastructure::my_hash::{self, HashDigest};
+use prime_field::FieldElement;
 
 pub fn verify_merkle(
     hash_digest: HashDigest,
     merkle_path: Vec<HashDigest>,
     len: usize,
     pow: i32,
+    values: Vec<FieldElement>,
 ) -> bool {
     // We need to make sure the len is always smaller than the size of merklePath.
     assert!(merkle_path.len() > len);
@@ -25,11 +27,17 @@ pub fn verify_merkle(
             data[1] = merkle_path[i];
         }
 
-        let pow = pow >> 1;
+        let pow = pow / 2;
         new_hash = my_hash::my_hash(data);
 
         // TODO: field element needs to be done
     }
 
+    for i in 0..len {
+        let element = values[i];
+    }
+
     hash_digest == new_hash // && merkle_path.last() == Some(value_hash)
 }
+
+// NOTE: what is commitments? and what is rscode?
