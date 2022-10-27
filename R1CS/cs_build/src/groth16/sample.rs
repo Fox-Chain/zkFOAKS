@@ -1,10 +1,14 @@
-use crate::lc;
+//use crate::lc;
 //use crate::r1cs::*;
 use ark_bls12_381::Bls12_381;
 use ark_bls12_381::*;
 use ark_ec::*;
 use ark_ff::fields::{FftParameters, Fp256, Fp256Parameters, FpParameters};
-use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystem, ConstraintSystemRef};
+// use ark_relations::r1cs::{
+//  ConstraintSynthesizer, ConstraintSystem, ConstraintSystemRef, SynthesisError,
+// };
+use ark_relations::lc;
+use ark_relations::r1cs::*;
 use ark_test_curves::bls12_381::Fr;
 //pub type ConstantFr = ark_test_curves::bls12_381::Fr;
 //pub type ConstraintFr = ark_bls12_381::Fr;
@@ -12,6 +16,7 @@ pub type ConstraintFr = Fp256<ark_bls12_381::FrParameters>;
 // ark_bls12_381::Fr is same type as Fp256<FrParameters>, which is required as the type of public variable
 
 // TODO: mismatch type of local r1cs module and ark_relations::r1cs module
+#[derive(Debug, Copy, Clone)]
 pub struct sampleModule {
     a: i8,
     b: i8,
@@ -19,10 +24,7 @@ pub struct sampleModule {
 }
 
 impl ConstraintSynthesizer<ConstraintFr> for sampleModule {
-    fn generate_constraints(
-        self,
-        cs: ConstraintSystemRef<ConstraintFr>,
-    ) -> Result<(), SynthesisError> {
+    fn generate_constraints(self, cs: ConstraintSystemRef<ConstraintFr>) -> Result<()> {
         let cs = ConstraintSystem::<ConstraintFr>::new_ref();
         let a = cs
             .new_input_variable(|| Ok(ConstraintFr::from(self.a)))
@@ -72,7 +74,8 @@ mod tests {
             b: 2,
             c: 4,
         };
-        let cs = ConstraintSystem::new_ref();
+        let cs: ark_relations::r1cs::ConstraintSystemRef<ConstraintFr> =
+            ConstraintSystem::new_ref();
         //sample_circuit.generate_constraints(cs.clone()).unwrap();
         let (pk, vk) =
             Groth16::<Bls12_381>::circuit_specific_setup(sample_circuit, &mut rng).unwrap();
