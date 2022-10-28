@@ -337,7 +337,7 @@ impl<F: Field> ConstraintSystem<F> {
                     // `new_lc_map` since a LC can only depend on other
                     // LCs with lower indices, which we have transformed.
                     //
-                    let lc = transformed_lc_map
+                    let lc: &_ = transformed_lc_map
                         .get(&lc_index)
                         .expect("should be inlined");
                     transformed_lc.extend((lc * coeff).0.into_iter());
@@ -769,7 +769,7 @@ impl<F: Field> ConstraintSystemRef<F> {
 
     /// Consumes self to return the inner `ConstraintSystem<F>`. Returns
     /// `None` if `Self::CS` is `None` or if any other references to
-    /// `Self::CS` exist.  
+    /// `Self::CS` exist.
     pub fn into_inner(self) -> Option<ConstraintSystem<F>> {
         match self {
             Self::CS(a) => Rc::try_unwrap(a).ok().map(|s| s.into_inner()),
@@ -1027,6 +1027,13 @@ mod tests {
     use ark_test_curves::bls12_381::Fr;
     use std::{fs::File, io::Write};
 
+    #[test]
+    fn test_struct_correct() {
+        //let sample = sampleModule { a: 2, b: 3, c: 1 };
+        let a = 2;
+        assert_eq!(a, 2);
+        println!("here")
+    }
     #[test]
     fn matrix_generation() -> crate::r1cs::Result<()> {
         let cs = ConstraintSystem::<Fr>::new_ref();

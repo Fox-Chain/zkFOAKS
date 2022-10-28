@@ -1,6 +1,6 @@
-//! Core interface for working with various relations that are useful in
-//! zkSNARKs. At the moment, we only implement APIs for working with Rank-1
-//! Constraint Systems (R1CS).
+// //! Core interface for working with various relations that are useful in
+// //! zkSNARKs. At the moment, we only implement APIs for working with Rank-1
+// //! Constraint Systems (R1CS).
 
 //#![cfg_attr(not(feature = "std"), no_std)]
 #![warn(
@@ -15,4 +15,6 @@
 #[macro_use]
 extern crate ark_std;
 
+pub mod groth16;
+pub mod mem_gen;
 pub mod r1cs;
