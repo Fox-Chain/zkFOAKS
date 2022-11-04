@@ -15,6 +15,5 @@
 #[macro_use]
 extern crate ark_std;
 
-pub mod groth16;
 pub mod mem_gen;
 pub mod r1cs;

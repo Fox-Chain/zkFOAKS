@@ -336,11 +336,12 @@ impl<F: Field> ConstraintSystem<F> {
                     // We have the guarantee that `lc_index` must exist in
                     // `new_lc_map` since a LC can only depend on other
                     // LCs with lower indices, which we have transformed.
-                    //
-                    let lc: &_ = transformed_lc_map
+                    // lc_map: BTreeMap<LcIndex, LinearCombination<F>>,
+                    let lc: &LinearCombination<F> = transformed_lc_map
                         .get(&lc_index)
                         .expect("should be inlined");
-                    transformed_lc.extend((lc * coeff).0.into_iter());
+                    let lc_coeff = (lc * coeff).0.into_iter();
+                    transformed_lc.extend(lc_coeff);
 
                     // Delete linear combinations that are no longer used.
                     //
