@@ -36,12 +36,6 @@ impl Default for FieldElement64 {
     }
 }
 
-// impl FieldElement64 {
-//     pub fn inner(&self) -> [Vec<FieldElement>; SLICE_NUMBER] {
-//         self.0
-//     }
-// }
-
 #[derive(Debug)]
 struct Mapping64([Vec<usize>; SLICE_NUMBER]);
 
@@ -51,12 +45,6 @@ impl Default for Mapping64 {
         Mapping64([EMPTY_VEC; SLICE_NUMBER])
     }
 }
-
-// impl Mapping64 {
-//     pub fn inner(self) -> [Vec<usize>; SLICE_NUMBER] {
-//         self.0
-//     }
-// }
 
 #[derive(Default)]
 pub struct FRIContext {
