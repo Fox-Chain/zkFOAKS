@@ -25,6 +25,7 @@ ark-bls12-381 = { version = "^0.3.0" }
 ark-bls12-377 = { version = "^0.3.0" }
 ark-ec = {version = "^0.3.0"}
 ark-relations = {version = "^0.3.0"}
+rand = {version="0.8.0"}
 [features]
 default = []
 std = [ "ark-std/std", "ark-ff/std", "tracing-subscriber", "tracing/std" ]
