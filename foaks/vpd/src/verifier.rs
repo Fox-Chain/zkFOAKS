@@ -41,3 +41,4 @@ pub fn verify_merkle(
 }
 
 // NOTE: what is commitments? and what is rscode?
+// LdtCommitment
