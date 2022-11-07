@@ -27,9 +27,7 @@ pub fn matrix_gen(a_in: u8, b_in: u8, c_in: u8) -> ConstraintMatrices<Fr> {
 
 // Constraint: (x)*(x-1)=0
 // x∈(lastAccess,mOp,mWr)
-pub fn boolean_check_matrix_gen(
-    x_in: u64,
-) -> ConstraintSystemRef<Fr>::CS(Rc<RefCell<ConstraintSystem<Fr>>>) {
+pub fn boolean_check_matrix_gen(x_in: u64) -> ConstraintSystemRef<Fr> {
     let cs = ConstraintSystem::<Fr>::new_ref();
     let x = Fr::from(x_in);
     let one = Fr::from(1u64);
