@@ -9,18 +9,6 @@ mod r1cs;
 use crate::mem_gen::*;
 use crate::r1cs::*;
 
-// fn read_user_from_file<P: AsRef<Path>>(path: P) -> Result<Data> {
-//     // Open the file in read-only mode with buffer.
-//     let file = File::open(path)?;
-//     let reader = BufReader::new(file);
-
-//     // Read the JSON contents of the file as an instance of `User`.
-//     let u = serde_json::from_reader(reader)?;
-
-//     // Return the `User`.
-//     Ok(u)
-// }
-
 use ark_ff::PrimeField;
 use ark_test_curves::bls12_381::Fr;
 use std::{fs::File, io::Write};
@@ -41,6 +29,15 @@ fn main() {
     // println!("{:#?}",data.as_array().unwrap().len());
     let mem_table_len = data.as_array().unwrap().len();
 
+    let mut i = 0;
+    while i < mem_table_len {
+        println!(
+            "index {:#?} = address {:#?} ",
+            i,
+            data.as_array().unwrap()[i]["address"].as_u64().unwrap()
+        );
+        i += 1;
+    }
     // Read memory op data from json
     let mOp_in = data.as_array().unwrap()[0]["mOp"].as_u64().unwrap();
     let lastAccess = data.as_array().unwrap()[0]["lastAccess"].as_u64().unwrap();
@@ -67,17 +64,9 @@ fn main() {
     let val_7 = data.as_array().unwrap()[0]["val7"].as_u64().unwrap();
 
     // check mOp/mWr/lastAccess = 1 or 0
-    // let mat = boolean_check_matrix_gen(mOp_in);
-    // let mat2 = boolean_check_matrix_gen(mWr_in);
-    // let mat3 = boolean_check_matrix_gen(lastAccess);
-
-    let cs_1 = boolean_check_matrix_gen(mOp_in);
-    // let result = generate_qap::<LibsnarkReduction, Fr>(cs_1.clone());
-    // println!("Result = {:#?}", result.unwrap());
-
-    // let witness_map =
-    //     LibsnarkReduction::witness_map::<Fr, GeneralEvaluationDomain<Fr>>(cs_1.clone());
-    // println!("Witness map= {:#?}", witness_map.unwrap());
+    let mat = boolean_check_matrix_gen(mOp_in);
+    let mat2 = boolean_check_matrix_gen(mWr_in);
+    let mat3 = boolean_check_matrix_gen(lastAccess);
 
     // check Constraint: (1-lastAccess)*(addr'-addr)=0
     let mat4 = addr_inc_check_matrix_gen(lastAccess, addr_p, addr);
