@@ -1,11 +1,10 @@
 use ark_ff::{One, PrimeField, Zero};
 use ark_poly::EvaluationDomain;
 use ark_std::{cfg_into_iter, cfg_iter, cfg_iter_mut, end_timer, start_timer, vec};
-
+use std::{fs::File, io::Write};
 // //use crate::Vec;
 use crate::r1cs::{ConstraintMatrices, ConstraintSystemRef, Result as R1CSResult, SynthesisError};
 use core::ops::{AddAssign, Deref};
-
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
@@ -151,7 +150,9 @@ impl R1CStoQAP for LibsnarkReduction {
         let matrices = prover.to_matrices().unwrap();
         let num_inputs = prover.num_instance_variables();
         let num_constraints = prover.num_constraints();
-
+        let mut file_wt = File::create("./mat_input_const.txt").expect("error");
+        let output_wt = format!("{:#?}", &prover);
+        file_wt.write_all(output_wt.as_bytes());
         let cs = prover.borrow().unwrap();
         let prover = cs.deref();
 
@@ -160,7 +161,9 @@ impl R1CStoQAP for LibsnarkReduction {
             prover.witness_assignment.as_slice(),
         ]
         .concat();
-
+        let mut file_fa = File::create("./full_assignment.txt").expect("error");
+        let output_fa = format!("{:#?}", &full_assignment);
+        file_fa.write_all(output_fa.as_bytes());
         Self::witness_map_from_matrices::<F, D>(
             &matrices,
             num_inputs,
@@ -176,6 +179,9 @@ impl R1CStoQAP for LibsnarkReduction {
     ) -> R1CSResult<Vec<F>> {
         let domain =
             D::new(num_constraints + num_inputs).ok_or(SynthesisError::PolynomialDegreeTooLarge)?;
+        let mut file_domain = File::create("./new_domain.txt").expect("error");
+        let output_domain = format!("{:#?}", &domain);
+        file_domain.write_all(output_domain.as_bytes());
         let domain_size = domain.size();
         let zero = F::zero();
 
@@ -196,6 +202,12 @@ impl R1CStoQAP for LibsnarkReduction {
             let end = start + num_inputs;
             a[start..end].clone_from_slice(&full_assignment[..num_inputs]);
         }
+        let mut file_vec_a = File::create("./vec_a.txt").expect("error");
+        let output_vec_a = format!("{:#?}", &a);
+        file_vec_a.write_all(output_vec_a.as_bytes());
+        let mut file_vec_b = File::create("./vec_b.txt").expect("error");
+        let output_vec_b = format!("{:#?}", &b);
+        file_vec_b.write_all(output_vec_b.as_bytes());
 
         domain.ifft_in_place(&mut a);
         domain.ifft_in_place(&mut b);
@@ -204,6 +216,9 @@ impl R1CStoQAP for LibsnarkReduction {
         domain.coset_fft_in_place(&mut b);
 
         let mut ab = domain.mul_polynomials_in_evaluation_domain(&a, &b);
+        let mut file_ab = File::create("./ab.txt").expect("error");
+        let output_ab = format!("{:#?}", &ab);
+        file_ab.write_all(output_ab.as_bytes());
         drop(a);
         drop(b);
 

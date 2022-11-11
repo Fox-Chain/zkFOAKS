@@ -27,7 +27,7 @@ pub fn matrix_gen(a_in: u8, b_in: u8, c_in: u8) -> ConstraintMatrices<Fr> {
 
 // Constraint: (x)*(x-1)=0
 // x∈(lastAccess,mOp,mWr)
-pub fn boolean_check_matrix_gen(x_in: u64) -> ConstraintSystemRef<Fr> {
+pub fn boolean_check_matrix_gen(x_in: u64) -> ConstraintMatrices<Fr> {
     let cs = ConstraintSystem::<Fr>::new_ref();
     let x = Fr::from(x_in);
     let one = Fr::from(1u64);
@@ -38,7 +38,7 @@ pub fn boolean_check_matrix_gen(x_in: u64) -> ConstraintSystemRef<Fr> {
     cs.finalize();
 
     //assert!(cs.is_satisfied().is_ok());
-    // let matrices = cs.to_matrices().unwrap();
+    let matrices = cs.to_matrices().unwrap();
     // one, out, x
     // A [0,0,1]
     // B [-1,0,1]
@@ -47,8 +47,7 @@ pub fn boolean_check_matrix_gen(x_in: u64) -> ConstraintSystemRef<Fr> {
     // TODO: check -1 in Fp
     //assert_eq!(matrices.b[0], vec![(Fr::one(), 0), (Fr::one(), 2)]);
     //assert_eq!(matrices.c[0], vec![(Fr::from(1u64), 1)]);
-    // matrices
-    cs
+    matrices
 }
 
 // Constraint: (1-lastAccess)*(addr'-addr)=0

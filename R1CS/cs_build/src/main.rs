@@ -25,10 +25,10 @@ use ark_ff::PrimeField;
 use ark_test_curves::bls12_381::Fr;
 use std::{fs::File, io::Write};
 //use mem_gen::{mem_gen, r1cs_to_qap, *};
-use crate::mem_gen::generate_qap;
+// use crate::mem_gen::generate_qap;
 use crate::mem_gen::mem_gen::*;
-use crate::mem_gen::r1cs_to_qap::{LibsnarkReduction, R1CStoQAP};
-use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
+// use crate::mem_gen::r1cs_to_qap::{LibsnarkReduction, R1CStoQAP};
+// use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 fn print_type_of<T>(_: &T) {
     println!("{}", std::any::type_name::<T>())
 }
@@ -72,27 +72,27 @@ fn main() {
     // let mat3 = boolean_check_matrix_gen(lastAccess);
 
     let cs_1 = boolean_check_matrix_gen(mOp_in);
-    let result = generate_qap::<LibsnarkReduction, Fr>(cs_1.clone());
-    println!("Result = {:#?}", result.unwrap());
+    // let result = generate_qap::<LibsnarkReduction, Fr>(cs_1.clone());
+    // println!("Result = {:#?}", result.unwrap());
 
-    let witness_map =
-        LibsnarkReduction::witness_map::<Fr, GeneralEvaluationDomain<Fr>>(cs_1.clone());
-    println!("Witness map= {:#?}", witness_map.unwrap());
+    // let witness_map =
+    //     LibsnarkReduction::witness_map::<Fr, GeneralEvaluationDomain<Fr>>(cs_1.clone());
+    // println!("Witness map= {:#?}", witness_map.unwrap());
 
-    // // check Constraint: (1-lastAccess)*(addr'-addr)=0
-    // let mat4 = addr_inc_check_matrix_gen(lastAccess, addr_p, addr);
+    // check Constraint: (1-lastAccess)*(addr'-addr)=0
+    let mat4 = addr_inc_check_matrix_gen(lastAccess, addr_p, addr);
 
-    // // check Constraint: (1-mOp)*(mWr)=0
-    // let mat5 = mOp_mWr_check_matrix_gen(mOp_in, mWr_in);
+    // check Constraint: (1-mOp)*(mWr)=0
+    let mat5 = mOp_mWr_check_matrix_gen(mOp_in, mWr_in);
 
-    // // check Constraint: (1-mOp'*mWr')(1-lastAccess)(val[0..7]'-val[0..7])=0
-    // let mat6 = update_value_check_matrix_gen(
-    //     mOp_p_in, mWr_p_in, lastAccess, val_p0, val_p1, val_p2, val_p3, val_p4, val_p5, val_p6,
-    //     val_p7, val_0, val_1, val_2, val_3, val_4, val_5, val_6, val_7,
-    // );
-    // // Constraint: (1-mOp'*mWr')lastAccess(val'[0..3])(val'[4..7])=0
-    // let mat7 = update_value_check_mul_matrix_gen(
-    //     mOp_p_in, mWr_p_in, lastAccess, val_p0, val_p1, val_p2, val_p3, val_p4, val_p5, val_p6,
-    //     val_p7,
-    // );
+    // check Constraint: (1-mOp'*mWr')(1-lastAccess)(val[0..7]'-val[0..7])=0
+    let mat6 = update_value_check_matrix_gen(
+        mOp_p_in, mWr_p_in, lastAccess, val_p0, val_p1, val_p2, val_p3, val_p4, val_p5, val_p6,
+        val_p7, val_0, val_1, val_2, val_3, val_4, val_5, val_6, val_7,
+    );
+    // Constraint: (1-mOp'*mWr')lastAccess(val'[0..3])(val'[4..7])=0
+    let mat7 = update_value_check_mul_matrix_gen(
+        mOp_p_in, mWr_p_in, lastAccess, val_p0, val_p1, val_p2, val_p3, val_p4, val_p5, val_p6,
+        val_p7,
+    );
 }
