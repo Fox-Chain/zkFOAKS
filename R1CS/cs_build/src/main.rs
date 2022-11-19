@@ -44,8 +44,14 @@ fn main() {
     // Read memory op data from json
     let mOp_in = data.as_array().unwrap()[0]["mOp"].as_u64().unwrap();
     let lastAccess = data.as_array().unwrap()[0]["lastAccess"].as_u64().unwrap();
-    let addr_p = data.as_array().unwrap()[1]["address"].as_u64().unwrap();
-    let addr = data.as_array().unwrap()[0]["address"].as_u64().unwrap();
+    let addr_p_0 = data.as_array().unwrap()[1]["address_0"].as_u64().unwrap();
+    let addr_p_1 = data.as_array().unwrap()[1]["address_1"].as_u64().unwrap();
+    let addr_p_2 = data.as_array().unwrap()[1]["address_2"].as_u64().unwrap();
+    let addr_p_3 = data.as_array().unwrap()[1]["address_3"].as_u64().unwrap();
+    let addr_0 = data.as_array().unwrap()[0]["address_0"].as_u64().unwrap();
+    let addr_1 = data.as_array().unwrap()[0]["address_1"].as_u64().unwrap();
+    let addr_2 = data.as_array().unwrap()[0]["address_2"].as_u64().unwrap();
+    let addr_3 = data.as_array().unwrap()[0]["address_3"].as_u64().unwrap();
     let mWr_in = data.as_array().unwrap()[0]["mWr"].as_u64().unwrap();
     let mOp_p_in = data.as_array().unwrap()[1]["mOp"].as_u64().unwrap();
     let mWr_p_in = data.as_array().unwrap()[1]["mWr"].as_u64().unwrap();
@@ -79,8 +85,10 @@ fn main() {
     //     LibsnarkReduction::witness_map::<Fr, GeneralEvaluationDomain<Fr>>(cs_1.clone());
     // println!("Witness map= {:#?}", witness_map.unwrap());
 
-    // check Constraint: (1-lastAccess)*(addr'-addr)=0
-    let mat4 = addr_inc_check_matrix_gen(lastAccess, addr_p, addr);
+    // check Constraint: (1-lastAccess)*(addr'[0..3]-addr[0..3])*(addr'[4..7]-addr[4..7])=0
+    let mat4 = addr_inc_check_matrix_gen(
+        lastAccess, addr_p_0, addr_p_1, addr_p_2, addr_p_3, addr_0, addr_1, addr_2, addr_3,
+    );
 
     // check Constraint: (1-mOp)*(mWr)=0
     let mat5 = mOp_mWr_check_matrix_gen(mOp_in, mWr_in);
