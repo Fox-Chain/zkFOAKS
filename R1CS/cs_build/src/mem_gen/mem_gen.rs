@@ -388,5 +388,62 @@ pub fn update_value_check_mul_matrix_gen(
     matrices
 }
 
-// (mWr)(val_src-val_dst) = 0
-// (1-mWr)mWr8 = 0
+// Constraint: (mWr)(val_src-val_dst) = 0
+pub fn val_check_matrix_gen(
+    mWr_in: u64,
+    val_src_in: u64,
+    val_dst_in: u64,
+) -> ConstraintMatrices<Fr> {
+    let cs = ConstraintSystem::<Fr>::new_ref();
+    let mWr = Fr::from(mWr_in);
+    let val_src = Fr::from(val_src_in);
+    let val_dst = Fr::from(val_dst_in);
+    let one = Fr::from(1u64);
+
+    let mWr = cs.new_witness_variable(|| Ok(mWr)).unwrap();
+    let val_src = cs.new_witness_variable(|| Ok(val_src)).unwrap();
+    let val_dst = cs.new_witness_variable(|| Ok(val_dst)).unwrap();
+    let out = cs.new_input_variable(|| Ok(Fr::from(0u64))).unwrap();
+    cs.enforce_constraint(lc!() + mWr, lc!() + val_src - val_dst, lc!() + out)
+        .unwrap();
+    cs.finalize();
+
+    assert!(cs.is_satisfied().is_ok());
+    let matrices = cs.to_matrices().unwrap();
+    // 1, out, mWr, val_src, val_dst
+    // A [0,0,1,0,0]
+    // B [0,0,0,1,-1,0]
+    // C [0,1,0,0,0]
+    assert_eq!(matrices.a[0], vec![(Fr::from(1u64), 2)]);
+    assert_eq!(matrices.b[0], vec![(Fr::from(1u64), 3), (Fr::from(-1), 4)]);
+    assert_eq!(matrices.c[0], vec![(Fr::from(1u64), 1)]);
+    matrices
+}
+
+// Constraint: (1-mWr)mWr8 = 0
+pub fn mWr_mWr8_check_matrix_gen(mWr_in: u64, mWr8_in: u64) -> ConstraintMatrices<Fr> {
+    let cs = ConstraintSystem::<Fr>::new_ref();
+    let mWr = Fr::from(mWr_in);
+    let mWr8 = Fr::from(mWr8_in);
+    let one = Fr::from(1u64);
+    let mWr = cs.new_witness_variable(|| Ok(mWr)).unwrap();
+    let mWr8 = cs.new_witness_variable(|| Ok(mWr8)).unwrap();
+    let out = cs.new_input_variable(|| Ok(Fr::from(0u64))).unwrap();
+    cs.enforce_constraint(
+        lc!() + (one, Variable::One) - mWr,
+        lc!() + mWr8,
+        lc!() + out,
+    )
+    .unwrap();
+    cs.finalize();
+
+    assert!(cs.is_satisfied().is_ok());
+    let matrices = cs.to_matrices().unwrap();
+    // 1, out, mOp, mWr
+    // A [1,0,-1,0]
+    // B [0,0,0,1]
+    // C [0,1,0,0]
+    assert_eq!(matrices.b[0], vec![(Fr::from(1u64), 3)]);
+    assert_eq!(matrices.c[0], vec![(Fr::from(1u64), 1)]);
+    matrices
+}
