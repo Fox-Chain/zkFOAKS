@@ -1,5 +1,6 @@
 use crate::lc;
 use crate::r1cs::*;
+use ark_ff::BigInteger256;
 use std::{fs::File, io::Write};
 // pub mod r1cs_to_qap;
 // use r1cs_to_qap::*;
@@ -50,24 +51,50 @@ pub fn boolean_check_matrix_gen(x_in: u64) -> ConstraintMatrices<Fr> {
     matrices
 }
 
-// Constraint: (1-lastAccess)*(addr'-addr)=0
-pub fn addr_inc_check_matrix_gen(
-    x_in: u64,
-    addr_p_in: u64,
-    addr_in: u64,
+// Constraint: (1+mWr*mWr8)(val_src-val_dst) = 0
+// mid_1 = mWr*mWr8
+// out = (1+mid_1)*(val_src-val_dst)
+pub fn val_check_matrix_gen(
+    mWr_in: u64,
+    mWr8_in: u64,
+    val_src_0_in: u64,
+    val_src_1_in: u64,
+    val_src_2_in: u64,
+    val_src_3_in: u64,
+    val_dst_0_in: u64,
+    val_dst_1_in: u64,
+    val_dst_2_in: u64,
+    val_dst_3_in: u64,
 ) -> ConstraintMatrices<Fr> {
     let cs = ConstraintSystem::<Fr>::new_ref();
-    let x = Fr::from(x_in);
-    let addr_p = Fr::from(addr_p_in);
-    let addr = Fr::from(addr_in);
+    let mWr = Fr::from(mWr_in);
+    let mWr8 = Fr::from(mWr8_in);
+    let mid_1 = mWr * mWr8;
+    let val_src = Fr::from(BigInteger256::new([
+        val_src_0_in,
+        val_src_1_in,
+        val_src_2_in,
+        val_src_3_in,
+    ]));
+    let val_dst = Fr::from(BigInteger256::new([
+        val_dst_0_in,
+        val_dst_1_in,
+        val_dst_2_in,
+        val_dst_3_in,
+    ]));
     let one = Fr::from(1u64);
-    let lastAccess = cs.new_witness_variable(|| Ok(x)).unwrap();
-    let addr_p = cs.new_witness_variable(|| Ok(addr_p)).unwrap();
-    let addr = cs.new_witness_variable(|| Ok(addr)).unwrap();
+
+    let mWr = cs.new_witness_variable(|| Ok(mWr)).unwrap();
+    let mWr8 = cs.new_witness_variable(|| Ok(mWr8)).unwrap();
+    let mid_1 = cs.new_witness_variable(|| Ok(mid_1)).unwrap();
+    let val_src = cs.new_witness_variable(|| Ok(val_src)).unwrap();
+    let val_dst = cs.new_witness_variable(|| Ok(val_dst)).unwrap();
     let out = cs.new_input_variable(|| Ok(Fr::from(0u64))).unwrap();
+    cs.enforce_constraint(lc!() + mWr, lc!() + mWr8, lc!() + mid_1)
+        .unwrap();
     cs.enforce_constraint(
-        lc!() + (one, Variable::One) - lastAccess,
-        lc!() + addr_p - addr,
+        lc!() + (one, Variable::One) + mid_1,
+        lc!() + val_src - val_dst,
         lc!() + out,
     )
     .unwrap();
@@ -75,13 +102,150 @@ pub fn addr_inc_check_matrix_gen(
 
     assert!(cs.is_satisfied().is_ok());
     let matrices = cs.to_matrices().unwrap();
-    // 1, out, lastAccess, addr', addr
-    // A [1,0,-1,0,0,]
-    // B [0,0,0,1,-1]
-    // C [0,1,0,0,0]
+    // 1, out, mWr, mWr8, mid_1, val_src, val_dst
+    // A [0,0,1,0,0,0,0]
+    // [1,0,0,0,1,0,0]
+    // B [0,0,0,1,0,0,0]
+    // [0,0,0,0,0,1,-1]
+    // C [0,0,0,0,1,0,0]
+    // [0,1,0,0,0,0,0]
+    assert_eq!(matrices.a[0], vec![(Fr::from(1u64), 2)]);
+    assert_eq!(
+        matrices.a[1],
+        vec![(Fr::from(1u64), 0), (Fr::from(1u64), 4)]
+    );
+    assert_eq!(matrices.b[0], vec![(Fr::from(1u64), 3)]);
+    assert_eq!(matrices.b[1], vec![(Fr::from(1u64), 5), (Fr::from(-1), 6)]);
+    assert_eq!(matrices.c[0], vec![(Fr::from(1u64), 4)]);
+    assert_eq!(matrices.c[1], vec![(Fr::from(1u64), 1)]);
+    matrices
+}
+
+// Constraint: (1-mWr)mWr8 = 0
+pub fn mWr_mWr8_check_matrix_gen(mWr_in: u64, mWr8_in: u64) -> ConstraintMatrices<Fr> {
+    let cs = ConstraintSystem::<Fr>::new_ref();
+    let mWr = Fr::from(mWr_in);
+    let mWr8 = Fr::from(mWr8_in);
+    let one = Fr::from(1u64);
+    let mWr = cs.new_witness_variable(|| Ok(mWr)).unwrap();
+    let mWr8 = cs.new_witness_variable(|| Ok(mWr8)).unwrap();
+    let out = cs.new_input_variable(|| Ok(Fr::from(0u64))).unwrap();
+    cs.enforce_constraint(
+        lc!() + (one, Variable::One) - mWr,
+        lc!() + mWr8,
+        lc!() + out,
+    )
+    .unwrap();
+    cs.finalize();
+
+    assert!(cs.is_satisfied().is_ok());
+    let matrices = cs.to_matrices().unwrap();
+    // 1, out, mOp, mWr
+    // A [1,0,-1,0]
+    // B [0,0,0,1]
+    // C [0,1,0,0]
+    assert_eq!(matrices.a[0], vec![(Fr::from(1u64), 0), (Fr::from(-1), 2)]);
+    assert_eq!(matrices.b[0], vec![(Fr::from(1u64), 3)]);
     assert_eq!(matrices.c[0], vec![(Fr::from(1u64), 1)]);
     matrices
 }
+
+/*---------------------------circuit refer from polygon zkevm----------------------------*/
+
+// Constraint: (1-lastAccess)*(addr'[0..3]-addr[0..3])*(addr'[4..7]-addr[4..7])=0
+// mid_1 = (1-lastAccess)*(addr'[0..3]-addr[0..3])
+// out = mid_1*(addr'[4..7]-addr[4..7])
+pub fn addr_inc_check_matrix_gen(
+    x_in: u64,
+    addr_p_in_0: u64,
+    addr_p_in_1: u64,
+    addr_p_in_2: u64,
+    addr_p_in_3: u64,
+    addr_in_0: u64,
+    addr_in_1: u64,
+    addr_in_2: u64,
+    addr_in_3: u64,
+) -> ConstraintMatrices<Fr> {
+    let cs = ConstraintSystem::<Fr>::new_ref();
+    let x = Fr::from(x_in);
+
+    let addr_p_in_0: u128 = addr_p_in_0 as u128;
+    let addr_p_in_1: u128 = addr_p_in_1 as u128;
+    let addr_p_in_2: u128 = addr_p_in_2 as u128;
+    let addr_p_in_3: u128 = addr_p_in_3 as u128;
+    let addr_in_0: u128 = addr_in_0 as u128;
+    let addr_in_1: u128 = addr_in_1 as u128;
+    let addr_in_2: u128 = addr_in_2 as u128;
+    let addr_in_3: u128 = addr_in_3 as u128;
+
+    let mut addr_p_0: u128 = addr_p_in_1 << 63 + addr_p_in_0;
+    let addr_p_0 = Fr::from(addr_p_0);
+    let mut addr_p_1: u128 = addr_p_in_3 << 63 + addr_p_in_2;
+    let addr_p_1 = Fr::from(addr_p_1);
+
+    let mut addr_0: u128 = addr_in_1 << 63 + addr_in_0;
+    let addr_0 = Fr::from(addr_0);
+    let mut addr_1: u128 = addr_in_3 << 63 + addr_in_2;
+    let addr_1 = Fr::from(addr_1);
+
+    let one = Fr::from(1u64);
+
+    let mid_1 = Fr::from((one - x) * (addr_p_0 - addr_0));
+
+    let lastAccess = cs.new_witness_variable(|| Ok(x)).unwrap();
+    let addr_p_1 = cs.new_witness_variable(|| Ok(addr_p_1)).unwrap();
+    let addr_p_0 = cs.new_witness_variable(|| Ok(addr_p_0)).unwrap();
+    let addr_1 = cs.new_witness_variable(|| Ok(addr_1)).unwrap();
+    let addr_0 = cs.new_witness_variable(|| Ok(addr_0)).unwrap();
+    let mid_1 = cs.new_witness_variable(|| Ok(mid_1)).unwrap();
+
+    let out = cs.new_input_variable(|| Ok(Fr::from(0u64))).unwrap();
+    cs.enforce_constraint(
+        lc!() + (one, Variable::One) - lastAccess,
+        lc!() + addr_p_0 - addr_0,
+        lc!() + mid_1,
+    )
+    .unwrap();
+    cs.enforce_constraint(lc!() + mid_1, lc!() + addr_p_1 - addr_1, lc!() + out)
+        .unwrap();
+    cs.finalize();
+    assert!(cs.is_satisfied().is_ok());
+    let matrices = cs.to_matrices().unwrap();
+    matrices
+}
+// ) -> ConstraintMatrices<Fr> {
+// // Constraint: (1-lastAccess)*(addr'-addr)=0
+// pub fn addr_inc_check_matrix_gen(
+//     x_in: u64,
+//     addr_p_in: u64,
+//     addr_in: u64,
+// ) -> ConstraintMatrices<Fr> {
+//     let cs = ConstraintSystem::<Fr>::new_ref();
+//     let x = Fr::from(x_in);
+//     let addr_p = Fr::from(addr_p_in);
+//     let addr = Fr::from(addr_in);
+//     let one = Fr::from(1u64);
+//     let lastAccess = cs.new_witness_variable(|| Ok(x)).unwrap();
+//     let addr_p = cs.new_witness_variable(|| Ok(addr_p)).unwrap();
+//     let addr = cs.new_witness_variable(|| Ok(addr)).unwrap();
+//     let out = cs.new_input_variable(|| Ok(Fr::from(0u64))).unwrap();
+//     cs.enforce_constraint(
+//         lc!() + (one, Variable::One) - lastAccess,
+//         lc!() + addr_p - addr,
+//         lc!() + out,
+//     )
+//     .unwrap();
+//     cs.finalize();
+
+//     assert!(cs.is_satisfied().is_ok());
+//     let matrices = cs.to_matrices().unwrap();
+//     // 1, out, lastAccess, addr', addr
+//     // A [1,0,-1,0,0,]
+//     // B [0,0,0,1,-1]
+//     // C [0,1,0,0,0]
+//     assert_eq!(matrices.c[0], vec![(Fr::from(1u64), 1)]);
+//     matrices
+// }
 
 // Constraint: (1-mOp)*(mWr)=0
 pub fn mOp_mWr_check_matrix_gen(mOp_in: u64, mWr_in: u64) -> ConstraintMatrices<Fr> {
