@@ -78,6 +78,9 @@ fn main() {
     // let mat3 = boolean_check_matrix_gen(lastAccess);
 
     let cs_1 = boolean_check_matrix_gen(mOp_in);
+    // let mut mat_1 = File::create("./mat_1_1.txt").expect("error");
+    // let output_mat_1 = format!("{:#?}", cs_1);
+    // mat_1.write_all(output_mat_1.as_bytes());
     // let result = generate_qap::<LibsnarkReduction, Fr>(cs_1.clone());
     // println!("Result = {:#?}", result.unwrap());
 
