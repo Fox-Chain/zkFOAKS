@@ -3,6 +3,30 @@ use crate::r1cs::*;
 use ark_ff::BigInteger256;
 use ark_test_curves::bls12_381::Fr;
 
+// Constraint: (x)*(x-1)=0
+// x∈(mWr,mWr8)
+pub fn boolean_check(x_in: u64) -> ConstraintMatrices<Fr> {
+    let cs = ConstraintSystem::<Fr>::new_ref();
+    let x = Fr::from(x_in);
+    let one = Fr::from(1u64);
+    let x = cs.new_witness_variable(|| Ok(x)).unwrap();
+    let out = cs.new_input_variable(|| Ok(Fr::from(0u64))).unwrap();
+    cs.enforce_constraint(lc!() + x, lc!() + x - (one, Variable::One), lc!() + out)
+        .unwrap();
+    cs.finalize();
+
+    //assert!(cs.is_satisfied().is_ok());
+    let matrices = cs.to_matrices().unwrap();
+    // one, out, x
+    // A [0,0,1]
+    // B [-1,0,1]
+    // C [0,1,0]
+    assert_eq!(matrices.a[0], vec![(Fr::from(1u64), 2)]);
+    assert_eq!(matrices.b[0], vec![(Fr::from(-1), 0), (Fr::from(1u64), 2)]);
+    assert_eq!(matrices.c[0], vec![(Fr::from(1u64), 1)]);
+    matrices
+}
+
 // Constraint: (1+mWr*mWr8)(val_src-val_dst) = 0
 // mid_1 = mWr*mWr8
 // out = (1+mid_1)*(val_src-val_dst)
