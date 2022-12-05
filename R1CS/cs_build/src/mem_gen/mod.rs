@@ -1,4 +1,5 @@
 pub mod mem_gen;
+pub mod stack_gen;
 //pub mod r1cs_to_qap;
 use crate::r1cs::{
     ConstraintSynthesizer, ConstraintSystem, ConstraintSystemRef, OptimizationGoal,
