@@ -15,13 +15,14 @@
 #[macro_use]
 extern crate ark_std;
 
-pub mod mem_gen;
+pub mod mat_gen;
 pub mod r1cs;
 
 #[cfg(test)]
 mod tests {
     use crate::lc;
-    use crate::mem_gen::mem_gen::*;
+    use crate::mat_gen::mem_gen::*;
+    use crate::mat_gen::stack_gen::push_num_check;
     use crate::r1cs::*;
     use ark_ff::BigInteger256;
     use ark_test_curves::bls12_381::Fr;
@@ -83,6 +84,21 @@ mod tests {
         let matrices = boolean_check(mWr);
         assert_eq!(matrices.a[0], vec![(Fr::from(1u64), 2)]);
         assert_eq!(matrices.b[0], vec![(Fr::from(-1), 0), (Fr::from(1u64), 2)]);
+        assert_eq!(matrices.c[0], vec![(Fr::from(1u64), 1)]);
+    }
+
+    #[test]
+    fn push_num_test() {
+        let file_tx =
+            File::open("./src/data/tx_stack_table.json").expect("file should open read only");
+        let json_tx: serde_json::Value =
+            serde_json::from_reader(file_tx).expect("file should be proper JSON");
+        let data = json_tx.get("data").expect("file should have data key");
+        let is_push_in = data.as_array().unwrap()[0]["is_push"].as_u64().unwrap();
+        let push_num_in = data.as_array().unwrap()[0]["push_num"].as_u64().unwrap();
+        let matrices = push_num_check(is_push_in, push_num_in);
+        assert_eq!(matrices.a[0], vec![(Fr::from(-1), 0), (Fr::from(1u64), 2)]);
+        assert_eq!(matrices.b[0], vec![(Fr::from(1u64), 3)]);
         assert_eq!(matrices.c[0], vec![(Fr::from(1u64), 1)]);
     }
 }
