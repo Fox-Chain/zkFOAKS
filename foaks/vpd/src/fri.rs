@@ -1,4 +1,4 @@
-use std::time;
+use std::{time, usize};
 
 use infrastructure::{
     constants::{LOG_SLICE_NUMBER, MAX_BIT_LENGTH, MAX_FRI_DEPTH, RS_CODE_RATE, SLICE_NUMBER},
@@ -26,16 +26,37 @@ impl CommitPhaseData {
     }
 }
 
-pub struct FRIContext<'a> {
+#[derive(Debug)]
+struct FieldElement64([Vec<FieldElement>; SLICE_NUMBER]);
+
+impl Default for FieldElement64 {
+    fn default() -> Self {
+        const EMPTY_VEC: Vec<FieldElement> = Vec::new();
+        FieldElement64([EMPTY_VEC; SLICE_NUMBER])
+    }
+}
+
+#[derive(Debug)]
+struct Mapping64([Vec<usize>; SLICE_NUMBER]);
+
+impl Default for Mapping64 {
+    fn default() -> Self {
+        const EMPTY_VEC: Vec<usize> = Vec::new();
+        Mapping64([EMPTY_VEC; SLICE_NUMBER])
+    }
+}
+
+#[derive(Default)]
+pub struct FRIContext {
     log_current_witness_size_per_slice: usize,
     witness_bit_length_per_slice: i64,
     current_step_no: usize,
     cpd: CommitPhaseData,
     fri_timer: f64,
     witness_merkle: [Vec<HashDigest>; 2],
-    witness_rs_codeword_before_arrange: [[&'a [FieldElement]; SLICE_NUMBER]; 2],
+    witness_rs_codeword_before_arrange: [FieldElement64; 2],
     witness_rs_codeword_interleaved: [Vec<FieldElement>; 2],
-    witness_rs_mapping: [[Vec<usize>; SLICE_NUMBER]; 2],
+    witness_rs_mapping: [Mapping64; 2],
     l_group: Vec<FieldElement>,
     visited: [Vec<bool>; MAX_BIT_LENGTH],
     visited_init: [Vec<bool>; 2],
@@ -47,7 +68,7 @@ pub struct FRIContext<'a> {
     leaf_hash: [Vec<HashDigest>; 2],
 }
 
-pub fn request_init_commit<'a>(
+pub fn request_init_commit(
     FRIContext {
         log_current_witness_size_per_slice,
         witness_bit_length_per_slice,
@@ -66,14 +87,14 @@ pub fn request_init_commit<'a>(
         virtual_oracle_witness_mapping,
         r_extended,
         leaf_hash,
-    }: &mut FRIContext<'a>,
+    }: &mut FRIContext,
     PolyCommitContext {
         slice_size,
         slice_count,
         l_eval,
         h_eval_arr,
         ..
-    }: &'a PolyCommitContext,
+    }: PolyCommitContext,
     bit_len: usize,
     oracle_indicator: usize,
 ) -> HashDigest {
@@ -129,23 +150,23 @@ pub fn request_init_commit<'a>(
                 .unwrap();
 
         if oracle_indicator == 0 {
-            witness_rs_codeword_before_arrange[0][i] = &l_eval[i * slice_size..];
+            witness_rs_codeword_before_arrange[0].0[i] = l_eval[i * slice_size..].to_vec();
         } else {
-            witness_rs_codeword_before_arrange[1][i] = &h_eval_arr[i * slice_size..];
+            witness_rs_codeword_before_arrange[1].0[i] = h_eval_arr[i * slice_size..].to_vec();
         }
 
         root_of_unity =
             FieldElement::get_root_of_unity(*log_current_witness_size_per_slice).unwrap();
 
-        witness_rs_mapping[oracle_indicator][i].reserve(1 << *log_current_witness_size_per_slice);
+        witness_rs_mapping[oracle_indicator].0[i].reserve(1 << *log_current_witness_size_per_slice);
 
         let a = FieldElement::zero();
         for j in 0..(1 << (*log_current_witness_size_per_slice - 1)) {
             assert!((j << log_leaf_size | (i << 1) | 1) < (1 << (bit_len + RS_CODE_RATE)));
             assert!((j << log_leaf_size | (i << 1) | 1) < slice_size * slice_count);
 
-            witness_rs_mapping[oracle_indicator][i][j] = j << log_leaf_size | (i << 1) | 0;
-            witness_rs_mapping[oracle_indicator][i]
+            witness_rs_mapping[oracle_indicator].0[i][j] = j << log_leaf_size | (i << 1) | 0;
+            witness_rs_mapping[oracle_indicator].0[i]
                 [j + (1 << *log_current_witness_size_per_slice) / 2] =
                 j << log_leaf_size | (i << 1) | 0;
         }

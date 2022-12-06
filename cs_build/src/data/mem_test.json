@@ -2,10 +2,7 @@
     "data": [
       {
         "ISNOLAST": 1,
-        "address_0": 64,
-        "address_1": 53,
-        "address_2": 2,
-        "address_3": 87,
+        "address": 64,
         "step": 0,
         "mOp": 1,
         "mWr": 0,
@@ -21,10 +18,7 @@
       },
       {
         "ISNOLAST": 1,
-        "address_0": 64,
-        "address_1": 53,
-        "address_2": 2,
-        "address_3": 87,
+        "address": 65,
         "step": 1,
         "mOp": 1,
         "mWr": 0,

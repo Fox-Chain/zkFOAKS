@@ -640,7 +640,7 @@ impl<F: Field> ConstraintSystem<F> {
                     self.lc_assignment_cache.borrow_mut().insert(idx, value);
                     Some(value)
                 }
-            },
+            }
         }
     }
 }
@@ -1024,7 +1024,6 @@ impl<F: Field> ConstraintSystemRef<F> {
 #[cfg(test)]
 mod tests {
     use crate::r1cs::*;
-    use ark_ff::BigInteger256;
     use ark_ff::One;
     use ark_test_curves::bls12_381::Fr;
     use std::{fs::File, io::Write};
@@ -1040,7 +1039,6 @@ mod tests {
     fn matrix_generation() -> crate::r1cs::Result<()> {
         let cs = ConstraintSystem::<Fr>::new_ref();
         let two = Fr::one() + Fr::one();
-        // let test = Fr::<BigInteger256::from(3 i64)>;
         let a = cs.new_input_variable(|| Ok(Fr::one()))?;
         let b = cs.new_witness_variable(|| Ok(Fr::one()))?;
         let c = cs.new_witness_variable(|| Ok(two))?;
