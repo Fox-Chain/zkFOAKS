@@ -1,3 +1,5 @@
+#![feature(slice_as_chunks)]
+
 pub mod constants;
 mod merkle_tree;
 pub mod my_hash;
