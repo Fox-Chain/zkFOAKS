@@ -7,12 +7,13 @@ use infrastructure::my_hash::HashDigest;
 use infrastructure::rs_polynomial::{self, fast_fourier_transform, inverse_fast_fourier_transform};
 use infrastructure::utility;
 
-struct LdtCommitment {
-    commitment_hash: HashDigest,
-    randomness: FieldElement,
-    final_rs_code: FieldElement,
-    mx_depth: usize,
-    repeat_no: usize,
+#[derive(Default)]
+pub struct LdtCommitment {
+    pub commitment_hash: Vec<HashDigest>,
+    pub randomness: Vec<FieldElement>,
+    // final_rs_code: FieldElement,
+    pub mx_depth: usize,
+    // repeat_no: usize,
 }
 
 #[derive(Default, Debug)]
@@ -129,4 +130,8 @@ impl PolyCommitProver {
 
         unimplemented!()
     }
+}
+
+pub fn commit_phrase_step(r: FieldElement) -> HashDigest {
+    HashDigest::new()
 }

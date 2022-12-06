@@ -1,5 +1,14 @@
-use infrastructure::my_hash::{self, HashDigest};
+use std::{char::MAX, thread::current};
+
+use infrastructure::{
+    constants::{LOG_SLICE_NUMBER, RS_CODE_RATE, SLICE_NUMBER},
+    my_hash::{self, HashDigest},
+};
+
+use poly_commitment::LdtCommitment;
 use prime_field::FieldElement;
+
+use crate::fri::FRIContext;
 
 pub fn verify_merkle(
     hash_digest: HashDigest,
@@ -40,5 +49,96 @@ pub fn verify_merkle(
     hash_digest == new_hash // && merkle_path.last() == Some(value_hash)
 }
 
-// NOTE: what is commitments? and what is rscode?
 // LdtCommitment
+
+const MAX_FRI_DEPTH: usize = 0;
+
+// Defined in fri.h
+pub struct FriCommitPhaseData {
+    pub merkle: [HashDigest; MAX_FRI_DEPTH],
+    pub rs_codeword: [FieldElement; MAX_FRI_DEPTH],
+    pub rs_codeword_mapping: Vec<[usize; MAX_FRI_DEPTH]>,
+}
+
+pub struct VpdVerifier {
+    cpd: FriCommitPhaseData,
+    step: usize,
+}
+
+impl VpdVerifier {
+    pub fn init() {}
+
+    pub fn commit_phase_step(mut self, r: FieldElement) -> HashDigest {
+        let log_current_witness_size_per_slice = 0; // TODO: ?
+        let next_witness_size: usize = (1 << log_current_witness_size_per_slice) / 2;
+
+        if self.cpd.rs_codeword[self.step] == FieldElement::default() {
+            self.cpd.rs_codeword[self.step] =
+            // QUESTION: from_img or from_real
+                FieldElement::from_img(next_witness_size as u64 * /* SLICE_COUNT */ 0);
+        }
+
+        // let mut previous_witness = FieldElement::default();
+
+        let (previous_witness, previous_witness_mapping) = match self.step {
+            // TODO: virtual oracle
+            0 => (FieldElement::default(), []),
+            _ => (
+                self.cpd.rs_codeword[self.step - 1],
+                self.cpd.rs_codeword_mapping[self.step - 1],
+            ),
+        };
+
+        for i in 0..next_witness_size {
+            let qual_res_0 = i;
+            let qual_res_1 = ((1 << (log_current_witness_size_per_slice - 1)) + i) / 2;
+
+            let pos = usize::min(qual_res_0, qual_res_1);
+
+            // TODO: L_group
+
+            for j in 0..SLICE_NUMBER {
+                let real_pos = previous_witness_mapping[pos << (LOG_SLICE_NUMBER | j)];
+                // let x = self.cpd.rs_codeword[self.step][i << LOG_SLICE_NUMBER | j];
+            }
+        }
+
+        HashDigest::new()
+    }
+
+    pub fn finish(&self) -> FieldElement {
+        assert!(self.step != 0);
+        self.cpd.rs_codeword[self.step - 1]
+    }
+}
+
+// poly_commit::ldt_commitment poly_commit::poly_commit_prover::commit_phase
+pub fn commit_phase(log_length: usize) -> LdtCommitment {
+    // LOG_SLICE_NUMBER;
+
+    let mut codeword_size = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+
+    let mut randomness: Vec<FieldElement> =
+        Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+
+    let mut ret: Vec<HashDigest> = Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+
+    let mut ptr = 0;
+    while codeword_size > (1 << RS_CODE_RATE) {
+        randomness[ptr] = prime_field::FieldElement::new_random();
+        ret[ptr] = commit_step(randomness[ptr]);
+        codeword_size /= 2;
+        ptr += 1;
+    }
+
+    LdtCommitment {
+        commitment_hash: ret,
+        // final_rs_code: vpdVerifier::finish(),
+        randomness,
+        mx_depth: ptr,
+    }
+}
+
+pub fn commit_step(r: FieldElement) -> HashDigest {
+    HashDigest::new()
+}
