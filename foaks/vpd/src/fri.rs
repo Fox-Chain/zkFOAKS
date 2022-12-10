@@ -9,11 +9,11 @@ use prime_field::FieldElement;
 
 #[derive(Default)]
 pub struct CommitPhaseData {
-    merkle: [Vec<HashDigest>; MAX_FRI_DEPTH],
-    merkle_size: [usize; MAX_FRI_DEPTH],
-    rs_codeword: [Vec<FieldElement>; MAX_FRI_DEPTH],
-    poly_coef: [Vec<FieldElement>; MAX_FRI_DEPTH],
-    rs_codeword_mapping: [Vec<usize>; MAX_FRI_DEPTH],
+    pub merkle: [Vec<HashDigest>; MAX_FRI_DEPTH],
+    pub merkle_size: [usize; MAX_FRI_DEPTH],
+    pub rs_codeword: [Vec<FieldElement>; MAX_FRI_DEPTH],
+    pub poly_coef: [Vec<FieldElement>; MAX_FRI_DEPTH],
+    pub rs_codeword_mapping: [Vec<usize>; MAX_FRI_DEPTH],
 }
 
 // namespace fri

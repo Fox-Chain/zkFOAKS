@@ -137,11 +137,56 @@ impl FRIContext {
     /// Request the merkle proof to lvl-th level oracle, at w^{pow}, will also return it's quad residue's proof.
     /// returned value is unordered, meaning that one of them is the requested value and the other one is it's qual residue.
     pub fn request_step_commit(
-        lvl: i64,
-        pow: i64,
+        &mut self,
+        lvl: usize,
+        pow: usize,
         new_size: i64,
     ) -> (Vec<(FieldElement, FieldElement)>, Vec<HashDigest>) {
-        (vec![], vec![])
+        let mut new_size = 0;
+        let mut pow_0 = 0;
+
+        let mut value_vec: Vec<(FieldElement, FieldElement)> = vec![];
+        let mut visited_element = false;
+
+        for i in 0..SLICE_NUMBER {
+            pow_0 = self.cpd.rs_codeword_mapping[lvl][pow << LOG_SLICE_NUMBER | i];
+            pow_0 /= 2;
+            if !self.visited[lvl][pow_0 * 2] {
+                self.visited[lvl][pow_0 * 2] = true;
+            } else {
+                visited_element = true
+            }
+
+            value_vec.push((
+                self.cpd.rs_codeword[lvl][pow_0 * 2],
+                self.cpd.rs_codeword[lvl][pow_0 * 2 + 1],
+            ));
+        }
+
+        // this can be compressed into one by random linear combination
+        if !visited_element {
+            new_size += std::mem::size_of::<FieldElement>();
+        }
+
+        let mut com_hhash: Vec<HashDigest> = vec![];
+        let merkle_size = self.cpd.merkle_size[lvl];
+        let val_hhash = self.cpd.merkle[lvl][pow_0];
+        pow_0 = (self.cpd.rs_codeword_mapping[lvl][pow << LOG_SLICE_NUMBER]
+            >> (LOG_SLICE_NUMBER + 1))
+            + merkle_size;
+
+        while pow_0 != 1 {
+            if !self.visited[lvl][pow_0 ^ 1] {
+                new_size += std::mem::size_of::<HashDigest>();
+                self.visited[lvl][pow_0 ^ 1] = true;
+                self.visited[lvl][pow_0] = true;
+            }
+            com_hhash.push(self.cpd.merkle[lvl][pow_0 ^ 1]);
+            pow_0 /= 2;
+        }
+
+        com_hhash.push(val_hhash);
+        (value_vec, com_hhash)
     }
 
     /// Given fold parameter r, return the root of the merkle tree of next level.
