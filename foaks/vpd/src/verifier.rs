@@ -190,11 +190,19 @@ impl FRIContext {
     }
 
     /// Given fold parameter r, return the root of the merkle tree of next level.
-    pub fn commit_phrase_step(r: FieldElement) {}
+    pub fn commit_phrase_step(&mut self, r: FieldElement) {
+        let nxt_witness_size = (1 << self.log_current_witness_size_per_slice) / 2;
+        if self.cpd.rs_codeword[self.current_step_no].is_empty() {
+            // from img or from real?
+            self.cpd.rs_codeword[self.current_step_no] = vec![];
+        }
+
+        let previous_witness: Vec<FieldElement> = vec![];
+    }
 
     /// Return the final rs code since it is only constant size
-    pub fn commit_phase_final() -> FieldElement {
-        FieldElement::default()
+    pub fn commit_phase_final(&self) -> Vec<FieldElement> {
+        self.cpd.rs_codeword[self.current_step_no - 1].clone()
     }
 }
 
@@ -244,11 +252,6 @@ impl VpdVerifier {
         }
 
         HashDigest::new()
-    }
-
-    pub fn finish(&self) -> FieldElement {
-        assert!(self.step != 0);
-        self.cpd.rs_codeword[self.step - 1]
     }
 }
 
