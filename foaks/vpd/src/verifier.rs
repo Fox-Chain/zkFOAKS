@@ -15,38 +15,40 @@ pub fn verify_merkle(
     merkle_path: Vec<HashDigest>,
     len: usize,
     pow: i32,
-    values: Vec<FieldElement>,
+    values: Vec<(FieldElement, FieldElement)>,
 ) -> bool {
     // We need to make sure the len is always smaller than the size of merklePath.
-    assert!(merkle_path.len() > len);
+    assert!(merkle_path.len() >= len);
 
+    let mut pow = pow;
     let current_hash: HashDigest = *merkle_path.last().unwrap();
 
-    let mut data: [HashDigest; 2] = [HashDigest::new(), HashDigest::new()];
-    let value_hash: [HashDigest; 2] = [HashDigest::new(), HashDigest::new()];
-
+    // don't mutate the current_hash, this is the output of the loop following
     let mut new_hash = HashDigest::new();
 
-    for i in 0..len {
+    for i in 0..(len - 1) {
         if (pow & i as i32).is_positive() {
-            data[0] = merkle_path[i];
-            data[1] = current_hash;
+            let data: [HashDigest; 2] = [merkle_path[i], current_hash];
+            new_hash = my_hash::my_hash(data);
         } else {
-            data[0] = current_hash;
-            data[1] = merkle_path[i];
+            let data: [HashDigest; 2] = [current_hash, merkle_path[i]];
+            new_hash = my_hash::my_hash(data);
         }
-
-        let pow = pow / 2;
-        new_hash = my_hash::my_hash(data);
-
-        // TODO: field element needs to be done
+        pow /= 2;
     }
 
-    for i in 0..len {
-        let element = values[i];
+    let mut value_hash = HashDigest::new();
+
+    for value in values {
+        let data_element: [FieldElement; 2] = [value.0, value.1];
+        // can't coerce type FieldElement to HashDigest
+        // data_element[1] = value_hash; // ?
+        value_hash = my_hash::my_hash(data_element);
     }
 
-    hash_digest == new_hash // && merkle_path.last() == Some(value_hash)
+    // QUESTION: should check if the function equals is custom one?
+    // HashDigest::eq()
+    hash_digest == new_hash && merkle_path.last() == Some(&value_hash)
 }
 
 // LdtCommitment
@@ -68,7 +70,7 @@ pub struct VpdVerifier {
 impl VpdVerifier {
     pub fn init() {}
 
-    pub fn commit_phase_step(mut self, r: FieldElement) -> HashDigest {
+    pub fn commit_phrase_step(mut self, r: FieldElement) -> HashDigest {
         let log_current_witness_size_per_slice = 0; // TODO: ?
         let next_witness_size: usize = (1 << log_current_witness_size_per_slice) / 2;
 
@@ -112,7 +114,7 @@ impl VpdVerifier {
     }
 }
 
-// poly_commit::ldt_commitment poly_commit::poly_commit_prover::commit_phase
+/// Return the hhash array of commitments, randomness and final small polynomial (represented by rscode)
 pub fn commit_phase(log_length: usize) -> LdtCommitment {
     // LOG_SLICE_NUMBER;
 
