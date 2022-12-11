@@ -1,3 +1,4 @@
+use infrastructure::merkle_tree::create_tree;
 use std::{char::MAX, thread::current};
 
 use infrastructure::{
@@ -49,17 +50,6 @@ pub fn verify_merkle(
     // QUESTION: should check if the function equals is custom one?
     // HashDigest::eq()
     hash_digest == new_hash && merkle_path.last() == Some(&value_hash)
-}
-
-// LdtCommitment
-
-const MAX_FRI_DEPTH: usize = 0;
-
-// Defined in fri.h
-pub struct FriCommitPhaseData {
-    pub merkle: [HashDigest; MAX_FRI_DEPTH],
-    pub rs_codeword: [FieldElement; MAX_FRI_DEPTH],
-    pub rs_codeword_mapping: Vec<[usize; MAX_FRI_DEPTH]>,
 }
 
 impl FRIContext {
@@ -190,14 +180,126 @@ impl FRIContext {
     }
 
     /// Given fold parameter r, return the root of the merkle tree of next level.
-    pub fn commit_phrase_step(&mut self, r: FieldElement) {
+    pub fn commit_phrase_step(&mut self, r: FieldElement) -> HashDigest {
         let nxt_witness_size = (1 << self.log_current_witness_size_per_slice) / 2;
         if self.cpd.rs_codeword[self.current_step_no].is_empty() {
-            // from img or from real?
-            self.cpd.rs_codeword[self.current_step_no] = vec![];
+            // QUESTION: from img or from real?
+            self.cpd.rs_codeword[self.current_step_no] =
+                vec![FieldElement::new_random(); nxt_witness_size * (1 << SLICE_NUMBER)];
         }
 
-        let previous_witness: Vec<FieldElement> = vec![];
+        let mut previous_witness: Vec<FieldElement> = vec![];
+        let mut previous_witness_mapping: Vec<usize> = vec![];
+
+        let (previous_witness, previous_witness_mapping) = match self.current_step_no {
+            0 => (
+                self.virtual_oracle_witness.clone(),
+                self.virtual_oracle_witness_mapping.clone(),
+            ),
+            _ => (
+                self.cpd.rs_codeword[self.current_step_no - 1].clone(),
+                self.cpd.rs_codeword_mapping[self.current_step_no - 1].clone(),
+            ),
+        };
+
+        // QUESTION: from img or from real?
+        let inv_2 = FieldElement::from_img(2).inverse();
+
+        let log_leaf_size = LOG_SLICE_NUMBER + 1;
+
+        for i in 0..nxt_witness_size {
+            let qual_res_0 = i;
+            let qual_res_1 = (1 << (self.log_current_witness_size_per_slice - 1) + i) / 2;
+            let pos = usize::min(qual_res_0, qual_res_1);
+
+            let inv_mu = self.l_group[((1 << self.log_current_witness_size_per_slice) - i)
+                & ((1 << self.log_current_witness_size_per_slice) - 1)];
+
+            for j in 0..SLICE_NUMBER {
+                let real_pos = previous_witness_mapping[(pos) << LOG_SLICE_NUMBER | j];
+                // assert((i << LOG_SLICE_NUMBER | j) < nxt_witness_size * SLICE_COUNT);
+                // we should check this since the original code has BUG comment
+                self.cpd.rs_codeword[self.current_step_no][i << LOG_SLICE_NUMBER | j] = inv_2
+                    * (previous_witness[real_pos] + previous_witness[real_pos | 1])
+                    + inv_mu * r * (previous_witness[real_pos] - previous_witness[real_pos | 1]);
+            }
+        }
+
+        for i in 0..nxt_witness_size {
+            self.l_group[i] = self.l_group[i * 2];
+        }
+
+        // we assume poly_commit::slice_count is (1 << SLICE_NUMBER) here
+        let mut tmp: Vec<FieldElement> =
+            vec![FieldElement::new_random(); nxt_witness_size * (1 << SLICE_NUMBER)];
+        self.cpd.rs_codeword_mapping[self.current_step_no] =
+            vec![0; nxt_witness_size * (1 << SLICE_NUMBER)];
+
+        for i in 0..nxt_witness_size / 2 {
+            for j in 0..SLICE_NUMBER {
+                let a = i << LOG_SLICE_NUMBER | j;
+                let b = (i + nxt_witness_size / 2) << LOG_SLICE_NUMBER | j;
+                let c = (i) << log_leaf_size | (j << 1) | 0;
+                let d = (i) << log_leaf_size | (j << 1) | 1;
+
+                self.cpd.rs_codeword_mapping[self.current_step_no][a] =
+                    (i) << log_leaf_size | (j << 1) | 0;
+                self.cpd.rs_codeword_mapping[self.current_step_no][b] =
+                    (i) << log_leaf_size | (j << 1) | 0;
+
+                tmp[c] = self.cpd.rs_codeword[self.current_step_no][i << LOG_SLICE_NUMBER | j];
+                tmp[d] = self.cpd.rs_codeword[self.current_step_no]
+                    [(i + nxt_witness_size / 2) << LOG_SLICE_NUMBER | j];
+
+                assert!(a < nxt_witness_size * SLICE_NUMBER);
+                assert!(b < nxt_witness_size * SLICE_NUMBER);
+                assert!(c < nxt_witness_size * SLICE_NUMBER);
+                assert!(d < nxt_witness_size * SLICE_NUMBER);
+            }
+        }
+
+        self.cpd.rs_codeword[self.current_step_no] = tmp;
+
+        self.visited[self.current_step_no] =
+            vec![false; nxt_witness_size * (1 << SLICE_NUMBER) * 4];
+
+        let mut htmp: HashDigest = HashDigest::default();
+        let mut hash_val: Vec<HashDigest> = vec![HashDigest::default(); nxt_witness_size / 2];
+
+        for i in 0..nxt_witness_size / 2 {
+            for j in 0..(1 << LOG_SLICE_NUMBER) {
+                let mut data = [HashDigest::default(), HashDigest::default()];
+                let c = (i) << log_leaf_size | (j << 1) | 0;
+                let d = (i) << log_leaf_size | (j << 1) | 1;
+
+                let data_ele = [
+                    self.cpd.rs_codeword[self.current_step_no][c],
+                    self.cpd.rs_codeword[self.current_step_no][d],
+                ];
+
+                // PROBLEM can't coerce data FieldElement to HashDigest
+                // data[0] = data_ele[0];
+                data[1] = htmp;
+            }
+            hash_val[i] = htmp;
+        }
+
+        unsafe {
+            // write merkle tree to self.cpd.merkle[self.current_step_no]
+            create_tree(
+                hash_val,
+                nxt_witness_size / 2,
+                self.cpd.merkle[self.current_step_no].as_mut(),
+                Some(std::mem::size_of::<HashDigest>()),
+                Some(self.cpd.merkle[self.current_step_no].is_empty()),
+            )
+        }
+
+        self.cpd.merkle_size[self.current_step_no] = nxt_witness_size / 2;
+        self.log_current_witness_size_per_slice -= 1;
+
+        self.current_step_no += 1;
+        self.cpd.merkle[self.current_step_no - 1][1] // since we increment current_step_no up there
     }
 
     /// Return the final rs code since it is only constant size
@@ -206,78 +308,29 @@ impl FRIContext {
     }
 }
 
-// No longer needed, we got FRIContext
-pub struct VpdVerifier {
-    cpd: FriCommitPhaseData,
-    step: usize,
-}
+// Return the hhash array of commitments, randomness and final small polynomial (represented by rscode)
+pub fn commit_phase(log_length: usize) -> LdtCommitment {
+    // LOG_SLICE_NUMBER;
 
-// SHould I put inside VPD?
-impl VpdVerifier {
-    pub fn init() {}
+    let mut codeword_size = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
 
-    pub fn commit_phrase_step(mut self, r: FieldElement) -> HashDigest {
-        let log_current_witness_size_per_slice = 0; // TODO: ?
-        let next_witness_size: usize = (1 << log_current_witness_size_per_slice) / 2;
+    let mut randomness: Vec<FieldElement> =
+        Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
 
-        if self.cpd.rs_codeword[self.step] == FieldElement::default() {
-            self.cpd.rs_codeword[self.step] =
-            // QUESTION: from_img or from_real
-                FieldElement::from_img(next_witness_size as u64 * /* SLICE_COUNT */ 0);
-        }
+    let mut ret: Vec<HashDigest> = Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
 
-        // let mut previous_witness = FieldElement::default();
+    let mut ptr = 0;
+    while codeword_size > (1 << RS_CODE_RATE) {
+        randomness[ptr] = prime_field::FieldElement::new_random();
+        ret[ptr] = commit_step(randomness[ptr]);
+        codeword_size /= 2;
+        ptr += 1;
+    }
 
-        let (previous_witness, previous_witness_mapping) = match self.step {
-            // TODO: virtual oracle
-            0 => (FieldElement::default(), []),
-            _ => (
-                self.cpd.rs_codeword[self.step - 1],
-                self.cpd.rs_codeword_mapping[self.step - 1],
-            ),
-        };
-
-        for i in 0..next_witness_size {
-            let qual_res_0 = i;
-            let qual_res_1 = ((1 << (log_current_witness_size_per_slice - 1)) + i) / 2;
-
-            let pos = usize::min(qual_res_0, qual_res_1);
-
-            // TODO: L_group
-
-            for j in 0..SLICE_NUMBER {
-                let real_pos = previous_witness_mapping[pos << (LOG_SLICE_NUMBER | j)];
-                // let x = self.cpd.rs_codeword[self.step][i << LOG_SLICE_NUMBER | j];
-            }
-        }
-
-        HashDigest::new()
+    LdtCommitment {
+        commitment_hash: ret,
+        // final_rs_code: vpdVerifier::finish(),
+        randomness,
+        mx_depth: ptr,
     }
 }
-
-// Return the hhash array of commitments, randomness and final small polynomial (represented by rscode)
-// pub fn commit_phase(log_length: usize) -> LdtCommitment {
-//     // LOG_SLICE_NUMBER;
-
-//     let mut codeword_size = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
-
-//     let mut randomness: Vec<FieldElement> =
-//         Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
-
-//     let mut ret: Vec<HashDigest> = Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
-
-//     let mut ptr = 0;
-//     while codeword_size > (1 << RS_CODE_RATE) {
-//         randomness[ptr] = prime_field::FieldElement::new_random();
-//         ret[ptr] = commit_step(randomness[ptr]);
-//         codeword_size /= 2;
-//         ptr += 1;
-//     }
-
-//     LdtCommitment {
-//         commitment_hash: ret,
-//         // final_rs_code: vpdVerifier::finish(),
-//         randomness,
-//         mx_depth: ptr,
-//     }
-// }
