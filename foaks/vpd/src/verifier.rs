@@ -1,4 +1,4 @@
-use infrastructure::merkle_tree::create_tree;
+use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
 use std::{char::MAX, thread::current};
 
 use infrastructure::{
@@ -40,15 +40,17 @@ pub fn verify_merkle(
 
     let mut value_hash = HashDigest::new();
 
-    for value in values {
-        let data_element: [FieldElement; 2] = [value.0, value.1];
-        // can't coerce type FieldElement to HashDigest
-        // data_element[1] = value_hash; // ?
-        // value_hash = my_hash::my_hash(data_element);
+    unsafe {
+        for value in values {
+            let data_element: [HashDigest; 2] = [
+                hash_single_field_element(value.0),
+                hash_single_field_element(value.1),
+            ];
+            data_element[1] = value_hash;
+            value_hash = my_hash::my_hash(data_element);
+        }
     }
 
-    // QUESTION: should check if the function equals is custom one?
-    // HashDigest::eq()
     hash_digest == new_hash && merkle_path.last() == Some(&value_hash)
 }
 
@@ -183,9 +185,8 @@ impl FRIContext {
     pub fn commit_phrase_step(&mut self, r: FieldElement) -> HashDigest {
         let nxt_witness_size = (1 << self.log_current_witness_size_per_slice) / 2;
         if self.cpd.rs_codeword[self.current_step_no].is_empty() {
-            // QUESTION: from img or from real?
             self.cpd.rs_codeword[self.current_step_no] =
-                vec![FieldElement::new_random(); nxt_witness_size * (1 << SLICE_NUMBER)];
+                vec![FieldElement::default(); nxt_witness_size * (1 << SLICE_NUMBER)];
         }
 
         let mut previous_witness: Vec<FieldElement> = vec![];
@@ -203,7 +204,7 @@ impl FRIContext {
         };
 
         // QUESTION: from img or from real?
-        let inv_2 = FieldElement::from_img(2).inverse();
+        let inv_2 = FieldElement::default().inverse();
 
         let log_leaf_size = LOG_SLICE_NUMBER + 1;
 
@@ -266,25 +267,24 @@ impl FRIContext {
         let mut htmp: HashDigest = HashDigest::default();
         let mut hash_val: Vec<HashDigest> = vec![HashDigest::default(); nxt_witness_size / 2];
 
-        for i in 0..nxt_witness_size / 2 {
-            for j in 0..(1 << LOG_SLICE_NUMBER) {
-                let mut data = [HashDigest::default(), HashDigest::default()];
-                let c = (i) << log_leaf_size | (j << 1) | 0;
-                let d = (i) << log_leaf_size | (j << 1) | 1;
-
-                let data_ele = [
-                    self.cpd.rs_codeword[self.current_step_no][c],
-                    self.cpd.rs_codeword[self.current_step_no][d],
-                ];
-
-                // PROBLEM can't coerce data FieldElement to HashDigest
-                // data[0] = data_ele[0];
-                data[1] = htmp;
-            }
-            hash_val[i] = htmp;
-        }
-
         unsafe {
+            for i in 0..nxt_witness_size / 2 {
+                for j in 0..(1 << LOG_SLICE_NUMBER) {
+                    let mut data = [HashDigest::default(), HashDigest::default()];
+                    let c = (i) << log_leaf_size | (j << 1) | 0;
+                    let d = (i) << log_leaf_size | (j << 1) | 1;
+
+                    let data_ele = [
+                        self.cpd.rs_codeword[self.current_step_no][c],
+                        self.cpd.rs_codeword[self.current_step_no][d],
+                    ];
+
+                    data[0] = hash_single_field_element(data_ele[0]);
+                    data[1] = htmp;
+                }
+                hash_val[i] = htmp;
+            }
+
             // write merkle tree to self.cpd.merkle[self.current_step_no]
             create_tree(
                 hash_val,
@@ -322,7 +322,8 @@ pub fn commit_phase(log_length: usize) -> LdtCommitment {
     let mut ptr = 0;
     while codeword_size > (1 << RS_CODE_RATE) {
         randomness[ptr] = prime_field::FieldElement::new_random();
-        ret[ptr] = commit_step(randomness[ptr]);
+        // QUESTION: how?
+        // ret[ptr] = commit_step(randomness[ptr]);
         codeword_size /= 2;
         ptr += 1;
     }
