@@ -56,6 +56,12 @@ pub struct Layer<'a> {
     log_repeat_num: usize,
 }
 
+impl<'a> Layer<'a> {
+    pub fn new() -> Self {
+        Default::default()
+    }
+}
+
 #[derive(Default)]
 pub struct LayeredCircuit<'a> {
     circuit: Vec<Layer<'a>>,
