@@ -53,3 +53,25 @@ impl QuadraticPoly {
         Self { a, b, c }
     }
 }
+
+pub struct QuintuplePoly {
+    pub a: FieldElement,
+    pub b: FieldElement,
+    pub c: FieldElement,
+    pub d: FieldElement,
+    pub e: FieldElement,
+    pub f: FieldElement,
+}
+
+impl QuintuplePoly {
+    pub fn new(
+        a: FieldElement,
+        b: FieldElement,
+        c: FieldElement,
+        d: FieldElement,
+        e: FieldElement,
+        f: FieldElement,
+    ) -> Self {
+        Self { a = aa, b = bb, c = cc, d = dd, e = ee, f = ff }
+    }
+}
