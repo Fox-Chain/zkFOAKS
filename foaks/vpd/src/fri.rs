@@ -9,13 +9,14 @@ use prime_field::FieldElement;
 
 #[derive(Default)]
 pub struct CommitPhaseData {
-    merkle: [Vec<HashDigest>; MAX_FRI_DEPTH],
-    merkle_size: [usize; MAX_FRI_DEPTH],
-    rs_codeword: [Vec<FieldElement>; MAX_FRI_DEPTH],
-    poly_coef: [Vec<FieldElement>; MAX_FRI_DEPTH],
-    rs_codeword_mapping: [Vec<FieldElement>; MAX_FRI_DEPTH],
+    pub merkle: [Vec<HashDigest>; MAX_FRI_DEPTH],
+    pub merkle_size: [usize; MAX_FRI_DEPTH],
+    pub rs_codeword: [Vec<FieldElement>; MAX_FRI_DEPTH],
+    pub poly_coef: [Vec<FieldElement>; MAX_FRI_DEPTH],
+    pub rs_codeword_mapping: [Vec<usize>; MAX_FRI_DEPTH],
 }
 
+// namespace fri
 impl CommitPhaseData {
     pub fn new() -> Self {
         Default::default()
@@ -27,7 +28,7 @@ impl CommitPhaseData {
 }
 
 #[derive(Debug)]
-struct FieldElement64([Vec<FieldElement>; SLICE_NUMBER]);
+pub struct FieldElement64([Vec<FieldElement>; SLICE_NUMBER]);
 
 impl Default for FieldElement64 {
     fn default() -> Self {
@@ -37,7 +38,7 @@ impl Default for FieldElement64 {
 }
 
 #[derive(Debug)]
-struct Mapping64([Vec<usize>; SLICE_NUMBER]);
+pub struct Mapping64([Vec<usize>; SLICE_NUMBER]);
 
 impl Default for Mapping64 {
     fn default() -> Self {
@@ -48,26 +49,27 @@ impl Default for Mapping64 {
 
 #[derive(Default)]
 pub struct FRIContext {
-    log_current_witness_size_per_slice: usize,
-    witness_bit_length_per_slice: i64,
-    current_step_no: usize,
-    cpd: CommitPhaseData,
-    fri_timer: f64,
-    witness_merkle: [Vec<HashDigest>; 2],
-    witness_rs_codeword_before_arrange: [FieldElement64; 2],
-    witness_rs_codeword_interleaved: [Vec<FieldElement>; 2],
-    witness_rs_mapping: [Mapping64; 2],
-    l_group: Vec<FieldElement>,
-    visited: [Vec<bool>; MAX_BIT_LENGTH],
-    visited_init: [Vec<bool>; 2],
-    visited_witness: [Vec<bool>; 2],
-    virtual_oracle_witness: Vec<FieldElement>,
-    virtual_oracle_witness_mapping: Vec<usize>,
+    pub log_current_witness_size_per_slice: usize,
+    pub witness_bit_length_per_slice: i64,
+    pub current_step_no: usize,
+    pub cpd: CommitPhaseData,
+    pub fri_timer: f64,
+    pub witness_merkle: [Vec<HashDigest>; 2],
+    pub witness_rs_codeword_before_arrange: [FieldElement64; 2],
+    pub witness_rs_codeword_interleaved: [Vec<FieldElement>; 2],
+    pub witness_rs_mapping: [Mapping64; 2],
+    pub l_group: Vec<FieldElement>,
+    pub visited: [Vec<bool>; MAX_BIT_LENGTH],
+    pub visited_init: [Vec<bool>; 2],
+    pub visited_witness: [Vec<bool>; 2],
+    pub virtual_oracle_witness: Vec<FieldElement>,
+    pub virtual_oracle_witness_mapping: Vec<usize>,
 
-    r_extended: Vec<FieldElement>,
-    leaf_hash: [Vec<HashDigest>; 2],
+    pub r_extended: Vec<FieldElement>,
+    pub leaf_hash: [Vec<HashDigest>; 2],
 }
 
+/// Given private input, calculate the first oracle commitment
 pub fn request_init_commit(
     FRIContext {
         log_current_witness_size_per_slice,
