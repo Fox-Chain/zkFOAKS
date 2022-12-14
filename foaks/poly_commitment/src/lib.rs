@@ -47,7 +47,7 @@ pub struct PolyCommitContext {
     pub pre_prepare_executed: bool,
 }
 
-struct PolyCommitProver {
+pub struct PolyCommitProver {
     total_time: f64,
     ctx: PolyCommitContext,
 }
