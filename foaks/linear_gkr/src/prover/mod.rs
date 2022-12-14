@@ -15,6 +15,9 @@ pub fn from_string(s: &str) -> FieldElement {
 
 static mut INV_2: FieldElement = FieldElement::zero();
 
-pub fn get_circuit(from_verifier: &LayeredCircuit) {}
+pub fn get_circuit(from_verifier: &LayeredCircuit) {
+    let C = from_verifier;
+    INV_2 = prime_field::INITIALIZED;
+}
 
 pub struct ZKProver {}
