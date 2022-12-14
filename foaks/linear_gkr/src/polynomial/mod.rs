@@ -177,6 +177,6 @@ impl core::ops::Add for QuintuplePoly {
         let d = self.d + x.d;
         let e = self.e + x.e;
         let f = self.f + x.f;
-        Self { a, b, c, d, f }
+        Self { a, b, c, d, e, f }
     }
 }
