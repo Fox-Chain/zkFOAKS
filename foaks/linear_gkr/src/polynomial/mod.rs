@@ -156,13 +156,26 @@ impl QuintuplePoly {
         return Self { a = aa, b = bb, c = cc, d = dd, e = ee, f = ff }
     }
 
-    pub fn operator(x: Self) {
-        return Self {
-            a + x.a, b + x.b, c + x.c, d + x.d, e + x.e, f + x.f
-        }
-    }
+    // pub fn operator(x: Self) {
+    //     return Self {
+    //         a + x.a, b + x.b, c + x.c, d + x.d, e + x.e, f + x.f
+    //     }
+    // }
 
     pub fn eval(x: FieldElement) {
         return (((((self.a * x) + self.b) * x + self.c) * x + self.d) * x + self.e) * x + self.f;
+    }
+}
+
+impl core::ops::Add for QuintuplePoly {
+    type Output = Self;
+
+    fn add(self, x: Self) -> Self::Output {
+        let a = self.a + x.a;
+        let b = self.b + x.b;
+        let c = self.c + x.c;
+        let d = self.d + x.d;
+        let f = self.f + x.f;
+        Self { a, b, c, d, f }
     }
 }
