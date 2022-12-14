@@ -10,7 +10,7 @@ impl LinearPoly {
         Self { a, b }
     }
     // Create a monomial with no variables
-    pub fn new_constant_monomial(b: FieldElement) -> Self { 
+    pub fn new_constant_monomial(b: FieldElement) -> Self {
         Self {
             a: FieldElement::from_real(0),
             b,
@@ -144,6 +144,15 @@ pub struct QuintuplePoly {
     pub f: FieldElement,
 }
 
+pub struct QuintuplePoly {
+    pub a: FieldElement,
+    pub b: FieldElement,
+    pub c: FieldElement,
+    pub d: FieldElement,
+    pub e: FieldElement,
+    pub f: FieldElement,
+}
+
 impl QuintuplePoly {
     pub fn new(
         a: FieldElement,
@@ -153,7 +162,7 @@ impl QuintuplePoly {
         e: FieldElement,
         f: FieldElement,
     ) -> Self {
-        return Self { a = aa, b = bb, c = cc, d = dd, e = ee, f = ff }
+        Self { a, b, c, d, e, f }
     }
 
     // pub fn operator(x: Self) {
@@ -162,7 +171,7 @@ impl QuintuplePoly {
     //     }
     // }
 
-    pub fn eval(x: FieldElement) {
+    pub fn eval(self, x: FieldElement) -> FieldElement {
         return (((((self.a * x) + self.b) * x + self.c) * x + self.d) * x + self.e) * x + self.f;
     }
 }
