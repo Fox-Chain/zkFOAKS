@@ -60,7 +60,7 @@ static mut INV_2: FieldElement = FieldElement::zero();
 impl<'a> ZKProver<'a> {
     pub fn get_circuit(from_verifier: &LayeredCircuit) {
         let C = from_verifier;
-        INV_2 = FieldElement::from_real(2);
+        // INV_2 = FieldElement::from_real(2);
     }
 
     pub fn V_res(

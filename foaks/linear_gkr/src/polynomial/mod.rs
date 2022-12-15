@@ -17,7 +17,7 @@ impl LinearPoly {
         }
     }
 
-    pub fn eval(x: FieldElement) -> FieldElement {
+    pub fn eval(&self, x: FieldElement) -> FieldElement {
         self.a * x + self.b
     }
 }
@@ -135,14 +135,6 @@ impl core::ops::Add for QuadruplePoly {
         Self { a, b, c, d, e }
     }
 }
-pub struct QuintuplePoly {
-    pub a: FieldElement,
-    pub b: FieldElement,
-    pub c: FieldElement,
-    pub d: FieldElement,
-    pub e: FieldElement,
-    pub f: FieldElement,
-}
 
 pub struct QuintuplePoly {
     pub a: FieldElement,
@@ -187,5 +179,33 @@ impl core::ops::Add for QuintuplePoly {
         let e = self.e + x.e;
         let f = self.f + x.f;
         Self { a, b, c, d, e, f }
+    }
+}
+
+#[cfg(test)]
+mod polynomial {
+    use prime_field::FieldElement;
+
+    use crate::polynomial::{CubicPoly, LinearPoly, QuadraticPoly};
+
+    #[test]
+    fn exploration() {
+        let a = FieldElement::new(1, 0);
+        let b = FieldElement::new(1, 0);
+        let c = FieldElement::new(2, 0);
+        let d = FieldElement::new(2, 0);
+
+        let linear_1 = LinearPoly::new(a, b);
+        let linear_2 = QuadraticPoly::new(a, b, c);
+        let linear_3 = CubicPoly::new(a, b, c, d);
+        let linear_32 = CubicPoly::new(c, d, c, d);
+
+        let linear = QuadraticPoly::new(a, b, d);
+        // let sum = linear_3.add(linear_32);
+        //let multi = linear_2.mul(linear);
+        // println!("{:?}", sum);
+        // println!("{:?}", sum);
+
+        assert_eq!(2 + 2, 4);
     }
 }
