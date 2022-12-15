@@ -15,13 +15,6 @@ pub fn from_string(s: &str) -> FieldElement {
     ret
 }
 
-static mut INV_2: FieldElement = FieldElement::zero();
-
-pub fn get_circuit(from_verifier: &LayeredCircuit) {
-    let C = from_verifier;
-    INV_2 = FieldElement::from_real(2);
-}
-
 pub struct ZKProver<'a> {
     poly_prover: PolyCommitProver,
     /** @name Basic
@@ -60,4 +53,40 @@ pub struct ZKProver<'a> {
     beta_g: Vec<FieldElement>,
 
     total_time: u64,
+}
+
+static mut INV_2: FieldElement = FieldElement::zero();
+
+impl<'a> ZKProver<'a> {
+    pub fn get_circuit(from_verifier: &LayeredCircuit) {
+        let C = from_verifier;
+        INV_2 = FieldElement::from_real(2);
+    }
+
+    pub fn V_res(
+        one_minus_r_0: FieldElement,
+        r_0: FieldElement,
+        output_raw: FieldElement,
+        r_0_size: FieldElement,
+        output_size: FieldElement,
+    ) {
+    }
+
+    pub fn evaluate() {}
+
+    pub fn get_witness() {}
+
+    pub fn sumcheck_init() {}
+
+    pub fn init_array() {}
+
+    pub fn delete_self() {}
+
+    pub fn sumcheck_phase1_init() {}
+
+    pub fn sumcheck_phase1_update() {}
+
+    pub fn sumcheck_phase2_init() {}
+
+    pub fn sumcheck_phase2_update() {}
 }
