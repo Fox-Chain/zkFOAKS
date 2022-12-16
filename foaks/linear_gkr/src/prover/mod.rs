@@ -152,3 +152,14 @@ pub struct ProverContext<'a> {
     rets_cur: Vec<QuadraticPoly>,
     zkprover: ZKProver<'a>,
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::prover::from_string;
+
+    #[test]
+    fn prover_from_string() {
+        let str = from_string("string");
+        assert_eq!(str.real, 7452375);
+    }
+}
