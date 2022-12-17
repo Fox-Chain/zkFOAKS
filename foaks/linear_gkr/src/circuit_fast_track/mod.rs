@@ -46,7 +46,7 @@ pub struct Layer<'a> {
     weight_expander_c_mempool: Vec<FieldElement>,
     weight_expander_d_mempool: Vec<FieldElement>,
     gates: Vec<Gate<'a>>,
-    bit_length: i32,
+    pub bit_length: i32,
     u_gates: HashMap<i32, Vec<(i32, (i32, i32))>>,
     v_gates: HashMap<i32, Vec<(i32, (i32, i32))>>,
     is_parallel: bool,
@@ -64,9 +64,9 @@ impl<'a> Layer<'a> {
 
 #[derive(Default)]
 pub struct LayeredCircuit<'a> {
-    circuit: Vec<Layer<'a>>,
-    total_depth: usize,
-    inputs: Vec<FieldElement>,
+    pub circuit: Vec<Layer<'a>>,
+    pub total_depth: usize,
+    pub nputs: Vec<FieldElement>,
 }
 
 impl<'a> LayeredCircuit<'a> {

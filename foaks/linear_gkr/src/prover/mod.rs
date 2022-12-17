@@ -4,6 +4,14 @@ use crate::polynomial::{LinearPoly, QuadraticPoly};
 use poly_commitment::PolyCommitProver;
 use prime_field::FieldElement;
 
+static mut INV_2: FieldElement = FieldElement::zero();
+static mut V_mult_add_new: Vec<FieldElement> = Vec::new();
+static mut addV_array_new: Vec<FieldElement> = Vec::new();
+static mut add_mult_sum_new: Vec<FieldElement> = Vec::new();
+static mut gate_meet: [bool; 15] = [false; 15];
+static mut rets_prev: Vec<QuadraticPoly> = Vec::new();
+static mut rets_cur: Vec<QuadraticPoly> = Vec::new();
+
 pub fn from_string(s: &str) -> FieldElement {
     let mut ret = FieldElement::from_real(0);
 
@@ -21,9 +29,9 @@ pub struct ZKProver<'a> {
     	* Basic information and variables about the arithmetic circuit*/
     //< two random gates v_u and v_v queried by V in each layer    v_u: FieldElement,
     v_v: FieldElement,
-    total_uv: u32,
-    aritmetic_circuit: Vec<LayeredCircuit<'a>>, //	c++ code: layered_circuit *C;
-    circuit_value: Vec<FieldElement>,
+    pub total_uv: i32,
+    pub aritmetic_circuit: Option<LayeredCircuit<'a>>, //	c++ code: layered_circuit *C;
+    pub circuit_value: [Vec<FieldElement>; 1000000],
     sumcheck_layer_id: u32,
     length_g: u32,
     length_u: u32,
@@ -56,20 +64,18 @@ pub struct ZKProver<'a> {
     total_time: u64,
 }
 
-static mut INV_2: FieldElement = FieldElement::zero();
-
 impl<'a> ZKProver<'a> {
-    pub fn init_zkprover(half_length: usize) -> Self {
+    pub fn new(half_length: usize) -> Self {
         Self {
-            beta_g_r0_fhalf: Vec::with_capacity(1 << half_length),
-            beta_g_r0_shalf: Vec::with_capacity(1 << half_length),
-            beta_g_r1_fhalf: Vec::with_capacity(1 << half_length),
-            beta_g_r1_shalf: Vec::with_capacity(1 << half_length),
-            beta_u_fhalf: Vec::with_capacity(1 << half_length),
-            beta_u_shalf: Vec::with_capacity(1 << half_length),
-            add_mult_sum: Vec::with_capacity(1 << half_length),
-            v_mult_add: Vec::with_capacity(1 << half_length),
-            add_v_array: Vec::with_capacity(1 << half_length),
+            beta_g_r0_fhalf: todo!(),
+            beta_g_r0_shalf: todo!(),
+            beta_g_r1_fhalf: todo!(),
+            beta_g_r1_shalf: todo!(),
+            beta_u_fhalf: todo!(),
+            beta_u_shalf: todo!(),
+            add_mult_sum: todo!(),
+            v_mult_add: todo!(),
+            add_v_array: todo!(),
             poly_prover: todo!(),
             v_v: todo!(),
             total_uv: todo!(),
@@ -91,9 +97,39 @@ impl<'a> ZKProver<'a> {
             total_time: todo!(),
         }
     }
-    pub fn get_circuit(from_verifier: &LayeredCircuit) {
-        let C = from_verifier;
-        // INV_2 = FieldElement::from_real(2);
+
+    pub fn init_array(&mut self, max_bit_length: usize) {
+        let half_length = (max_bit_length >> 1) + 1;
+
+        unsafe {
+            gate_meet = [false; 15];
+            V_mult_add_new = Vec::with_capacity(1 << half_length);
+            addV_array_new = Vec::with_capacity(1 << half_length);
+            add_mult_sum_new = Vec::with_capacity(1 << half_length);
+            rets_prev = Vec::with_capacity(1 << half_length);
+            rets_cur = Vec::with_capacity(1 << half_length);
+        }
+
+        Self::init_zkprover(self, half_length);
+    }
+
+    pub fn init_zkprover(&mut self, half_length: usize) {
+        self.beta_g_r0_fhalf = Vec::with_capacity(1 << half_length);
+        self.beta_g_r0_shalf = Vec::with_capacity(1 << half_length);
+        self.beta_g_r1_fhalf = Vec::with_capacity(1 << half_length);
+        self.beta_g_r1_shalf = Vec::with_capacity(1 << half_length);
+        self.beta_u_fhalf = Vec::with_capacity(1 << half_length);
+        self.beta_u_shalf = Vec::with_capacity(1 << half_length);
+        self.add_mult_sum = Vec::with_capacity(1 << half_length);
+        self.v_mult_add = Vec::with_capacity(1 << half_length);
+        self.add_v_array = Vec::with_capacity(1 << half_length);
+    }
+
+    pub fn get_circuit(&mut self, from_verifier: Option<LayeredCircuit<'a>>) {
+        self.aritmetic_circuit = from_verifier;
+        unsafe {
+            INV_2 = FieldElement::from_real(2);
+        }
     }
 
     pub fn V_res(
@@ -105,33 +141,17 @@ impl<'a> ZKProver<'a> {
     ) {
     }
 
-    pub fn evaluate() {}
+    pub fn evaluate() {
+        unimplemented!()
+    }
 
-    pub fn get_witness() {}
-
+    pub fn get_witness(&mut self, inputs: Vec<FieldElement>, n: u32) {
+        self.circuit_value[0] =
+            Vec::with_capacity(1 << self.aritmetic_circuit.as_ref().unwrap().circuit[0].bit_length);
+        self.circuit_value[0] = inputs;
+    }
     pub fn sumcheck_init() {}
 
-    pub fn init_array(
-        max_bit_length: usize,
-        ProverContext {
-            V_mult_add_new,
-            addV_array_new,
-            add_mult_sum_new,
-            gate_meet,
-            rets_prev,
-            rets_cur,
-            zkprover,
-        }: &mut ProverContext<'a>,
-    ) {
-        *gate_meet = [false; 15];
-        let half_length = (max_bit_length >> 1) + 1;
-        *zkprover = Self::init_zkprover(half_length);
-        *V_mult_add_new = Vec::with_capacity(1 << half_length);
-        *addV_array_new = Vec::with_capacity(1 << half_length);
-        *add_mult_sum_new = Vec::with_capacity(1 << half_length);
-        *rets_prev = Vec::with_capacity(1 << half_length);
-        *rets_cur = Vec::with_capacity(1 << half_length);
-    }
     pub fn delete_self() {}
 
     pub fn sumcheck_phase1_init() {}
@@ -141,16 +161,6 @@ impl<'a> ZKProver<'a> {
     pub fn sumcheck_phase2_init() {}
 
     pub fn sumcheck_phase2_update() {}
-}
-
-pub struct ProverContext<'a> {
-    V_mult_add_new: Vec<FieldElement>,
-    addV_array_new: Vec<FieldElement>,
-    add_mult_sum_new: Vec<FieldElement>,
-    gate_meet: [bool; 15],
-    rets_prev: Vec<QuadraticPoly>,
-    rets_cur: Vec<QuadraticPoly>,
-    zkprover: ZKProver<'a>,
 }
 
 #[cfg(test)]
