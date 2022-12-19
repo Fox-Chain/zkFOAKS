@@ -4,6 +4,8 @@ use crate::polynomial::{LinearPoly, QuadraticPoly};
 use poly_commitment::PolyCommitProver;
 use prime_field::FieldElement;
 
+use std::time::SystemTime;
+
 static mut INV_2: FieldElement = FieldElement::zero();
 static mut V_mult_add_new: Vec<FieldElement> = Vec::new();
 static mut addV_array_new: Vec<FieldElement> = Vec::new();
@@ -137,8 +139,14 @@ impl<'a> ZKProver<'a> {
         r_0: FieldElement,
         output_raw: FieldElement,
         r_0_size: FieldElement,
-        output_size: FieldElement,
+        output_size: u64,
     ) {
+        let sys_time = SystemTime::now();
+        let mut output: FieldElement;
+        output = FieldElement::from_real(output_size);
+        for i in 0..output_size {
+            output[i] = output_raw[i]
+        }
     }
 
     pub fn evaluate() {
@@ -171,5 +179,10 @@ mod tests {
     fn prover_from_string() {
         let str = from_string("string");
         assert_eq!(str.real, 7452375);
+    }
+
+    #[test]
+    fn prover_new() {
+        assert_eq!(2 + 2, 4);
     }
 }
