@@ -140,19 +140,25 @@ impl<'a> ZKProver<'a> {
         }
     }
 
+    // this function calculate time ?
+    // 	prime_field::field_element a_0 = p -> V_res(one_minus_r_0, r_0, result, C.circuit[C.total_depth - 1].bit_length, (1 << (C.circuit[C.total_depth - 1].bit_length)));
+
     pub fn V_res(
         one_minus_r_0: FieldElement,
         r_0: FieldElement,
         output_raw: FieldElement,
-        r_0_size: FieldElement,
+        r_0_size: u64,
         output_size: u64,
     ) {
         let sys_time = SystemTime::now();
         let mut output: FieldElement;
         output = FieldElement::from_real(output_size);
-        for i in 0..output_size {
-            output[i] = output_raw[i];
-        }
+        // for i in 0..output_size {
+        //     output[i] = output_raw[i];
+        // }
+        // for i in 0..r_0_size {
+
+        // }
     }
 
     pub fn evaluate(&mut self) -> Vec<FieldElement> {
@@ -287,7 +293,9 @@ impl<'a> ZKProver<'a> {
     }
 }
 
-pub fn delete_self() {}
+pub fn delete_self() {
+    self::delete_self();
+}
 
 pub fn sumcheck_phase1_init() {
     let t0 = SystemTime::now();
