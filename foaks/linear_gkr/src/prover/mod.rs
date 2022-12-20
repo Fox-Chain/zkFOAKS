@@ -24,16 +24,18 @@ pub fn from_string(s: &str) -> FieldElement {
 
     ret
 }
+#[derive(Default)]
 
 pub struct ZKProver<'a> {
-    poly_prover: PolyCommitProver,
+    //poly_prover: PolyCommitProver,
     /** @name Basic
     	* Basic information and variables about the arithmetic circuit*/
     //< two random gates v_u and v_v queried by V in each layer    v_u: FieldElement,
     v_v: FieldElement,
+    u_v: FieldElement,
     pub total_uv: i32,
     pub aritmetic_circuit: Option<LayeredCircuit<'a>>, //	c++ code: layered_circuit *C;
-    pub circuit_value: [Vec<FieldElement>; 1000000],
+    pub circuit_value: Vec<Vec<FieldElement>>,
     sumcheck_layer_id: u32,
     length_g: u32,
     length_u: u32,
@@ -67,7 +69,10 @@ pub struct ZKProver<'a> {
 }
 
 impl<'a> ZKProver<'a> {
-    pub fn new(half_length: usize) -> Self {
+    pub fn new() -> Self {
+        Default::default()
+    }
+    pub fn new_2(half_length: usize) -> Self {
         Self {
             beta_g_r0_fhalf: todo!(),
             beta_g_r0_shalf: todo!(),
@@ -78,8 +83,9 @@ impl<'a> ZKProver<'a> {
             add_mult_sum: todo!(),
             v_mult_add: todo!(),
             add_v_array: todo!(),
-            poly_prover: todo!(),
+            //poly_prover: todo!(),
             v_v: todo!(),
+            u_v: todo!(),
             total_uv: todo!(),
             aritmetic_circuit: todo!(),
             circuit_value: todo!(),
@@ -145,31 +151,153 @@ impl<'a> ZKProver<'a> {
         let mut output: FieldElement;
         output = FieldElement::from_real(output_size);
         for i in 0..output_size {
-            output[i] = output_raw[i]
+            output[i] = output_raw[i];
         }
     }
 
-    pub fn evaluate() {
-        unimplemented!()
+    pub fn evaluate(&mut self) -> Vec<FieldElement> {
+        todo!();
+        let t0 = SystemTime::now();
+        let halt = 1 << self.aritmetic_circuit.as_ref().unwrap().circuit[0].bit_length;
+        for i in 0..halt {
+            let g = i;
+            let u = self.aritmetic_circuit.as_ref().unwrap().circuit[0].gates[0].u;
+            let ty = self.aritmetic_circuit.as_ref().unwrap().circuit[0].gates[0].ty;
+            assert!(ty == 3 || ty == 2);
+        }
+        assert!(self.aritmetic_circuit.as_ref().unwrap().total_depth < 1000000);
+        for i in 0..self.aritmetic_circuit.as_ref().unwrap().total_depth {
+            self.circuit_value[i] = Vec::with_capacity(
+                1 << self.aritmetic_circuit.as_ref().unwrap().circuit[i].bit_length,
+            );
+            let halt = self.aritmetic_circuit.as_ref().unwrap().circuit[i].bit_length;
+            for j in 0..halt {
+                let g = j;
+                let ty: i32 = self.aritmetic_circuit.as_ref().unwrap().circuit[i].gates[g].ty;
+                let u = self.aritmetic_circuit.as_ref().unwrap().circuit[i].gates[g].u;
+                let v = self.aritmetic_circuit.as_ref().unwrap().circuit[i].gates[g]
+                    .v
+                    .try_into()
+                    .unwrap();
+                if (ty == 0) {
+                    self.circuit_value[i][g] =
+                        self.circuit_value[i - 1][u] + self.circuit_value[i - 1][v];
+                } else if (ty == 1) {
+                    assert!(
+                        u >= 0
+                            && u < (1
+                                << self.aritmetic_circuit.as_ref().unwrap().circuit[i - 1]
+                                    .bit_length),
+                    );
+                    assert!(
+                        v >= 0
+                            && v < (1
+                                << self.aritmetic_circuit.as_ref().unwrap().circuit[i - 1]
+                                    .bit_length),
+                    );
+                    self.circuit_value[i][g] =
+                        self.circuit_value[i - 1][u] * self.circuit_value[i - 1][v];
+                } else if (ty == 2) {
+                    self.circuit_value[i][g] = FieldElement::from_real(0);
+                } else if (ty == 3) {
+                    self.circuit_value[i][g] = FieldElement::from_real(u.try_into().unwrap());
+                } else if (ty == 4) {
+                    self.circuit_value[i][g] = self.circuit_value[i - 1][u];
+                } else if (ty == 5) {
+                    self.circuit_value[i][g] = FieldElement::from_real(0);
+                    for k in u..v {
+                        self.circuit_value[i][g] =
+                            self.circuit_value[i][g] + self.circuit_value[i - 1][k];
+                    }
+                } else if (ty == 6) {
+                    self.circuit_value[i][g] =
+                        FieldElement::from_real(1) - self.circuit_value[i - 1][u];
+                } else if (ty == 7) {
+                    self.circuit_value[i][g] =
+                        self.circuit_value[i - 1][u] - self.circuit_value[i - 1][v];
+                } else if (ty == 8) {
+                } else if (ty == 9) {
+                } else if (ty == 10) {
+                    self.circuit_value[i][g] = self.circuit_value[i - 1][u];
+                } else if (ty == 12) {
+                    self.circuit_value[i][g] = FieldElement::from_real(0);
+                    assert!(v - u + 1 <= 60);
+                    for k in u..=v {
+                        self.circuit_value[i][g] = self.circuit_value[i][g]
+                            + self.circuit_value[i - 1][k] * FieldElement::from_real(1 << (k - u));
+                    }
+                } else if (ty == 13) {
+                    assert!(u == v);
+                    assert!(
+                        u >= 0
+                            && u < (1
+                                << self.aritmetic_circuit.as_ref().unwrap().circuit[i - 1]
+                                    .bit_length),
+                    );
+                    self.circuit_value[i][g] = self.circuit_value[i - 1][u]
+                        * (FieldElement::from_real(1) - self.circuit_value[i - 1][v]);
+                } else if (ty == 14) {
+                    self.circuit_value[i][g] = FieldElement::from_real(0);
+                    for k in 0..self.aritmetic_circuit.as_ref().unwrap().circuit[i].gates[g]
+                        .parameter_length
+                    {
+                        unimplemented!()
+                    }
+                } else {
+                    assert!(false);
+                }
+            }
+        }
+        let t1 = SystemTime::now();
+        let life_span = t1.duration_since(t0);
+        let index = self.aritmetic_circuit.as_ref().unwrap().total_depth;
+        todo!()
     }
 
     pub fn get_witness(&mut self, inputs: Vec<FieldElement>, n: u32) {
+        // Do we really need this line of code?
         self.circuit_value[0] =
             Vec::with_capacity(1 << self.aritmetic_circuit.as_ref().unwrap().circuit[0].bit_length);
         self.circuit_value[0] = inputs;
     }
-    pub fn sumcheck_init() {}
 
-    pub fn delete_self() {}
-
-    pub fn sumcheck_phase1_init() {}
-
-    pub fn sumcheck_phase1_update() {}
-
-    pub fn sumcheck_phase2_init() {}
-
-    pub fn sumcheck_phase2_update() {}
+    pub fn sumcheck_init(
+        &mut self,
+        sumcheck_layer_id: u32,
+        length_g: u32,
+        length_u: u32,
+        length_v: u32,
+        alpha: FieldElement,
+        beta: FieldElement,
+        r_0: Vec<FieldElement>,
+        r_1: Vec<FieldElement>,
+        one_minus_r_0: Vec<FieldElement>,
+        one_minus_r_1: Vec<FieldElement>,
+    ) {
+        self.r_0 = r_0;
+        self.r_1 = r_1;
+        self.alpha = alpha;
+        self.beta = beta;
+        self.sumcheck_layer_id = sumcheck_layer_id;
+        self.length_g = length_g;
+        self.length_u = length_u;
+        self.length_v = length_v;
+        self.one_minus_r_0 = one_minus_r_0;
+        self.one_minus_r_1 = one_minus_r_1;
+    }
 }
+
+pub fn delete_self() {}
+
+pub fn sumcheck_phase1_init() {
+    let t0 = SystemTime::now();
+}
+
+pub fn sumcheck_phase1_update() {}
+
+pub fn sumcheck_phase2_init() {}
+
+pub fn sumcheck_phase2_update() {}
 
 #[cfg(test)]
 mod tests {
