@@ -26,7 +26,7 @@ pub fn from_string(s: &str) -> FieldElement {
 }
 #[derive(Default)]
 
-pub struct ZKProver<'a> {
+pub struct ZKProver {
     //poly_prover: PolyCommitProver,
     /** @name Basic
     	* Basic information and variables about the arithmetic circuit*/
@@ -34,7 +34,7 @@ pub struct ZKProver<'a> {
     v_v: FieldElement,
     u_v: FieldElement,
     pub total_uv: i32,
-    pub aritmetic_circuit: Option<LayeredCircuit<'a>>, //	c++ code: layered_circuit *C;
+    pub aritmetic_circuit: Option<LayeredCircuit>, //	c++ code: layered_circuit *C;
     pub circuit_value: Vec<Vec<FieldElement>>,
     sumcheck_layer_id: u32,
     length_g: u32,
@@ -68,7 +68,7 @@ pub struct ZKProver<'a> {
     total_time: u64,
 }
 
-impl<'a> ZKProver<'a> {
+impl ZKProver {
     pub fn new() -> Self {
         Default::default()
     }
@@ -133,7 +133,7 @@ impl<'a> ZKProver<'a> {
         self.add_v_array = Vec::with_capacity(1 << half_length);
     }
 
-    pub fn get_circuit(&mut self, from_verifier: Option<LayeredCircuit<'a>>) {
+    pub fn get_circuit(&mut self, from_verifier: Option<LayeredCircuit>) {
         self.aritmetic_circuit = from_verifier;
         unsafe {
             INV_2 = FieldElement::from_real(2);

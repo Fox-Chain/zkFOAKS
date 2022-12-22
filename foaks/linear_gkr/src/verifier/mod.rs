@@ -44,8 +44,8 @@ pub struct zk_verifier<'a> {
     beta_v_block_first_half: Vec<FieldElement>,
     beta_v_block_second_half: Vec<FieldElement>,
 
-    pub aritmetic_circuit: LayeredCircuit<'a>, // The circuit
-    pub prover: Option<ZKProver<'a>>,          // The prover
+    pub aritmetic_circuit: LayeredCircuit, // The circuit
+    pub prover: Option<&'a ZKProver>,      // The prover
 
     VPD_randomness: Vec<FieldElement>,
     one_minus_VPD_randomness: Vec<FieldElement>,
@@ -56,7 +56,7 @@ impl<'a> zk_verifier<'a> {
         Default::default()
     }
 
-    pub fn get_prover(&mut self, prover__: ZKProver<'a>) {
+    pub fn get_prover(&mut self, prover__: &'a ZKProver) {
         self.prover = Some(prover__);
     }
 }
