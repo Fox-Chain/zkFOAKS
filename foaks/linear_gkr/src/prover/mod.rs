@@ -26,7 +26,7 @@ pub fn from_string(s: &str) -> FieldElement {
 }
 #[derive(Default)]
 
-pub struct ZKProver {
+pub struct zk_prover<'a> {
     //poly_prover: PolyCommitProver,
     /** @name Basic
     	* Basic information and variables about the arithmetic circuit*/
@@ -34,7 +34,7 @@ pub struct ZKProver {
     v_v: FieldElement,
     u_v: FieldElement,
     pub total_uv: i32,
-    pub aritmetic_circuit: Option<LayeredCircuit>, //	c++ code: layered_circuit *C;
+    pub aritmetic_circuit: Option<&'a LayeredCircuit>, //	c++ code: layered_circuit *C;
     pub circuit_value: Vec<Vec<FieldElement>>,
     sumcheck_layer_id: u32,
     length_g: u32,
@@ -68,7 +68,7 @@ pub struct ZKProver {
     total_time: u64,
 }
 
-impl ZKProver {
+impl<'a> zk_prover<'a> {
     pub fn new() -> Self {
         Default::default()
     }
@@ -133,8 +133,8 @@ impl ZKProver {
         self.add_v_array = Vec::with_capacity(1 << half_length);
     }
 
-    pub fn get_circuit(&mut self, from_verifier: Option<LayeredCircuit>) {
-        self.aritmetic_circuit = from_verifier;
+    pub fn get_circuit(&mut self, from_verifier: &'a LayeredCircuit) {
+        self.aritmetic_circuit = Some(from_verifier);
         unsafe {
             INV_2 = FieldElement::from_real(2);
         }
@@ -262,8 +262,8 @@ impl ZKProver {
 
     pub fn get_witness(&mut self, inputs: Vec<FieldElement>, n: u32) {
         // Do we really need this line of code?
-        self.circuit_value[0] =
-            Vec::with_capacity(1 << self.aritmetic_circuit.as_ref().unwrap().circuit[0].bit_length);
+        //self.circuit_value[0] =
+        // Vec::with_capacity(1 << self.aritmetic_circuit.unwrap().circuit[0].bit_length);
         self.circuit_value[0] = inputs;
     }
 
@@ -291,6 +291,9 @@ impl ZKProver {
         self.one_minus_r_0 = one_minus_r_0;
         self.one_minus_r_1 = one_minus_r_1;
     }
+    pub fn init_total_time(&mut self, val: u64) {
+        self.total_time = val;
+    }
 }
 
 pub fn delete_self() {
@@ -309,8 +312,25 @@ pub fn sumcheck_phase2_update() {}
 
 #[cfg(test)]
 mod tests {
-    use crate::prover::from_string;
+    use crate::{
+        prover::{from_string, zk_prover},
+        verifier::zk_verifier,
+    };
 
+    #[test]
+    fn prover_verifer_interaction() {
+        let mut zkv = zk_verifier::new();
+        let mut zkp = zk_prover::new();
+        zkp.init_total_time(5);
+        println!("{:?}", zkp.total_time);
+
+        zkv.get_prover(&mut zkp);
+        println!("{:?}", zkv.prover.unwrap().total_time);
+
+        //todo()
+        //zkp.init_total_time(50);
+        //println!("{:?}", zkv.prover.unwrap().total_time);
+    }
     #[test]
     fn prover_from_string() {
         let str = from_string("string");

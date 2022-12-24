@@ -2,7 +2,7 @@ use poly_commitment::PolyCommitProver;
 use prime_field::FieldElement;
 
 use crate::circuit_fast_track::LayeredCircuit;
-use crate::prover::ZKProver;
+use crate::prover::zk_prover;
 enum gate_types {
     add = 0,
     mult = 1,
@@ -45,7 +45,7 @@ pub struct zk_verifier<'a> {
     beta_v_block_second_half: Vec<FieldElement>,
 
     pub aritmetic_circuit: LayeredCircuit, // The circuit
-    pub prover: Option<&'a ZKProver>,      // The prover
+    pub prover: Option<&'a zk_prover<'a>>, // The prover
 
     VPD_randomness: Vec<FieldElement>,
     one_minus_VPD_randomness: Vec<FieldElement>,
@@ -56,7 +56,7 @@ impl<'a> zk_verifier<'a> {
         Default::default()
     }
 
-    pub fn get_prover(&mut self, prover__: &'a ZKProver) {
+    pub fn get_prover(&mut self, prover__: &'a zk_prover) {
         self.prover = Some(prover__);
     }
 }
