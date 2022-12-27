@@ -38,6 +38,10 @@ It's a gate that output the summation of previous layer. A simple use case is ma
 ### Matrix multiplication test explain
 
 ```bash
+git clone git@github.com:sunblaze-ucb/Virgo.git
+```
+
+```bash
 cd tests/matmul
 python build.py
 python run.py
@@ -54,3 +58,5 @@ g++ gen.cpp -o gen -O3
 ./gen 128 mat_128_circuit.txt mat_128_meta.txt
 ./gen 256 mat_256_circuit.txt mat_256_meta.txt
 ```
+
+To understand the matrix generation check the gen.cpp in this folder
