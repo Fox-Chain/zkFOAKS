@@ -13,7 +13,6 @@ int main(int argc, char **argv)
 	std::cout << "hello world" << std::endl;
 
 	prime_field::init();
-
 	p.total_time = 0;
 	// std::cout << p << std::endl;
 	v.get_prover(&p);

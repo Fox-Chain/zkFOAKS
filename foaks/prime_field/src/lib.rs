@@ -3,7 +3,7 @@
 pub mod error;
 pub mod ops;
 
-use std::sync::atomic::AtomicBool;
+use std::{arch::x86_64::_mm256_set_epi64x, sync::atomic::AtomicBool};
 
 use ethnum::{i256, AsI256};
 use serde::Serialize;
@@ -18,6 +18,26 @@ pub const MASK: u32 = 4294967295; // 2^32 - 1
 pub const PRIME: u64 = 2305843009213693951; // 2^61 - 1
 
 pub const MAX_ORDER: usize = 62;
+
+//pub struct FieldElementContext {
+//pub packed_mod: i256,
+//  pub packed_mod_minus_one: i256,
+//}
+
+//impl FieldElementContext {
+//pub fn init() -> Self {
+//unsafe {
+//let packed_mod = _mm256_set_epi64x(MOD as i64, MOD as i64, MOD as i64, MOD as i64);
+//let packed_mod_minus_one = _mm256_set_epi64x(MOD - 1, MOD - 1, MOD - 1, MOD - 1);
+
+//  INITIALIZED = true;
+//}
+//Self {
+//    packed_mod,
+//      packed_mod_minus_one,
+//    }
+//  }
+//}
 
 pub fn my_mod(x: u64) -> u64 {
     (x >> 61) + (x & MOD)

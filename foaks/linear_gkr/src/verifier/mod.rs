@@ -18,7 +18,7 @@ enum gate_types {
     custom_linear_comb = 14,
     input = 3,
 }
-#[derive(Default)]
+#[derive(Default, Debug)]
 
 pub struct zk_verifier<'a> {
     pub proof_size: u32,

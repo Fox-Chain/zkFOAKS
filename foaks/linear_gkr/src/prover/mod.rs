@@ -24,7 +24,7 @@ pub fn from_string(s: &str) -> FieldElement {
 
     ret
 }
-#[derive(Default)]
+#[derive(Default, Debug)]
 
 pub struct zk_prover<'a> {
     //poly_prover: PolyCommitProver,
@@ -265,6 +265,8 @@ impl<'a> zk_prover<'a> {
         //self.circuit_value[0] =
         // Vec::with_capacity(1 << self.aritmetic_circuit.unwrap().circuit[0].bit_length);
         self.circuit_value[0] = inputs;
+        // todo()
+        //self.circuit_value[0] = inputs[..n].to_vec();
     }
 
     pub fn sumcheck_init(

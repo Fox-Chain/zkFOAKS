@@ -1,4 +1,5 @@
 use prime_field::FieldElement;
+#[derive(Debug)]
 
 pub struct LinearPoly {
     pub a: FieldElement,
