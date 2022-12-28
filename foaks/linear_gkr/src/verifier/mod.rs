@@ -1,3 +1,8 @@
+use std::fs::File;
+use std::io::prelude::*;
+use std::io::BufReader;
+use std::path::Path;
+
 use poly_commitment::PolyCommitProver;
 use prime_field::FieldElement;
 
@@ -19,7 +24,6 @@ enum gate_types {
     input = 3,
 }
 #[derive(Default, Debug)]
-
 pub struct zk_verifier<'a> {
     pub proof_size: u32,
     pub v_time: u64,
@@ -58,5 +62,18 @@ impl<'a> zk_verifier<'a> {
 
     pub fn get_prover(&mut self, prover__: &'a zk_prover) {
         self.prover = Some(prover__);
+    }
+
+    pub fn read_circuit(&mut self, path: &String, meta_path: &String) {
+        println!("{} {}", path, meta_path);
+        let circuit_path = Path::new(path);
+        println!("{:?}", circuit_path);
+        let circuit_file = File::open(path).unwrap();
+        println!("{:?}", circuit_file);
+        let circuit_reader = BufReader::new(circuit_file);
+
+        let D = circuit_reader.lines().map(|l| l.unwrap()).next();
+        let d: i8 = D.unwrap().parse().unwrap();
+        println!("{:?}", d);
     }
 }
