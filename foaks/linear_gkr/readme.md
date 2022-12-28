@@ -63,5 +63,6 @@ To understand the matrix generation check the gen.cpp in this folder
 
 ### Use this line to run main.rs
 ```bash
+cd src/
 cargo run main.rs mat_16_circuit.txt mat_16_meta.txt LOG/mat_16.txt
 ```
