@@ -42,7 +42,7 @@ pub fn verify_merkle(
 
     unsafe {
         for value in values {
-            let data_element: [HashDigest; 2] = [
+            let mut data_element: [HashDigest; 2] = [
                 hash_single_field_element(value.0),
                 hash_single_field_element(value.1),
             ];
@@ -203,7 +203,6 @@ impl FRIContext {
             ),
         };
 
-        // QUESTION: from img or from real?
         let inv_2 = FieldElement::default().inverse();
 
         let log_leaf_size = LOG_SLICE_NUMBER + 1;
@@ -286,12 +285,13 @@ impl FRIContext {
             }
 
             // write merkle tree to self.cpd.merkle[self.current_step_no]
+            let current_step_no = self.cpd.merkle[self.current_step_no].clone();
             create_tree(
                 hash_val,
                 nxt_witness_size / 2,
                 self.cpd.merkle[self.current_step_no].as_mut(),
                 Some(std::mem::size_of::<HashDigest>()),
-                Some(self.cpd.merkle[self.current_step_no].is_empty()),
+                Some(current_step_no.is_empty()),
             )
         }
 
@@ -306,32 +306,31 @@ impl FRIContext {
     pub fn commit_phase_final(&self) -> Vec<FieldElement> {
         self.cpd.rs_codeword[self.current_step_no - 1].clone()
     }
-}
 
-// Return the hhash array of commitments, randomness and final small polynomial (represented by rscode)
-pub fn commit_phase(log_length: usize) -> LdtCommitment {
-    // LOG_SLICE_NUMBER;
+    pub fn commit_phase(&mut self, log_length: usize) -> LdtCommitment {
+        // let log_current_witness_size_per_slice_cp = self.log_current_witness_size_per_slice;
+        // assumming we already have the initial commit
+        let mut codeword_size = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+        // repeat until the codeword is constant
+        let mut ret: Vec<HashDigest> =
+            Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+        let mut randomness: Vec<FieldElement> =
+            Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
 
-    let mut codeword_size = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+        let mut ptr = 0;
+        while codeword_size > 1 << RS_CODE_RATE {
+            assert!(ptr < log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+            randomness[ptr] = FieldElement::random();
+            ret[ptr] = self.commit_phrase_step(randomness[ptr]);
+            codeword_size /= 2;
+            ptr += 1;
+        }
 
-    let mut randomness: Vec<FieldElement> =
-        Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
-
-    let mut ret: Vec<HashDigest> = Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
-
-    let mut ptr = 0;
-    while codeword_size > (1 << RS_CODE_RATE) {
-        randomness[ptr] = prime_field::FieldElement::new_random();
-        // QUESTION: how?
-        // ret[ptr] = commit_step(randomness[ptr]);
-        codeword_size /= 2;
-        ptr += 1;
-    }
-
-    LdtCommitment {
-        commitment_hash: ret,
-        // final_rs_code: vpdVerifier::finish(),
-        randomness,
-        mx_depth: ptr,
+        LdtCommitment {
+            commitment_hash: ret,
+            final_rs_code: self.commit_phase_final(),
+            randomness,
+            mx_depth: ptr,
+        }
     }
 }
