@@ -66,20 +66,25 @@ impl<'a> zk_verifier<'a> {
     }
 
     pub fn read_circuit(&mut self, path: &String, meta_path: &String) {
-        println!("{} {}", path, meta_path);
+        // println!("{} {}", path, meta_path);
         let circuit_path = Path::new(path);
-        println!("{:?}", circuit_path);
+        // println!("{:?}", circuit_path);
         let circuit_file = File::open(path).unwrap();
-        println!("{:?}", circuit_file);
+        // println!("{:?}", circuit_file);
         let mut circuit_reader = BufReader::new(circuit_file);
 
         let mut lines_iter = circuit_reader.lines().map(|l| l.unwrap());
         let d: usize = lines_iter.next().unwrap().parse().unwrap();
 
-        println!("{:?}", d);
+        println!("d: {:?}", d);
 
+        // NEED WORK HERE !!!
         self.aritmetic_circuit.circuit = Vec::with_capacity(d);
         self.aritmetic_circuit.total_depth = d + 1;
+        println!(
+            "aritmetic_circuit.circuit: {:?}",
+            self.aritmetic_circuit.circuit
+        );
 
         let max_bit_length = -1;
         let mut n_pad: usize;
@@ -89,7 +94,7 @@ impl<'a> zk_verifier<'a> {
             let next_line = lines_iter.next().unwrap();
             let mut next_line_splited = next_line.split_whitespace();
             let n: usize = next_line_splited.next().unwrap().parse().unwrap();
-            println!("{}", n);
+            println!("n: {}", n);
             if d > 3 {
                 pad_requirement = 17;
             } else {
@@ -97,12 +102,14 @@ impl<'a> zk_verifier<'a> {
             }
 
             if i == 1 && n < (1 << pad_requirement) {
-                n_pad = (1 << pad_requirement);
+                n_pad = 1 << pad_requirement
             } else {
                 n_pad = n;
             }
 
             if i != 1 {
+                // The circuit vector have issue none of the circuit[].gate work. Break when i = 1
+                // Error when try to print self.aritmetic_circuit.circuit[0]
                 if n == 1 {
                     self.aritmetic_circuit.circuit[i].gates = Vec::with_capacity(2);
                 } else {
@@ -112,9 +119,27 @@ impl<'a> zk_verifier<'a> {
                 if n == 1 {
                     self.aritmetic_circuit.circuit[0].gates = Vec::with_capacity(2);
                     self.aritmetic_circuit.circuit[1].gates = Vec::with_capacity(2);
+                    // println!("{:?}", self.aritmetic_circuit.circuit[1].gates);
                 } else {
-                    //self.aritmetic_circuit.circuit[0].gates = Vec::with_capacity(n_pad);
-                    //self.aritmetic_circuit.circuit[1].gates = Vec::with_capacity(n_pad);
+                    println!("check i: {}", i);
+                    let _gate = Layer {
+                        gates: Vec::with_capacity(2),
+                        src_expander_c_mempool: todo!(),
+                        src_expander_d_mempool: todo!(),
+                        weight_expander_c_mempool: todo!(),
+                        weight_expander_d_mempool: todo!(),
+                        bit_length: todo!(),
+                        u_gates: todo!(),
+                        v_gates: todo!(),
+                        is_parallel: todo!(),
+                        block_size: todo!(),
+                        log_block_size: todo!(),
+                        repeat_num: todo!(),
+                        log_repeat_num: todo!(),
+                    };
+                    self.aritmetic_circuit.circuit.push(_gate);
+                    self.aritmetic_circuit.circuit[1].gates = Vec::with_capacity(2);
+                    // self.aritmetic_circuit.circuit[1].gates = Vec::with_capacity(n_pad);
                 }
             }
             let max_gate = -1;
@@ -130,6 +155,14 @@ impl<'a> zk_verifier<'a> {
             //"{}",
             //(1 << self.aritmetic_circuit.circuit[i - 1].bit_length)
             //);
+
+            if (ty != 3) {}
+            if (ty == 6) {}
+            if (ty == 10) {}
+            if (ty == 13) {}
+            // if (g != previous_g + 1) {}
+            // previous_g = g;
+            if (i != 1) {}
 
             break;
         }

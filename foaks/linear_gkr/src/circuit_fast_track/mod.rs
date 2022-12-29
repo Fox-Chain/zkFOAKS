@@ -42,19 +42,19 @@ impl Gate {
 
 #[derive(Default, Debug, Clone)]
 pub struct Layer {
-    src_expander_c_mempool: Vec<i32>,
-    src_expander_d_mempool: Vec<i32>,
-    weight_expander_c_mempool: Vec<FieldElement>,
-    weight_expander_d_mempool: Vec<FieldElement>,
+    pub src_expander_c_mempool: Vec<i32>,
+    pub src_expander_d_mempool: Vec<i32>,
+    pub weight_expander_c_mempool: Vec<FieldElement>,
+    pub weight_expander_d_mempool: Vec<FieldElement>,
     pub gates: Vec<Gate>,
     pub bit_length: usize,
-    u_gates: HashMap<i32, Vec<(i32, (i32, i32))>>,
-    v_gates: HashMap<i32, Vec<(i32, (i32, i32))>>,
-    is_parallel: bool,
-    block_size: usize,
-    log_block_size: usize,
-    repeat_num: usize,
-    log_repeat_num: usize,
+    pub u_gates: HashMap<i32, Vec<(i32, (i32, i32))>>,
+    pub v_gates: HashMap<i32, Vec<(i32, (i32, i32))>>,
+    pub is_parallel: bool,
+    pub block_size: usize,
+    pub log_block_size: usize,
+    pub repeat_num: usize,
+    pub log_repeat_num: usize,
 }
 
 impl Layer {
