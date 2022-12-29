@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use prime_field::FieldElement;
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 
 pub struct Gate {
     pub ty: i32,
@@ -40,7 +40,7 @@ impl Gate {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct Layer {
     src_expander_c_mempool: Vec<i32>,
     src_expander_d_mempool: Vec<i32>,
