@@ -179,7 +179,7 @@ impl<'a> zk_prover<'a> {
             let halt = self.aritmetic_circuit.as_ref().unwrap().circuit[i].bit_length;
             for j in 0..halt {
                 let g = j;
-                let ty: i32 = self.aritmetic_circuit.as_ref().unwrap().circuit[i].gates[g].ty;
+                let ty: u32 = self.aritmetic_circuit.as_ref().unwrap().circuit[i].gates[g].ty;
                 let u = self.aritmetic_circuit.as_ref().unwrap().circuit[i].gates[g].u;
                 let v = self.aritmetic_circuit.as_ref().unwrap().circuit[i].gates[g]
                     .v
