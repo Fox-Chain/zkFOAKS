@@ -1,5 +1,5 @@
 use prime_field::FieldElement;
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 
 pub struct LinearPoly {
     pub a: FieldElement,
@@ -7,6 +7,12 @@ pub struct LinearPoly {
 }
 
 impl LinearPoly {
+    pub fn zero() -> Self {
+        Self {
+            a: FieldElement::zero(),
+            b: FieldElement::zero(),
+        }
+    }
     pub fn new(a: FieldElement, b: FieldElement) -> Self {
         Self { a, b }
     }
@@ -42,6 +48,7 @@ impl core::ops::Mul for LinearPoly {
         QuadraticPoly::new(a, b, c)
     }
 }
+#[derive(Debug, Clone)]
 
 pub struct QuadraticPoly {
     a: FieldElement,
@@ -50,6 +57,13 @@ pub struct QuadraticPoly {
 }
 
 impl QuadraticPoly {
+    pub fn zero() -> Self {
+        Self {
+            a: FieldElement::zero(),
+            b: FieldElement::zero(),
+            c: FieldElement::zero(),
+        }
+    }
     pub fn new(a: FieldElement, b: FieldElement, c: FieldElement) -> Self {
         Self { a, b, c }
     }

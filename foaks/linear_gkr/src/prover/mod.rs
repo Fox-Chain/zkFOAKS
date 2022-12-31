@@ -7,9 +7,9 @@ use prime_field::FieldElement;
 use std::time::SystemTime;
 
 static mut INV_2: FieldElement = FieldElement::zero();
-static mut V_mult_add_new: Vec<FieldElement> = Vec::new();
-static mut addV_array_new: Vec<FieldElement> = Vec::new();
-static mut add_mult_sum_new: Vec<FieldElement> = Vec::new();
+static mut v_mult_add_new: Vec<LinearPoly> = Vec::new();
+static mut add_v_array_new: Vec<LinearPoly> = Vec::new();
+static mut add_mult_sum_new: Vec<LinearPoly> = Vec::new();
 static mut gate_meet: [bool; 15] = [false; 15];
 static mut rets_prev: Vec<QuadraticPoly> = Vec::new();
 static mut rets_cur: Vec<QuadraticPoly> = Vec::new();
@@ -54,7 +54,7 @@ pub struct zk_prover<'a> {
 
     add_v_array: Vec<LinearPoly>,
     v_mult_add: Vec<LinearPoly>,
-    beta_g_r0_fhalf: Vec<FieldElement>,
+    pub beta_g_r0_fhalf: Vec<FieldElement>,
     beta_g_r0_shalf: Vec<FieldElement>,
     beta_g_r1_fhalf: Vec<FieldElement>,
     beta_g_r1_shalf: Vec<FieldElement>,
@@ -72,65 +72,33 @@ impl<'a> zk_prover<'a> {
     pub fn new() -> Self {
         Default::default()
     }
-    pub fn new_2(half_length: usize) -> Self {
-        Self {
-            beta_g_r0_fhalf: todo!(),
-            beta_g_r0_shalf: todo!(),
-            beta_g_r1_fhalf: todo!(),
-            beta_g_r1_shalf: todo!(),
-            beta_u_fhalf: todo!(),
-            beta_u_shalf: todo!(),
-            add_mult_sum: todo!(),
-            v_mult_add: todo!(),
-            add_v_array: todo!(),
-            //poly_prover: todo!(),
-            v_v: todo!(),
-            u_v: todo!(),
-            total_uv: todo!(),
-            aritmetic_circuit: todo!(),
-            circuit_value: todo!(),
-            sumcheck_layer_id: todo!(),
-            length_g: todo!(),
-            length_u: todo!(),
-            length_v: todo!(),
-            alpha: todo!(),
-            beta: todo!(),
-            r_0: todo!(),
-            r_1: todo!(),
-            one_minus_r_0: todo!(),
-            one_minus_r_1: todo!(),
-            beta_u: todo!(),
-            beta_v: todo!(),
-            beta_g: todo!(),
-            total_time: todo!(),
-        }
-    }
 
     pub fn init_array(&mut self, max_bit_length: usize) {
         let half_length = (max_bit_length >> 1) + 1;
 
         unsafe {
+            //gate_meet size: 15 or 14
             gate_meet = [false; 15];
-            V_mult_add_new = Vec::with_capacity(1 << half_length);
-            addV_array_new = Vec::with_capacity(1 << half_length);
-            add_mult_sum_new = Vec::with_capacity(1 << half_length);
-            rets_prev = Vec::with_capacity(1 << half_length);
-            rets_cur = Vec::with_capacity(1 << half_length);
+            v_mult_add_new = vec![LinearPoly::zero(); 1 << half_length];
+            add_v_array_new = vec![LinearPoly::zero(); 1 << half_length];
+            add_mult_sum_new = vec![LinearPoly::zero(); 1 << half_length];
+            rets_prev = vec![QuadraticPoly::zero(); 1 << half_length];
+            rets_cur = vec![QuadraticPoly::zero(); 1 << half_length];
         }
 
         Self::init_zkprover(self, half_length);
     }
 
     pub fn init_zkprover(&mut self, half_length: usize) {
-        self.beta_g_r0_fhalf = Vec::with_capacity(1 << half_length);
-        self.beta_g_r0_shalf = Vec::with_capacity(1 << half_length);
-        self.beta_g_r1_fhalf = Vec::with_capacity(1 << half_length);
-        self.beta_g_r1_shalf = Vec::with_capacity(1 << half_length);
-        self.beta_u_fhalf = Vec::with_capacity(1 << half_length);
-        self.beta_u_shalf = Vec::with_capacity(1 << half_length);
-        self.add_mult_sum = Vec::with_capacity(1 << half_length);
-        self.v_mult_add = Vec::with_capacity(1 << half_length);
-        self.add_v_array = Vec::with_capacity(1 << half_length);
+        self.beta_g_r0_fhalf = vec![FieldElement::zero(); 1 << half_length];
+        self.beta_g_r0_shalf = vec![FieldElement::zero(); 1 << half_length];
+        self.beta_g_r1_fhalf = vec![FieldElement::zero(); 1 << half_length];
+        self.beta_g_r1_shalf = vec![FieldElement::zero(); 1 << half_length];
+        self.beta_u_fhalf = vec![FieldElement::zero(); 1 << half_length];
+        self.beta_u_shalf = vec![FieldElement::zero(); 1 << half_length];
+        self.add_mult_sum = vec![LinearPoly::zero(); 1 << half_length];
+        self.v_mult_add = vec![LinearPoly::zero(); 1 << half_length];
+        self.add_v_array = vec![LinearPoly::zero(); 1 << half_length];
     }
 
     pub fn get_circuit(&mut self, from_verifier: &'a LayeredCircuit) {

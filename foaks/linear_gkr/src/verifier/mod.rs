@@ -68,11 +68,7 @@ impl<'a> zk_verifier<'a> {
     }
 
     pub fn read_circuit(&mut self, path: &String, meta_path: &String) {
-        // println!("{} {}", path, meta_path);
-        let circuit_path = Path::new(path);
-        // println!("{:?}", circuit_path);
         let circuit_file = File::open(path).unwrap();
-        // println!("{:?}", circuit_file);
         let circuit_reader = BufReader::new(circuit_file);
 
         let mut lines_iter = circuit_reader.lines().map(|l| l.unwrap());
@@ -80,15 +76,14 @@ impl<'a> zk_verifier<'a> {
 
         println!("d: {:?}", d);
 
-        // NEED WORK HERE !!!
-        self.aritmetic_circuit.circuit = vec![Layer::new(); 2];
+        self.aritmetic_circuit.circuit = vec![Layer::new(); d + 1];
         self.aritmetic_circuit.total_depth = d + 1;
         println!(
-            "aritmetic_circuit.circuit: {:?}",
-            self.aritmetic_circuit.circuit
+            "aritmetic_circuit.circuit[0]: {:?}",
+            self.aritmetic_circuit.circuit[0]
         );
 
-        let max_bit_length = -1;
+        let mut max_bit_length: isize = -1;
         let mut n_pad: usize;
         for i in 1..=d {
             let pad_requirement: usize;
@@ -96,7 +91,7 @@ impl<'a> zk_verifier<'a> {
             let next_line = lines_iter.next().unwrap();
             let mut next_line_splited = next_line.split_whitespace();
             let mut number_gates: usize = next_line_splited.next().unwrap().parse().unwrap();
-            println!("n: {}", number_gates);
+            println!("number_gates: {}", number_gates);
             if d > 3 {
                 pad_requirement = 17;
             } else {
@@ -104,14 +99,11 @@ impl<'a> zk_verifier<'a> {
             }
             if i == 1 && number_gates < (1 << pad_requirement) {
                 n_pad = 1 << pad_requirement;
-                println!("n_pad: {}", n_pad)
             } else {
                 n_pad = number_gates;
             }
 
             if i != 1 {
-                // The circuit vector have issue none of the circuit[].gate work. Break when i = 1
-                // Error when try to print self.aritmetic_circuit.circuit[0]
                 if number_gates == 1 {
                     self.aritmetic_circuit.circuit[i].gates = vec![Gate::new(); 2];
                 } else {
@@ -121,30 +113,12 @@ impl<'a> zk_verifier<'a> {
                 if number_gates == 1 {
                     self.aritmetic_circuit.circuit[0].gates = vec![Gate::new(); 2];
                     self.aritmetic_circuit.circuit[1].gates = vec![Gate::new(); 2];
-                    // println!("{:?}", self.aritmetic_circuit.circuit[1].gates);
                 } else {
-                    //println!("check i: {}", i);
-                    //let _gate = Layer {
-                    //  gates: Vec::with_capacity(2),
-                    //  src_expander_c_mempool: todo!(),
-                    //  src_expander_d_mempool: todo!(),
-                    // weight_expander_c_mempool: todo!(),
-                    //  weight_expander_d_mempool: todo!(),
-                    //  bit_length: todo!(),
-                    // u_gates: todo!(),
-                    // v_gates: todo!(),
-                    // is_parallel: todo!(),
-                    // block_size: todo!(),
-                    // log_block_size: todo!(),
-                    //  repeat_num: todo!(),
-                    // log_repeat_num: todo!(),
-                    // };
-                    //self.aritmetic_circuit.circuit.push(_gate);
                     self.aritmetic_circuit.circuit[0].gates = vec![Gate::new(); n_pad];
                     self.aritmetic_circuit.circuit[1].gates = vec![Gate::new(); n_pad];
                 }
             }
-            let max_gate = -1;
+            let mut max_gate = -1;
             let mut previous_g: isize = -1;
 
             for j in 0..number_gates {
@@ -153,7 +127,7 @@ impl<'a> zk_verifier<'a> {
                 let u: usize = next_line_splited.next().unwrap().parse().unwrap();
                 let mut v: usize = next_line_splited.next().unwrap().parse().unwrap();
 
-                if j % 100 == 0 {
+                if j % number_gates / 4 == 0 {
                     println!("ty:{} g:{} u:{} v:{}", ty, g, u, v,);
                 }
 
@@ -247,8 +221,115 @@ impl<'a> zk_verifier<'a> {
                     self.aritmetic_circuit.circuit[1].gates[0]
                 );
             }
-            //can comment the below break sentence to let the loop continue
-            break;
+
+            max_gate = previous_g;
+            let mut cnt = 0;
+            while max_gate > 0 {
+                cnt += 1;
+                max_gate >>= 1;
+            }
+            max_gate = 1;
+            while cnt > 0 {
+                max_gate <<= 1;
+                cnt -= 1;
+            }
+            let mut mx_gate = max_gate;
+            while (mx_gate > 0) {
+                cnt += 1;
+                mx_gate >>= 1;
+            }
+            if number_gates == 1 {
+                //add a dummy gate to avoid ill-defined layer.
+                if i != 1 {
+                    self.aritmetic_circuit.circuit[i].gates[max_gate as usize] =
+                        Gate::from_params(2, 0, 0);
+                    self.aritmetic_circuit.circuit[i].bit_length = cnt;
+                } else {
+                    self.aritmetic_circuit.circuit[0].gates[max_gate as usize] =
+                        Gate::from_params(2, 0, 0);
+                    self.aritmetic_circuit.circuit[0].bit_length = cnt;
+                    self.aritmetic_circuit.circuit[1].gates[max_gate as usize] =
+                        Gate::from_params(4, 1, 0);
+                    self.aritmetic_circuit.circuit[1].bit_length = cnt;
+                }
+            } else {
+                self.aritmetic_circuit.circuit[i].bit_length = cnt - 1;
+                if i == 1 {
+                    self.aritmetic_circuit.circuit[0].bit_length = cnt - 1;
+                }
+            }
+            //todo: improve error handling
+            println!(
+                "layer {}, bit_length {}",
+                i, self.aritmetic_circuit.circuit[i].bit_length
+            );
+            if self.aritmetic_circuit.circuit[i].bit_length as isize > max_bit_length {
+                max_bit_length = self.aritmetic_circuit.circuit[i].bit_length as isize;
+            }
+
+            //can uncomment the below break sentence to break the for loop
+            //break;
         }
+        self.aritmetic_circuit.circuit[0].is_parallel = false;
+
+        let meta_file = File::open(meta_path).unwrap();
+        let meta_reader = BufReader::new(meta_file);
+
+        let mut meta_lines_iter = meta_reader.lines().map(|l| l.unwrap());
+        for i in 1..=d {
+            let meta_line = meta_lines_iter.next().unwrap();
+            let mut meta_line_splited = meta_line.split_whitespace();
+
+            let is_para: usize = meta_line_splited.next().unwrap().parse().unwrap();
+            self.aritmetic_circuit.circuit[i].block_size =
+                meta_line_splited.next().unwrap().parse().unwrap();
+            self.aritmetic_circuit.circuit[i].repeat_num =
+                meta_line_splited.next().unwrap().parse().unwrap();
+            self.aritmetic_circuit.circuit[i].log_block_size =
+                meta_line_splited.next().unwrap().parse().unwrap();
+            self.aritmetic_circuit.circuit[i].log_repeat_num =
+                meta_line_splited.next().unwrap().parse().unwrap();
+
+            //println!("meta_line: {:?}", meta_line);
+
+            if is_para != 0 {
+                assert!(
+                    1 << self.aritmetic_circuit.circuit[i].log_repeat_num
+                        == self.aritmetic_circuit.circuit[i].repeat_num
+                );
+            }
+            if is_para != 0 {
+                self.aritmetic_circuit.circuit[i].is_parallel = true;
+            } else {
+                self.aritmetic_circuit.circuit[i].is_parallel = false;
+            }
+        }
+        //todo!: One possible way to solve the bug is implement: Mutex<_>
+        //self.prover.unwrap().init_array(max_bit_length as usize);
+
+        Self::init_array(self, max_bit_length);
+    }
+
+    pub fn init_array(&mut self, max_bit_length: isize) {
+        let first_half_len = max_bit_length / 2;
+        let second_half_len = max_bit_length - first_half_len;
+
+        self.beta_g_r0_first_half = vec![FieldElement::zero(); 1 << first_half_len];
+        self.beta_g_r0_second_half = vec![FieldElement::zero(); 1 << second_half_len];
+        self.beta_g_r1_first_half = vec![FieldElement::zero(); 1 << first_half_len];
+        self.beta_g_r1_second_half = vec![FieldElement::zero(); 1 << second_half_len];
+        self.beta_v_first_half = vec![FieldElement::zero(); 1 << first_half_len];
+        self.beta_v_second_half = vec![FieldElement::zero(); 1 << second_half_len];
+        self.beta_u_first_half = vec![FieldElement::zero(); 1 << first_half_len];
+        self.beta_u_second_half = vec![FieldElement::zero(); 1 << second_half_len];
+
+        self.beta_g_r0_block_first_half = vec![FieldElement::zero(); 1 << first_half_len];
+        self.beta_g_r0_block_second_half = vec![FieldElement::zero(); 1 << second_half_len];
+        self.beta_g_r1_block_first_half = vec![FieldElement::zero(); 1 << first_half_len];
+        self.beta_g_r1_block_second_half = vec![FieldElement::zero(); 1 << second_half_len];
+        self.beta_v_block_first_half = vec![FieldElement::zero(); 1 << first_half_len];
+        self.beta_v_block_second_half = vec![FieldElement::zero(); 1 << second_half_len];
+        self.beta_u_block_first_half = vec![FieldElement::zero(); 1 << first_half_len];
+        self.beta_u_block_second_half = vec![FieldElement::zero(); 1 << second_half_len];
     }
 }
