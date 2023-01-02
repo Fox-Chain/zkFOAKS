@@ -306,7 +306,7 @@ impl<'a> zk_verifier<'a> {
         }
         //todo!: One possible way to solve the bug is implement: Mutex<_>
         //self.prover.unwrap().init_array(max_bit_length as usize);
-
+        println!("max_bit_length:{}", max_bit_length);
         Self::init_array(self, max_bit_length);
     }
 
@@ -331,5 +331,23 @@ impl<'a> zk_verifier<'a> {
         self.beta_v_block_second_half = vec![FieldElement::zero(); 1 << second_half_len];
         self.beta_u_block_first_half = vec![FieldElement::zero(); 1 << first_half_len];
         self.beta_u_block_second_half = vec![FieldElement::zero(); 1 << second_half_len];
+    }
+
+    //Decided to implemente the verify() function from orion repo
+    pub fn verify_orion(&mut self, output_path: &String) {
+        self.proof_size = 0;
+        //there is a way to compress binlinear pairing element
+        let verification_time = 0;
+        let predicates_calc_time = 0;
+        let verification_rdl_time = 0;
+
+        //Below function is not implemented neither in virgo repo nor orion repo
+        //prime_field::init_random();
+
+        //Below function is not implemented neither in virgo repo nor orion repo
+        //self.prover.unwrap().proof_init();
+
+        //todo
+        //let result = self.prover.unwrap().evaluate();
     }
 }

@@ -132,90 +132,100 @@ impl<'a> zk_prover<'a> {
     pub fn evaluate(&mut self) -> Vec<FieldElement> {
         todo!();
         let t0 = SystemTime::now();
-        let halt = 1 << self.aritmetic_circuit.as_ref().unwrap().circuit[0].bit_length;
+        let halt = 1 << self.aritmetic_circuit.unwrap().circuit[0].bit_length;
         for i in 0..halt {
             let g = i;
-            let u = self.aritmetic_circuit.as_ref().unwrap().circuit[0].gates[0].u;
-            let ty = self.aritmetic_circuit.as_ref().unwrap().circuit[0].gates[0].ty;
+            //todo: Could delete below variable, never used
+            let u = self.aritmetic_circuit.unwrap().circuit[0].gates[g].u;
+            let ty = self.aritmetic_circuit.unwrap().circuit[0].gates[g].ty;
             assert!(ty == 3 || ty == 2);
         }
-        assert!(self.aritmetic_circuit.as_ref().unwrap().total_depth < 1000000);
-        for i in 0..self.aritmetic_circuit.as_ref().unwrap().total_depth {
-            self.circuit_value[i] = Vec::with_capacity(
-                1 << self.aritmetic_circuit.as_ref().unwrap().circuit[i].bit_length,
-            );
-            let halt = self.aritmetic_circuit.as_ref().unwrap().circuit[i].bit_length;
-            for j in 0..halt {
+        assert!(self.aritmetic_circuit.unwrap().total_depth < 1000000);
+        for i in 1..self.aritmetic_circuit.unwrap().total_depth {
+            self.circuit_value[i] = vec![
+                FieldElement::zero();
+                1 << self.aritmetic_circuit.unwrap().circuit[i].bit_length
+            ];
+            for j in 0..self.aritmetic_circuit.unwrap().circuit[i].bit_length {
                 let g = j;
-                let ty: u32 = self.aritmetic_circuit.as_ref().unwrap().circuit[i].gates[g].ty;
-                let u = self.aritmetic_circuit.as_ref().unwrap().circuit[i].gates[g].u;
-                let v = self.aritmetic_circuit.as_ref().unwrap().circuit[i].gates[g]
-                    .v
-                    .try_into()
-                    .unwrap();
-                if (ty == 0) {
+                let ty: u32 = self.aritmetic_circuit.unwrap().circuit[i].gates[g].ty;
+                let u = self.aritmetic_circuit.unwrap().circuit[i].gates[g].u;
+                let v = self.aritmetic_circuit.unwrap().circuit[i].gates[g].v;
+
+                if ty == 0 {
                     self.circuit_value[i][g] =
                         self.circuit_value[i - 1][u] + self.circuit_value[i - 1][v];
-                } else if (ty == 1) {
+                } else if ty == 1 {
                     assert!(
                         u >= 0
-                            && u < (1
-                                << self.aritmetic_circuit.as_ref().unwrap().circuit[i - 1]
-                                    .bit_length),
+                            && u < (1 << self.aritmetic_circuit.unwrap().circuit[i - 1].bit_length),
                     );
                     assert!(
                         v >= 0
-                            && v < (1
-                                << self.aritmetic_circuit.as_ref().unwrap().circuit[i - 1]
-                                    .bit_length),
+                            && v < (1 << self.aritmetic_circuit.unwrap().circuit[i - 1].bit_length),
                     );
                     self.circuit_value[i][g] =
                         self.circuit_value[i - 1][u] * self.circuit_value[i - 1][v];
-                } else if (ty == 2) {
+                } else if ty == 2 {
                     self.circuit_value[i][g] = FieldElement::from_real(0);
-                } else if (ty == 3) {
+                } else if ty == 3 {
+                    // It is suppose to be input gate, it just read the 'u' input, what about 'v' input
                     self.circuit_value[i][g] = FieldElement::from_real(u.try_into().unwrap());
-                } else if (ty == 4) {
+                } else if ty == 4 {
                     self.circuit_value[i][g] = self.circuit_value[i - 1][u];
-                } else if (ty == 5) {
+                } else if ty == 5 {
                     self.circuit_value[i][g] = FieldElement::from_real(0);
                     for k in u..v {
                         self.circuit_value[i][g] =
                             self.circuit_value[i][g] + self.circuit_value[i - 1][k];
                     }
-                } else if (ty == 6) {
+                } else if ty == 6 {
                     self.circuit_value[i][g] =
                         FieldElement::from_real(1) - self.circuit_value[i - 1][u];
-                } else if (ty == 7) {
+                } else if ty == 7 {
                     self.circuit_value[i][g] =
                         self.circuit_value[i - 1][u] - self.circuit_value[i - 1][v];
-                } else if (ty == 8) {
-                } else if (ty == 9) {
-                } else if (ty == 10) {
+                } else if ty == 8 {
+                    let x = self.circuit_value[i - 1][u];
+                    let y = self.circuit_value[i - 1][v];
+                    self.circuit_value[i][g] = x + y - FieldElement::from_real(2) * x * y;
+                } else if ty == 9 {
+                    assert!(
+                        u >= 0
+                            && u < (1 << self.aritmetic_circuit.unwrap().circuit[i - 1].bit_length)
+                    );
+                    assert!(
+                        v >= 0
+                            && v < (1 << self.aritmetic_circuit.unwrap().circuit[i - 1].bit_length)
+                    );
+                    let x = self.circuit_value[i - 1][u];
+                    let y = self.circuit_value[i - 1][v];
+                    self.circuit_value[i][g] = y - x * y;
+                } else if ty == 10 {
                     self.circuit_value[i][g] = self.circuit_value[i - 1][u];
-                } else if (ty == 12) {
+                } else if ty == 12 {
                     self.circuit_value[i][g] = FieldElement::from_real(0);
                     assert!(v - u + 1 <= 60);
                     for k in u..=v {
                         self.circuit_value[i][g] = self.circuit_value[i][g]
                             + self.circuit_value[i - 1][k] * FieldElement::from_real(1 << (k - u));
                     }
-                } else if (ty == 13) {
+                } else if ty == 13 {
                     assert!(u == v);
                     assert!(
                         u >= 0
-                            && u < (1
-                                << self.aritmetic_circuit.as_ref().unwrap().circuit[i - 1]
-                                    .bit_length),
+                            && u < (1 << self.aritmetic_circuit.unwrap().circuit[i - 1].bit_length),
                     );
                     self.circuit_value[i][g] = self.circuit_value[i - 1][u]
                         * (FieldElement::from_real(1) - self.circuit_value[i - 1][v]);
-                } else if (ty == 14) {
+                } else if ty == 14 {
                     self.circuit_value[i][g] = FieldElement::from_real(0);
-                    for k in 0..self.aritmetic_circuit.as_ref().unwrap().circuit[i].gates[g]
-                        .parameter_length
+                    for k in 0..self.aritmetic_circuit.unwrap().circuit[i].gates[g].parameter_length
                     {
-                        unimplemented!()
+                        let weight = self.aritmetic_circuit.unwrap().circuit[i].gates[g].weight[k];
+                        let idx = self.aritmetic_circuit.unwrap().circuit[i].gates[g].src[k];
+                        self.circuit_value[i][g] =
+                            self.circuit_value[i][g] + self.circuit_value[i - 1][idx] * weight;
                     }
                 } else {
                     assert!(false);
@@ -223,9 +233,8 @@ impl<'a> zk_prover<'a> {
             }
         }
         let t1 = SystemTime::now();
-        let life_span = t1.duration_since(t0);
-        let index = self.aritmetic_circuit.as_ref().unwrap().total_depth;
-        todo!()
+        let time_span = t1.duration_since(t0);
+        println!("total evaluation time: {:?} seconds", time_span.unwrap());
     }
 
     pub fn get_witness(&mut self, inputs: Vec<FieldElement>, n: u32) {

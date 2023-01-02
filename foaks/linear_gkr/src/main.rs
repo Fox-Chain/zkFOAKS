@@ -20,10 +20,13 @@ fn main() {
     let mut zk_p = zk_prover::new();
 
     zk_p.init_total_time(0);
+    //todo!: Should call init_array() inside read_circuit() ! Not here!
+    zk_p.init_array(15);
     zk_v.get_prover(&zk_p);
 
     zk_v.read_circuit(&args[2], &args[3]);
-    //todo: Solve pointers and reference bugs
-    //zk_p.init_array(5);
-    //println!("{:?}", zk_v.prover.unwrap().beta_g_r0_fhalf);
+    zk_p.get_circuit(&zk_v.aritmetic_circuit);
+
+    //todo: Solve below bug
+    //let result = zk_v.verify_orion(&args[4]);
 }

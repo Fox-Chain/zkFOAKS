@@ -7,7 +7,7 @@ pub struct Gate {
     pub ty: u32,
     pub u: usize,
     pub v: usize,
-    pub src: Vec<i32>,
+    pub src: Vec<usize>,
     pub weight: Vec<FieldElement>,
     pub parameter_length: usize,
 }
