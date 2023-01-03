@@ -75,3 +75,9 @@ cargo run main.rs mat_64_circuit.txt mat_64_meta.txt LOG/mat_64.txt
 cargo run main.rs mat_128_circuit.txt mat_128_meta.txt LOG/mat_128.txt
 cargo run main.rs mat_256_circuit.txt mat_256_meta.txt LOG/mat_256.txt
 ```
+
+### Test Lanczos
+
+```bash
+cargo run main.rs lanczos2_112_N=16_circuit.txt lanczos2_112_N=16_meta.txt LOG/lanczos2_112_N=16.txt
+```

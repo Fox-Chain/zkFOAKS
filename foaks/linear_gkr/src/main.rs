@@ -1,9 +1,6 @@
 use linear_gkr::circuit_fast_track::LayeredCircuit;
 use linear_gkr::{prover::zk_prover, verifier::zk_verifier};
 use std::env;
-use std::fs::File;
-use std::io::prelude::*;
-use std::io::BufReader;
 
 fn main() {
     println!("Start Here !!!");
