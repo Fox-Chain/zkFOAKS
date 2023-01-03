@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
 
-use poly_commitment::PolyCommitProver;
+// use poly_commitment::PolyCommitProver;
 use prime_field::FieldElement;
 
 use crate::circuit_fast_track::Gate;
