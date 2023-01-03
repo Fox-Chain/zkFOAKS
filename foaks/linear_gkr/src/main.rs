@@ -16,7 +16,7 @@ fn main() {
          //}
     }
 
-    //prime_field::init() // we dont need this line of code is it?
+    //prime_field::init() // we don't need this line of code is it?
     let mut zk_v = zk_verifier::new();
     let mut zk_p = zk_prover::new2();
 

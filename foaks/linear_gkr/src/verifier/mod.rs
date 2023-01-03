@@ -1,7 +1,6 @@
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
-use std::path::Path;
 
 use poly_commitment::PolyCommitProver;
 use prime_field::FieldElement;
