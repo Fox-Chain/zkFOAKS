@@ -233,7 +233,7 @@ impl zk_verifier {
                 cnt -= 1;
             }
             let mut mx_gate = max_gate;
-            while (mx_gate > 0) {
+            while mx_gate > 0 {
                 cnt += 1;
                 mx_gate >>= 1;
             }

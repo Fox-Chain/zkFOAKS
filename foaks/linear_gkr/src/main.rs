@@ -35,4 +35,6 @@ fn main() {
         println!("{:?}", (*zk_p.aritmetic_circuit.unwrap()).total_depth);
     }
     let result = zk_v.verify_orion(&args[4]);
+    // println!("{:?}", result);
+    // return 0;
 }
