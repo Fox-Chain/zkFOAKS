@@ -1,3 +1,4 @@
+use linear_gkr::circuit_fast_track::LayeredCircuit;
 use linear_gkr::{prover::zk_prover, verifier::zk_verifier};
 use std::env;
 use std::fs::File;
@@ -17,16 +18,21 @@ fn main() {
 
     //prime_field::init() // we dont need this line of code is it?
     let mut zk_v = zk_verifier::new();
-    let mut zk_p = zk_prover::new();
+    let mut zk_p = zk_prover::new2();
+
+    type Prover = zk_prover;
+    type LatCir = LayeredCircuit;
+
+    let ptr_zk_p = &mut zk_p as *mut Prover;
+    let ptr_zk_v_arit_cir = &mut zk_v.aritmetic_circuit as *mut LatCir;
 
     zk_p.init_total_time(0);
-    //todo!: Should call init_array() inside read_circuit() ! Not here!
-    zk_p.init_array(15);
-    zk_v.get_prover(&zk_p);
 
+    zk_v.get_prover(ptr_zk_p);
     zk_v.read_circuit(&args[2], &args[3]);
-    zk_p.get_circuit(&zk_v.aritmetic_circuit);
-
-    //todo: Solve below bug
-    //let result = zk_v.verify_orion(&args[4]);
+    zk_p.get_circuit(ptr_zk_v_arit_cir);
+    unsafe {
+        println!("{:?}", (*zk_p.aritmetic_circuit.unwrap()).total_depth);
+    }
+    let result = zk_v.verify_orion(&args[4]);
 }

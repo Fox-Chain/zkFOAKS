@@ -26,7 +26,7 @@ pub fn from_string(s: &str) -> FieldElement {
 }
 #[derive(Default, Debug)]
 
-pub struct zk_prover<'a> {
+pub struct zk_prover {
     //poly_prover: PolyCommitProver,
     /** @name Basic
     	* Basic information and variables about the arithmetic circuit*/
@@ -34,7 +34,7 @@ pub struct zk_prover<'a> {
     v_v: FieldElement,
     u_v: FieldElement,
     pub total_uv: i32,
-    pub aritmetic_circuit: Option<&'a LayeredCircuit>, //	c++ code: layered_circuit *C;
+    pub aritmetic_circuit: Option<*mut LayeredCircuit>, //	c++ code: layered_circuit *C;
     pub circuit_value: Vec<Vec<FieldElement>>,
     sumcheck_layer_id: u32,
     length_g: u32,
@@ -68,9 +68,15 @@ pub struct zk_prover<'a> {
     total_time: u64,
 }
 
-impl<'a> zk_prover<'a> {
+impl zk_prover {
     pub fn new() -> Self {
         Default::default()
+    }
+    pub fn new2() -> Self {
+        Self {
+            circuit_value: Vec::with_capacity(1000000),
+            ..Default::default()
+        }
     }
 
     pub fn init_array(&mut self, max_bit_length: usize) {
@@ -99,9 +105,10 @@ impl<'a> zk_prover<'a> {
         self.add_mult_sum = vec![LinearPoly::zero(); 1 << half_length];
         self.v_mult_add = vec![LinearPoly::zero(); 1 << half_length];
         self.add_v_array = vec![LinearPoly::zero(); 1 << half_length];
+        println!("Init!");
     }
 
-    pub fn get_circuit(&mut self, from_verifier: &'a LayeredCircuit) {
+    pub fn get_circuit(&mut self, from_verifier: *mut LayeredCircuit) {
         self.aritmetic_circuit = Some(from_verifier);
         unsafe {
             INV_2 = FieldElement::from_real(2);
@@ -129,28 +136,39 @@ impl<'a> zk_prover<'a> {
         // }
     }
 
-    pub fn evaluate(&mut self) -> Vec<FieldElement> {
-        todo!();
+    pub unsafe fn evaluate(&mut self) -> Vec<FieldElement> {
+        //let mut depth: usize;
+        //unsafe {
         let t0 = SystemTime::now();
-        let halt = 1 << self.aritmetic_circuit.unwrap().circuit[0].bit_length;
+        self.circuit_value.push(vec![
+            FieldElement::zero();
+            1 << (*self.aritmetic_circuit.unwrap()).circuit[0]
+                .bit_length
+        ]);
+        let halt = 1 << (*self.aritmetic_circuit.unwrap()).circuit[0].bit_length;
         for i in 0..halt {
             let g = i;
             //todo: Could delete below variable, never used
-            let u = self.aritmetic_circuit.unwrap().circuit[0].gates[g].u;
-            let ty = self.aritmetic_circuit.unwrap().circuit[0].gates[g].ty;
+            let u = (*self.aritmetic_circuit.unwrap()).circuit[0].gates[g].u;
+            let ty = (*self.aritmetic_circuit.unwrap()).circuit[0].gates[g].ty;
             assert!(ty == 3 || ty == 2);
         }
-        assert!(self.aritmetic_circuit.unwrap().total_depth < 1000000);
-        for i in 1..self.aritmetic_circuit.unwrap().total_depth {
-            self.circuit_value[i] = vec![
+        assert!((*self.aritmetic_circuit.unwrap()).total_depth < 1000000);
+        let depth = (*self.aritmetic_circuit.unwrap()).total_depth;
+
+        for i in 1..depth {
+            println!("len: {}", self.circuit_value.len());
+            println!("cap: {}", self.circuit_value.capacity());
+            self.circuit_value.push(vec![
                 FieldElement::zero();
-                1 << self.aritmetic_circuit.unwrap().circuit[i].bit_length
-            ];
-            for j in 0..self.aritmetic_circuit.unwrap().circuit[i].bit_length {
+                1 << (*self.aritmetic_circuit.unwrap()).circuit[i]
+                    .bit_length
+            ]);
+            for j in 0..(*self.aritmetic_circuit.unwrap()).circuit[i].bit_length {
                 let g = j;
-                let ty: u32 = self.aritmetic_circuit.unwrap().circuit[i].gates[g].ty;
-                let u = self.aritmetic_circuit.unwrap().circuit[i].gates[g].u;
-                let v = self.aritmetic_circuit.unwrap().circuit[i].gates[g].v;
+                let ty: u32 = (*self.aritmetic_circuit.unwrap()).circuit[i].gates[g].ty;
+                let u = (*self.aritmetic_circuit.unwrap()).circuit[i].gates[g].u;
+                let v = (*self.aritmetic_circuit.unwrap()).circuit[i].gates[g].v;
 
                 if ty == 0 {
                     self.circuit_value[i][g] =
@@ -158,11 +176,13 @@ impl<'a> zk_prover<'a> {
                 } else if ty == 1 {
                     assert!(
                         u >= 0
-                            && u < (1 << self.aritmetic_circuit.unwrap().circuit[i - 1].bit_length),
+                            && u < (1
+                                << (*self.aritmetic_circuit.unwrap()).circuit[i - 1].bit_length),
                     );
                     assert!(
                         v >= 0
-                            && v < (1 << self.aritmetic_circuit.unwrap().circuit[i - 1].bit_length),
+                            && v < (1
+                                << (*self.aritmetic_circuit.unwrap()).circuit[i - 1].bit_length),
                     );
                     self.circuit_value[i][g] =
                         self.circuit_value[i - 1][u] * self.circuit_value[i - 1][v];
@@ -192,11 +212,13 @@ impl<'a> zk_prover<'a> {
                 } else if ty == 9 {
                     assert!(
                         u >= 0
-                            && u < (1 << self.aritmetic_circuit.unwrap().circuit[i - 1].bit_length)
+                            && u < (1
+                                << (*self.aritmetic_circuit.unwrap()).circuit[i - 1].bit_length)
                     );
                     assert!(
                         v >= 0
-                            && v < (1 << self.aritmetic_circuit.unwrap().circuit[i - 1].bit_length)
+                            && v < (1
+                                << (*self.aritmetic_circuit.unwrap()).circuit[i - 1].bit_length)
                     );
                     let x = self.circuit_value[i - 1][u];
                     let y = self.circuit_value[i - 1][v];
@@ -214,16 +236,19 @@ impl<'a> zk_prover<'a> {
                     assert!(u == v);
                     assert!(
                         u >= 0
-                            && u < (1 << self.aritmetic_circuit.unwrap().circuit[i - 1].bit_length),
+                            && u < (1
+                                << (*self.aritmetic_circuit.unwrap()).circuit[i - 1].bit_length),
                     );
                     self.circuit_value[i][g] = self.circuit_value[i - 1][u]
                         * (FieldElement::from_real(1) - self.circuit_value[i - 1][v]);
                 } else if ty == 14 {
                     self.circuit_value[i][g] = FieldElement::from_real(0);
-                    for k in 0..self.aritmetic_circuit.unwrap().circuit[i].gates[g].parameter_length
+                    for k in
+                        0..(*self.aritmetic_circuit.unwrap()).circuit[i].gates[g].parameter_length
                     {
-                        let weight = self.aritmetic_circuit.unwrap().circuit[i].gates[g].weight[k];
-                        let idx = self.aritmetic_circuit.unwrap().circuit[i].gates[g].src[k];
+                        let weight =
+                            (*self.aritmetic_circuit.unwrap()).circuit[i].gates[g].weight[k];
+                        let idx = (*self.aritmetic_circuit.unwrap()).circuit[i].gates[g].src[k];
                         self.circuit_value[i][g] =
                             self.circuit_value[i][g] + self.circuit_value[i - 1][idx] * weight;
                     }
@@ -232,15 +257,21 @@ impl<'a> zk_prover<'a> {
                 }
             }
         }
+
         let t1 = SystemTime::now();
         let time_span = t1.duration_since(t0);
         println!("total evaluation time: {:?} seconds", time_span.unwrap());
+
+        let depth = (*self.aritmetic_circuit.unwrap()).total_depth;
+        //}
+        self.circuit_value.pop().unwrap()
+        //println!("total evaluation time: ");
     }
 
     pub fn get_witness(&mut self, inputs: Vec<FieldElement>, n: u32) {
         // Do we really need this line of code?
         //self.circuit_value[0] =
-        // Vec::with_capacity(1 << self.aritmetic_circuit.unwrap().circuit[0].bit_length);
+        // Vec::with_capacity(1 << (*self.aritmetic_circuit.unwrap()).circuit[0].bit_length);
         self.circuit_value[0] = inputs;
         // todo()
         //self.circuit_value[0] = inputs[..n].to_vec();
@@ -273,43 +304,20 @@ impl<'a> zk_prover<'a> {
     pub fn init_total_time(&mut self, val: u64) {
         self.total_time = val;
     }
+
+    pub fn sumcheck_phase1_init() {
+        let t0 = SystemTime::now();
+    }
+
+    pub fn sumcheck_phase1_update() {}
+
+    pub fn sumcheck_phase2_init() {}
+
+    pub fn sumcheck_phase2_update() {}
 }
-
-pub fn delete_self() {
-    self::delete_self();
-}
-
-pub fn sumcheck_phase1_init() {
-    let t0 = SystemTime::now();
-}
-
-pub fn sumcheck_phase1_update() {}
-
-pub fn sumcheck_phase2_init() {}
-
-pub fn sumcheck_phase2_update() {}
-
 #[cfg(test)]
 mod tests {
-    use crate::{
-        prover::{from_string, zk_prover},
-        verifier::zk_verifier,
-    };
-
-    #[test]
-    fn prover_verifer_interaction() {
-        let mut zkv = zk_verifier::new();
-        let mut zkp = zk_prover::new();
-        zkp.init_total_time(5);
-        println!("{:?}", zkp.total_time);
-
-        zkv.get_prover(&mut zkp);
-        println!("{:?}", zkv.prover.unwrap().total_time);
-
-        //todo()
-        //zkp.init_total_time(50);
-        //println!("{:?}", zkv.prover.unwrap().total_time);
-    }
+    use crate::prover::from_string;
     #[test]
     fn prover_from_string() {
         let str = from_string("string");

@@ -27,7 +27,7 @@ enum gate_types {
 }
 
 #[derive(Default, Debug)]
-pub struct zk_verifier<'a> {
+pub struct zk_verifier {
     pub proof_size: u32,
     pub v_time: u64,
     //poly_verifier: PolyCommitVerifier,
@@ -52,18 +52,18 @@ pub struct zk_verifier<'a> {
     beta_v_block_second_half: Vec<FieldElement>,
 
     pub aritmetic_circuit: LayeredCircuit, // The circuit
-    pub prover: Option<&'a zk_prover<'a>>, // The prover
+    pub prover: Option<*mut zk_prover>,    // The prover
 
     VPD_randomness: Vec<FieldElement>,
     one_minus_VPD_randomness: Vec<FieldElement>,
 }
 
-impl<'a> zk_verifier<'a> {
+impl zk_verifier {
     pub fn new() -> Self {
         Default::default()
     }
 
-    pub fn get_prover(&mut self, prover__: &'a zk_prover) {
+    pub fn get_prover(&mut self, prover__: *mut zk_prover) {
         self.prover = Some(prover__);
     }
 
@@ -305,7 +305,11 @@ impl<'a> zk_verifier<'a> {
             }
         }
         //todo!: One possible way to solve the bug is implement: Mutex<_>
-        //self.prover.unwrap().init_array(max_bit_length as usize);
+        unsafe {
+            let x = self.prover.unwrap();
+            (*x).init_array(max_bit_length.try_into().unwrap());
+        }
+
         println!("max_bit_length:{}", max_bit_length);
         Self::init_array(self, max_bit_length);
     }
@@ -347,7 +351,9 @@ impl<'a> zk_verifier<'a> {
         //Below function is not implemented neither in virgo repo nor orion repo
         //self.prover.unwrap().proof_init();
 
-        //todo
-        //let result = self.prover.unwrap().evaluate();
+        unsafe {
+            let zkp = self.prover.unwrap();
+            let result = (*zkp).evaluate();
+        }
     }
 }
