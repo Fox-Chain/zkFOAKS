@@ -17,14 +17,18 @@ We have `11` different types of gates for now.
 `ty=0` is addition gate, `ty=1` is multiplication gate, `ty=2` is dummy gate, `ty=3` is input gate, `ty=4` is direct relay gate, `ty=5` is summation gate， `ty=6` is not gate, `ty=7` is minus gate, `ty=8` is XOR gate, `ty=9` is NAAB gate ($\not x \land y$), `ty=10` is relay gate.
 
 ## Special gate explain
+
 ### Direct relay gate
+
 Do not use it in the circuit description, it's a gate that we use it to simplify computation. The gate just directly copy the value from the node in previous layer which has the same label as the direct relay gate.
 
 ### Summation gate
+
 It's a gate that output the summation of previous layer. A simple use case is matrix multiplication.
 
 ## Example
-```
+
+```bash
 3 \\ three layers
 4 3 0 1 1 3 1 1 1 3 2 1 1 3 3 1 1
 2 0 0 0 1 1 1 2 3 \\ first gate is addition, and second is a multiplication
@@ -62,7 +66,18 @@ g++ gen.cpp -o gen -O3
 To understand the matrix generation check the gen.cpp in this folder
 
 ### Use this line to run main.rs
+
 ```bash
 cd src/
 cargo run main.rs mat_16_circuit.txt mat_16_meta.txt LOG/mat_16.txt
+cargo run main.rs mat_32_circuit.txt mat_32_meta.txt LOG/mat_32.txt
+cargo run main.rs mat_64_circuit.txt mat_64_meta.txt LOG/mat_64.txt
+cargo run main.rs mat_128_circuit.txt mat_128_meta.txt LOG/mat_128.txt
+cargo run main.rs mat_256_circuit.txt mat_256_meta.txt LOG/mat_256.txt
+```
+
+### Test Lanczos
+
+```bash
+cargo run main.rs lanczos2_112_N=16_circuit.txt lanczos2_112_N=16_meta.txt LOG/lanczos2_112_N=16.txt
 ```

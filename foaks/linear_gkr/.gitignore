@@ -1,2 +1,12 @@
 mat_16_circuit.txt
 mat_16_meta.txt
+mat_32_circuit.txt
+mat_32_meta.txt
+mat_64_circuit.txt
+mat_64_meta.txt
+mat_128_circuit.txt
+mat_128_meta.txt
+mat_256_circuit.txt
+mat_256_meta.txt
+lanczos2_112_N=16_circuit.txt
+lanczos2_112_N=16_meta.txt

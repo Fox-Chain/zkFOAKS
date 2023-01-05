@@ -1,9 +1,8 @@
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
-use std::path::Path;
 
-use poly_commitment::PolyCommitProver;
+// use poly_commitment::PolyCommitProver;
 use prime_field::FieldElement;
 
 use crate::circuit_fast_track::Gate;
@@ -236,7 +235,7 @@ impl zk_verifier {
                 cnt -= 1;
             }
             let mut mx_gate = max_gate;
-            while (mx_gate > 0) {
+            while mx_gate > 0 {
                 cnt += 1;
                 mx_gate >>= 1;
             }

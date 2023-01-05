@@ -1,9 +1,6 @@
 use linear_gkr::circuit_fast_track::LayeredCircuit;
 use linear_gkr::{prover::zk_prover, verifier::zk_verifier};
 use std::env;
-use std::fs::File;
-use std::io::prelude::*;
-use std::io::BufReader;
 
 fn main() {
     println!("Start Here !!!");
@@ -16,7 +13,7 @@ fn main() {
          //}
     }
 
-    //prime_field::init() // we dont need this line of code is it?
+    //prime_field::init() // we don't need this line of code is it?
     let mut zk_v = zk_verifier::new();
     let mut zk_p = zk_prover::new2();
 
@@ -35,4 +32,5 @@ fn main() {
         println!("{:?}", (*zk_p.aritmetic_circuit.unwrap()).total_depth);
         let result = zk_v.verify_orion(&args[4]);
     }
+    let result = zk_v.verify_orion(&args[4]);
 }
