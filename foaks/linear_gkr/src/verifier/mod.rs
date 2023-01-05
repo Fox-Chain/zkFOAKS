@@ -422,7 +422,23 @@ impl zk_verifier {
         ret
     }
 
-    pub fn direct_relay() {}
+    pub fn direct_relay(
+        depth: u32,
+        r_g: prime_field::FieldElement,
+        r_u: prime_field::FieldElement,
+    ) {
+        if (depth != 1) {
+            return FieldElement::from_real(0);
+        } else {
+            let ret = FieldElement::from_real(1);
+            for i in 0..self.aritmetic_circuit.circuit[depth].bit_length {
+                ret = ret
+                    * (FieldElement::from_real(1) - r_g[i] - r_u[i]
+                        + FieldElement::from_real(2) * r_g[i] * r_u[i]);
+            }
+            return ret;
+        }
+    }
 
     pub fn delete_self() {}
 }
