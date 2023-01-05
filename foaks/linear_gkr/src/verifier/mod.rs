@@ -384,6 +384,23 @@ impl zk_verifier {
 
         for i in (self.aritmetic_circuit.total_depth - 1)..1 {
             let rho = FieldElement::new_random();
+
+            // p -> sumcheck_init(i, C.circuit[i].bit_length, C.circuit[i - 1].bit_length, C.circuit[i - 1].bit_length, alpha, beta, r_0, r_1, one_minus_r_0, one_minus_r_1);
+            // p -> sumcheck_phase1_init();
+            zk_prover::sumcheck_init(
+                i,
+                self.aritmetic_circuit.circuit[i].bit_length,
+                self.aritmetic_circuit.circuit[i - 1].bit_length,
+                None,
+                None,
+                alpha,
+                beta,
+                r_0,
+                r_1,
+                one_minus_r_0,
+                one_minus_r_1,
+            );
+            zk_prover::sumcheck_phase1_init();
         }
 
         todo!()
@@ -398,4 +415,6 @@ impl zk_verifier {
         }
         ret
     }
+
+    pub fn delete_self() {}
 }
