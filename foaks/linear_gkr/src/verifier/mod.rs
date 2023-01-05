@@ -10,6 +10,8 @@ use crate::circuit_fast_track::Gate;
 use crate::circuit_fast_track::Layer;
 use crate::circuit_fast_track::LayeredCircuit;
 use crate::prover::zk_prover;
+
+use std::time::SystemTime;
 enum gate_types {
     add = 0,
     mult = 1,
@@ -304,7 +306,6 @@ impl zk_verifier {
                 self.aritmetic_circuit.circuit[i].is_parallel = false;
             }
         }
-        //todo!: One possible way to solve the bug is implement: Mutex<_>
         unsafe {
             let x = self.prover.unwrap();
             (*x).init_array(max_bit_length.try_into().unwrap());
@@ -338,7 +339,7 @@ impl zk_verifier {
     }
 
     //Decided to implemente the verify() function from orion repo
-    pub fn verify_orion(&mut self, output_path: &String) {
+    pub unsafe fn verify_orion(&mut self, output_path: &String) {
         self.proof_size = 0;
         //there is a way to compress binlinear pairing element
         let verification_time = 0;
@@ -351,9 +352,51 @@ impl zk_verifier {
         //Below function is not implemented neither in virgo repo nor orion repo
         //self.prover.unwrap().proof_init();
 
-        unsafe {
-            let zkp = self.prover.unwrap();
-            let result = (*zkp).evaluate();
+        // unsafe {
+        let zkp = self.prover.unwrap();
+        let result = (*zkp).evaluate();
+        // }
+        let alpha = FieldElement::from_real(1);
+        let beta = FieldElement::from_real(0);
+        //	random_oracle oracle; // Orion dont use this here
+        let capacity =
+            self.aritmetic_circuit.circuit[self.aritmetic_circuit.total_depth - 1].bit_length;
+        let r_0 = Self::generate_randomness(capacity);
+        let r_1 = Self::generate_randomness(capacity);
+        let mut one_minus_r_0 = vec![FieldElement::zero(); capacity];
+        let mut one_minus_r_1 = vec![FieldElement::zero(); capacity];
+
+        for i in 0..capacity {
+            one_minus_r_0.push(FieldElement::from_real(1) - r_0[i]);
+            one_minus_r_1.push(FieldElement::from_real(1) - r_1[i]);
         }
+        let t_a = SystemTime::now();
+        println!("Calc V_output(r)");
+        // unsafe{
+        let mut a_0 =
+            (*self.prover.unwrap()).V_res(one_minus_r_0, r_0, result, capacity, (1 << capacity));
+        // }
+        let t_b = SystemTime::now();
+        let time_span = (t_b.duration_since(t_a)).unwrap();
+        println!("microsecs: {}", time_span.as_micros());
+        a_0 = alpha * a_0;
+        let alpha_beta_sum = a_0;
+        let direct_relay_value: FieldElement;
+
+        for i in (self.aritmetic_circuit.total_depth - 1)..1 {
+            let rho = FieldElement::new_random();
+        }
+
+        todo!()
+    }
+
+    pub fn generate_randomness(size: usize) -> Vec<FieldElement> {
+        let k = size;
+        let mut ret = vec![FieldElement::zero(); k];
+
+        for i in 0..k {
+            ret.push(FieldElement::new_random());
+        }
+        ret
     }
 }

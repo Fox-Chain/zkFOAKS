@@ -65,7 +65,7 @@ pub struct zk_prover {
     beta_g: Vec<FieldElement>,
     add_mult_sum: Vec<LinearPoly>,
 
-    total_time: u64,
+    pub total_time: u64,
 }
 
 impl zk_prover {
@@ -119,21 +119,30 @@ impl zk_prover {
     // 	prime_field::field_element a_0 = p -> V_res(one_minus_r_0, r_0, result, C.circuit[C.total_depth - 1].bit_length, (1 << (C.circuit[C.total_depth - 1].bit_length)));
 
     pub fn V_res(
-        one_minus_r_0: FieldElement,
-        r_0: FieldElement,
-        output_raw: FieldElement,
-        r_0_size: u64,
-        output_size: u64,
-    ) {
-        let sys_time = SystemTime::now();
-        let mut output: FieldElement;
-        output = FieldElement::from_real(output_size);
-        // for i in 0..output_size {
-        //     output[i] = output_raw[i];
-        // }
-        // for i in 0..r_0_size {
-
-        // }
+        &mut self,
+        one_minus_r_0: Vec<FieldElement>,
+        r_0: Vec<FieldElement>,
+        output_raw: Vec<FieldElement>,
+        r_0_size: usize,
+        output_size: usize,
+    ) -> FieldElement {
+        let t0 = SystemTime::now();
+        let mut outputsize = output_size;
+        let mut output = vec![FieldElement::zero(); outputsize];
+        for i in 0..output_size {
+            output.push(output_raw[i]);
+        }
+        for i in 0..r_0_size {
+            for j in 0..(outputsize >> 1) {
+                output[j] = (output[j << 1] * one_minus_r_0[i] + output[j << 1 | 1] * r_0[i]);
+            }
+            outputsize >>= 1;
+        }
+        let t1 = SystemTime::now();
+        let time_span = (t1.duration_since(t0)).unwrap();
+        self.total_time += time_span.as_secs();
+        let res = output[0];
+        res
     }
 
     pub unsafe fn evaluate(&mut self) -> Vec<FieldElement> {
