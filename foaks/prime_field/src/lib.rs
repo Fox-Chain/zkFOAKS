@@ -168,9 +168,9 @@ impl FieldElement {
         Ok(rou)
     }
 
-    pub fn random() -> Self {
-        unimplemented!()
-    }
+    //pub fn random() -> Self {
+    //  unimplemented!()
+    //}
 }
 
 fn verify_lt_mod_once(mut a: u64) -> u64 {
