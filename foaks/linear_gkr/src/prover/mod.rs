@@ -346,8 +346,8 @@ impl zk_prover {
         }
 
         let mask_fhalf = (1 << first_half) - 1;
-        let intermediates0 = vec![FieldElement::zero(); 1 << self.length_g];
-        let intermediates1 = vec![FieldElement::zero(); 1 << self.length_g];
+        let mut intermediates0 = vec![FieldElement::zero(); 1 << self.length_g];
+        let mut intermediates1 = vec![FieldElement::zero(); 1 << self.length_g];
 
         //todo
         //	#pragma omp parallel for
@@ -470,6 +470,9 @@ impl zk_prover {
                     )
                 }
             }
+            todo!()
+            //todo
+            //forsjbfjdsb
         }
     }
 

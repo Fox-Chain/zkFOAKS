@@ -405,8 +405,8 @@ impl zk_verifier {
             let r_u = FieldElement::new_random();
             let r_v = FieldElement::new_random();
 
-            let direct_relay_value =
-                alpha * direct_relay(i, r_0, r_u) + beta * direct_relay(i, r_1, r_u);
+            //let direct_relay_value =
+            //alpha * direct_relay(i, r_0, r_u) + beta * direct_relay(i, r_1, r_u);
         }
 
         todo!()
@@ -422,19 +422,14 @@ impl zk_verifier {
         ret
     }
 
-    pub fn direct_relay(
-        &mut self,
-        depth: usize,
-        r_g: prime_field::FieldElement,
-        r_u: prime_field::FieldElement,
-    ) {
-        if (depth != 1) {
+    pub fn direct_relay(&mut self, depth: usize, r_g: Vec<FieldElement>, r_u: Vec<FieldElement>) {
+        if depth != 1 {
             FieldElement::from_real(0);
         } else {
-            let ret = FieldElement::from_real(1);
+            let mut ret = FieldElement::from_real(1);
             for i in 0..(self.aritmetic_circuit.circuit[depth].bit_length) {
                 ret = ret
-                    * (FieldElement::from_real(1) - r_g - r_u[i]
+                    * (FieldElement::from_real(1) - r_g[i] - r_u[i]
                         + FieldElement::from_real(2) * r_g[i] * r_u[i]);
             }
             ret;
