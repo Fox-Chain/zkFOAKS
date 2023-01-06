@@ -385,12 +385,11 @@ impl zk_verifier {
         for i in (self.aritmetic_circuit.total_depth - 1)..1 {
             let rho = FieldElement::new_random();
 
-            zk_prover::sumcheck_init(
+            (*self.prover.unwrap()).sumcheck_init(
                 i,
                 self.aritmetic_circuit.circuit[i].bit_length,
                 self.aritmetic_circuit.circuit[i - 1].bit_length,
-                None,
-                None,
+                self.aritmetic_circuit.circuit[i - 1].bit_length,
                 alpha,
                 beta,
                 r_0,
@@ -398,7 +397,8 @@ impl zk_verifier {
                 one_minus_r_0,
                 one_minus_r_1,
             );
-            zk_prover::sumcheck_phase1_init();
+
+            (*self.prover.unwrap()).sumcheck_phase1_init();
 
             let previous_random = FieldElement::from_real(0);
             //next level random
