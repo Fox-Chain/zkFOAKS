@@ -419,6 +419,30 @@ impl zk_verifier {
                     r_v[j] = FieldElement::zero();
                 }
             }
+
+            //V should test the maskR for two points, V does random linear combination of these points first
+            let random_combine = Self::generate_randomness(1)[0];
+
+            //Every time all one test to V, V needs to do a linear combination for security.
+            let linear_combine = Self::generate_randomness(1)[0]; // mem leak
+
+            let mut one_minus_r_u =
+                vec![FieldElement::zero(); self.aritmetic_circuit.circuit[i - 1].bit_length];
+            let mut one_minus_r_v =
+                vec![FieldElement::zero(); self.aritmetic_circuit.circuit[i - 1].bit_length];
+
+            for j in 0..(self.aritmetic_circuit.circuit[i - 1].bit_length)
+                .try_into()
+                .unwrap()
+            {
+                one_minus_r_u.push(FieldElement::from_real(1) - r_u[j]);
+                one_minus_r_v.push(FieldElement::from_real(1) - r_v[j]);
+            }
+
+            for j in 0..(self.aritmetic_circuit.circuit[i - 1].bit_length)
+                .try_into()
+                .unwrap()
+            {}
         }
 
         todo!()
