@@ -20,8 +20,6 @@ fn main() {
     type Prover = zk_prover;
     type LatCir = LayeredCircuit;
 
-    type vecT = Vec<FieldElement>;
-
     let ptr_zk_p = &mut zk_p as *mut Prover;
     let ptr_zk_v_arit_cir = &mut zk_v.aritmetic_circuit as *mut LatCir;
 
@@ -32,6 +30,6 @@ fn main() {
     zk_p.get_circuit(ptr_zk_v_arit_cir);
     unsafe {
         println!("{:?}", (*zk_p.aritmetic_circuit.unwrap()).total_depth);
-        // let result = zk_v.verify_orion(&args[4]);
+        let result = zk_v.verify_orion(&args[4]);
     }
 }

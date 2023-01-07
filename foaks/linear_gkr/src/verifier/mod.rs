@@ -1,6 +1,9 @@
+//#![feature(core_intrinsics)]
+
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
+use std::mem;
 
 // use poly_commitment::PolyCommitProver;
 use prime_field::FieldElement;
@@ -8,6 +11,7 @@ use prime_field::FieldElement;
 use crate::circuit_fast_track::Gate;
 use crate::circuit_fast_track::Layer;
 use crate::circuit_fast_track::LayeredCircuit;
+use crate::polynomial::QuadraticPoly;
 use crate::prover::zk_prover;
 
 use std::time::SystemTime;
@@ -26,10 +30,10 @@ enum gate_types {
     custom_linear_comb = 14,
     input = 3,
 }
-
 #[derive(Default, Debug)]
+
 pub struct zk_verifier {
-    pub proof_size: u32,
+    pub proof_size: usize,
     pub v_time: u64,
     //poly_verifier: PolyCommitVerifier,
     /** @name Randomness&Const
@@ -338,6 +342,7 @@ impl zk_verifier {
     }
 
     //Decided to implemente the verify() function from orion repo
+
     pub unsafe fn verify_orion(&mut self, output_path: &String) {
         self.proof_size = 0;
         //there is a way to compress binlinear pairing element
@@ -384,7 +389,7 @@ impl zk_verifier {
         let time_span = (t_b.duration_since(t_a)).unwrap();
         println!("microsecs: {}", time_span.as_micros());
         a_0 = alpha * a_0;
-        let alpha_beta_sum = a_0;
+        let mut alpha_beta_sum = a_0;
         let direct_relay_value: FieldElement;
 
         for i in (self.aritmetic_circuit.total_depth - 1)..1 {
@@ -405,7 +410,7 @@ impl zk_verifier {
 
             (*self.prover.unwrap()).sumcheck_phase1_init();
 
-            let previous_random = FieldElement::from_real(0);
+            let mut previous_random = FieldElement::from_real(0);
             //next level random
             let r_u = Self::generate_randomness(self.aritmetic_circuit.circuit[i - 1].bit_length);
             let mut r_v =
@@ -431,18 +436,40 @@ impl zk_verifier {
             let mut one_minus_r_v =
                 vec![FieldElement::zero(); self.aritmetic_circuit.circuit[i - 1].bit_length];
 
-            for j in 0..(self.aritmetic_circuit.circuit[i - 1].bit_length)
-                .try_into()
-                .unwrap()
-            {
+            for j in 0..(self.aritmetic_circuit.circuit[i - 1].bit_length) {
                 one_minus_r_u.push(FieldElement::from_real(1) - r_u[j]);
                 one_minus_r_v.push(FieldElement::from_real(1) - r_v[j]);
             }
 
-            for j in 0..(self.aritmetic_circuit.circuit[i - 1].bit_length)
-                .try_into()
-                .unwrap()
-            {}
+            for j in 0..(self.aritmetic_circuit.circuit[i - 1].bit_length) {
+                let poly = (*self.prover.unwrap()).sumcheck_phase1_update(previous_random, j);
+
+                self.proof_size += mem::size_of::<QuadraticPoly>();
+                previous_random = r_u[j];
+                //todo: Debug eval() fn
+                if poly.eval(&FieldElement::zero()) + poly.eval(&FieldElement::real_one())
+                    != alpha_beta_sum
+                {
+                    //todo: Improve error handling
+                    println!(
+                        "Verification fail, phase1, circuit {}, current bit {}",
+                        i, j
+                    );
+                    //todo: return false ==  panic!() ???
+                    //return false;
+                    panic!()
+                } else {
+                    //println!(
+                    //  "Verification fail, phase1, circuit {}, current bit {}",
+                    //i, j
+                    //);
+                }
+                alpha_beta_sum = poly.eval(&r_u[j]);
+            }
+            //	std::cerr << "Bound v start" << std::endl;
+
+            (*self.prover.unwrap()).sumcheck_phase2_init(previous_random, r_u, one_minus_r_u);
+            let previous_random = FieldElement::zero();
         }
 
         todo!()

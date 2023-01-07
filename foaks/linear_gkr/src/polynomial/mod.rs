@@ -48,12 +48,11 @@ impl core::ops::Mul for LinearPoly {
         QuadraticPoly::new(a, b, c)
     }
 }
-#[derive(Debug, Clone)]
-
+#[derive(Debug, Clone, Copy)]
 pub struct QuadraticPoly {
-    a: FieldElement,
-    b: FieldElement,
-    c: FieldElement,
+    pub a: FieldElement,
+    pub b: FieldElement,
+    pub c: FieldElement,
 }
 
 impl QuadraticPoly {
@@ -66,6 +65,10 @@ impl QuadraticPoly {
     }
     pub fn new(a: FieldElement, b: FieldElement, c: FieldElement) -> Self {
         Self { a, b, c }
+    }
+    //todo: debug function
+    pub fn eval(self, x: &FieldElement) -> FieldElement {
+        (self.a * *x + self.b) * *x + self.c
     }
 
     pub fn mul(self, x: LinearPoly) -> CubicPoly {
