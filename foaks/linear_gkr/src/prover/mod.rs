@@ -24,8 +24,19 @@ pub fn from_string(s: &str) -> FieldElement {
 
     ret
 }
-#[derive(Default, Debug)]
+//#[derive(Copy)]
+//pub struct VecFieldElement<T> {
+//   vec: Vec<T>,
+//}
 
+//impl<T> VecFieldElement<T> {
+//pub fn new(capacity: usize) -> Self {
+//  Self {
+//        vec: vec![FieldElement::zero(); capacity],
+//      }
+//   }
+//}
+#[derive(Default, Debug)]
 pub struct zk_prover {
     //poly_prover: PolyCommitProver,
     /** @name Basic
@@ -175,7 +186,7 @@ impl zk_prover {
             ]);
             for j in 0..(*self.aritmetic_circuit.unwrap()).circuit[i].bit_length {
                 let g = j;
-                let ty: u32 = (*self.aritmetic_circuit.unwrap()).circuit[i].gates[g].ty;
+                let ty: usize = (*self.aritmetic_circuit.unwrap()).circuit[i].gates[g].ty;
                 let u = (*self.aritmetic_circuit.unwrap()).circuit[i].gates[g].u;
                 let v = (*self.aritmetic_circuit.unwrap()).circuit[i].gates[g].v;
 
@@ -299,16 +310,16 @@ impl zk_prover {
         one_minus_r_0: Vec<FieldElement>,
         one_minus_r_1: Vec<FieldElement>,
     ) {
-        self.r_0 = r_0;
-        self.r_1 = r_1;
+        self.r_0 = r_0.clone();
+        self.r_1 = r_1.clone();
         self.alpha = alpha;
         self.beta = beta;
         self.sumcheck_layer_id = sumcheck_layer_id;
         self.length_g = length_g;
         self.length_u = length_u;
         self.length_v = length_v;
-        self.one_minus_r_0 = one_minus_r_0;
-        self.one_minus_r_1 = one_minus_r_1;
+        self.one_minus_r_0 = one_minus_r_0.clone();
+        self.one_minus_r_1 = one_minus_r_1.clone();
     }
     pub fn init_total_time(&mut self, val: u64) {
         self.total_time = val;
@@ -470,10 +481,247 @@ impl zk_prover {
                     )
                 }
             }
-            todo!()
-            //todo
-            //forsjbfjdsb
         }
+        for i in 0..1 << self.length_g {
+            let u = (*self.aritmetic_circuit.unwrap()).circuit[self.sumcheck_layer_id].gates[i].u;
+            let v = (*self.aritmetic_circuit.unwrap()).circuit[self.sumcheck_layer_id].gates[i].v;
+
+            match (*self.aritmetic_circuit.unwrap()).circuit[self.sumcheck_layer_id].gates[i].ty {
+                0 => {
+                    //add gate
+                    if !gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
+                        [self.sumcheck_layer_id]
+                        .gates[i]
+                        .ty]
+                    {
+                        //printf("first meet %d gate\n", C -> circuit[sumcheck_layer_id].gates[i].ty);
+                        gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
+                            [self.sumcheck_layer_id]
+                            .gates[i]
+                            .ty] = true;
+                    }
+                    self.add_v_array[u].b = (self.add_v_array[u].b + intermediates0[i]);
+                    self.add_mult_sum[u].b = (self.add_mult_sum[u].b + intermediates1[i]);
+                }
+                2 => {}
+                1 => {
+                    //mult gate
+                    if (!gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
+                        [self.sumcheck_layer_id]
+                        .gates[i]
+                        .ty])
+                    {
+                        //printf("first meet %d gate\n", C -> circuit[sumcheck_layer_id].gates[i].ty);
+                        gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
+                            [self.sumcheck_layer_id]
+                            .gates[i]
+                            .ty] = true;
+                    }
+                    self.add_mult_sum[u].b = (self.add_mult_sum[u].b + intermediates0[i]);
+                }
+                5 => {
+                    //sum gate
+                    if (!gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
+                        [self.sumcheck_layer_id]
+                        .gates[i]
+                        .ty])
+                    {
+                        //printf("first meet %d gate\n", C -> circuit[sumcheck_layer_id].gates[i].ty);
+                        gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
+                            [self.sumcheck_layer_id]
+                            .gates[i]
+                            .ty] = true;
+                    }
+                    for j in u..v {
+                        self.add_mult_sum[j].b = (self.add_mult_sum[j].b + intermediates1[i]);
+                    }
+                }
+
+                12 =>
+                //exp sum gate
+                {
+                    if (!gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
+                        [self.sumcheck_layer_id]
+                        .gates[i]
+                        .ty])
+                    {
+                        //printf("first meet %d gate\n", C -> circuit[sumcheck_layer_id].gates[i].ty);
+                        gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
+                            [self.sumcheck_layer_id]
+                            .gates[i]
+                            .ty] = true;
+                    }
+                    let mut tmp = intermediates1[i];
+                    for j in u..v {
+                        self.add_mult_sum[j].b = (self.add_mult_sum[j].b + tmp);
+                        tmp = tmp + tmp;
+                    }
+                    break;
+                }
+                14 => {
+                    if (!gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
+                        [self.sumcheck_layer_id]
+                        .gates[i]
+                        .ty])
+                    {
+                        //printf("first meet %d gate\n", C -> circuit[sumcheck_layer_id].gates[i].ty);
+                        gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
+                            [self.sumcheck_layer_id]
+                            .gates[i]
+                            .ty] = true;
+                    }
+                    let tmp = intermediates1[i];
+                    for j in 0..(*self.aritmetic_circuit.unwrap()).circuit[self.sumcheck_layer_id]
+                        .gates[i]
+                        .parameter_length
+                    {
+                        let src = (*self.aritmetic_circuit.unwrap()).circuit
+                            [self.sumcheck_layer_id]
+                            .gates[i]
+                            .src[j];
+                        let weight = (*self.aritmetic_circuit.unwrap()).circuit
+                            [self.sumcheck_layer_id]
+                            .gates[i]
+                            .weight[j];
+                        self.add_mult_sum[src].b = self.add_mult_sum[src].b + weight * tmp;
+                    }
+                    break;
+                }
+                4 =>
+                //direct relay gate
+                {
+                    if (!gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
+                        [self.sumcheck_layer_id]
+                        .gates[i]
+                        .ty])
+                    {
+                        //printf("first meet %d gate\n", C -> circuit[sumcheck_layer_id].gates[i].ty);
+                        gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
+                            [self.sumcheck_layer_id]
+                            .gates[i]
+                            .ty] = true;
+                    }
+                    self.add_mult_sum[u].b = (self.add_mult_sum[u].b + intermediates1[i]);
+                    break;
+                }
+                6 =>
+                //NOT gate
+                {
+                    if (!gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
+                        [self.sumcheck_layer_id]
+                        .gates[i]
+                        .ty])
+                    {
+                        //printf("first meet %d gate\n", C -> circuit[sumcheck_layer_id].gates[i].ty);
+                        gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
+                            [self.sumcheck_layer_id]
+                            .gates[i]
+                            .ty] = true;
+                    }
+                    self.add_mult_sum[u].b = (self.add_mult_sum[u].b - intermediates1[i]);
+                    self.add_v_array[u].b = (self.add_v_array[u].b + intermediates1[i]);
+                    break;
+                }
+                7 =>
+                //minus gate
+                {
+                    if (!gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
+                        [self.sumcheck_layer_id]
+                        .gates[i]
+                        .ty])
+                    {
+                        //printf("first meet %d gate\n", C -> circuit[sumcheck_layer_id].gates[i].ty);
+                        gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
+                            [self.sumcheck_layer_id]
+                            .gates[i]
+                            .ty] = true;
+                    }
+                    self.add_v_array[u].b = (self.add_v_array[u].b - (intermediates0[i]));
+                    self.add_mult_sum[u].b = (self.add_mult_sum[u].b + intermediates1[i]);
+                    break;
+                }
+                8 =>
+                //XOR gate
+                {
+                    if (!gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
+                        [self.sumcheck_layer_id]
+                        .gates[i]
+                        .ty])
+                    {
+                        //printf("first meet %d gate\n", C -> circuit[sumcheck_layer_id].gates[i].ty);
+                        gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
+                            [self.sumcheck_layer_id]
+                            .gates[i]
+                            .ty] = true;
+                    }
+                    self.add_v_array[u].b = (self.add_v_array[u].b + intermediates0[i]);
+                    self.add_mult_sum[u].b = (self.add_mult_sum[u].b + intermediates1[i]
+                        - intermediates0[i]
+                        - intermediates0[i]);
+                    break;
+                }
+                13 =>
+                //bit-test gate
+                {
+                    if (!gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
+                        [self.sumcheck_layer_id]
+                        .gates[i]
+                        .ty])
+                    {
+                        //printf("first meet %d gate\n", C -> circuit[sumcheck_layer_id].gates[i].ty);
+                        gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
+                            [self.sumcheck_layer_id]
+                            .gates[i]
+                            .ty] = true;
+                    }
+                    self.add_mult_sum[u].b =
+                        (self.add_mult_sum[u].b - intermediates0[i] + intermediates1[i]);
+                    break;
+                }
+                9 =>
+                //NAAB gate
+                {
+                    if (!gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
+                        [self.sumcheck_layer_id]
+                        .gates[i]
+                        .ty])
+                    {
+                        //printf("first meet %d gate\n", C -> circuit[sumcheck_layer_id].gates[i].ty);
+                        gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
+                            [self.sumcheck_layer_id]
+                            .gates[i]
+                            .ty] = true;
+                    }
+                    self.add_v_array[u].b = (self.add_v_array[u].b + intermediates1[i]);
+                    self.add_mult_sum[u].b = (self.add_mult_sum[u].b - intermediates1[i]);
+                    break;
+                }
+                10 =>
+                //relay gate
+                {
+                    if (!gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
+                        [self.sumcheck_layer_id]
+                        .gates[i]
+                        .ty])
+                    {
+                        //printf("first meet %d gate\n", C -> circuit[sumcheck_layer_id].gates[i].ty);
+                        gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
+                            [self.sumcheck_layer_id]
+                            .gates[i]
+                            .ty] = true;
+                    }
+                    self.add_mult_sum[u].b = (self.add_mult_sum[u].b + intermediates0[i]);
+                    break;
+                }
+                _ => println!(
+                    "Warning Unknown gate {}",
+                    (*self.aritmetic_circuit.unwrap()).circuit[self.sumcheck_layer_id].gates[i].ty
+                ),
+            }
+        }
+        let t1 = SystemTime::now();
+        let time_span = (t1.duration_since(t0)).unwrap();
+        self.total_time += time_span.as_secs();
     }
 
     pub fn sumcheck_phase1_update() {}

@@ -4,7 +4,7 @@ use prime_field::FieldElement;
 #[derive(Debug, Clone)]
 
 pub struct Gate {
-    pub ty: u32,
+    pub ty: usize,
     pub u: usize,
     pub v: usize,
     pub src: Vec<usize>,
@@ -30,7 +30,7 @@ impl Gate {
         Default::default()
     }
 
-    pub fn from_params(ty: u32, u: usize, v: usize) -> Self {
+    pub fn from_params(ty: usize, u: usize, v: usize) -> Self {
         Self {
             ty,
             u,

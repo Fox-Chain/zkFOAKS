@@ -1,5 +1,6 @@
 use linear_gkr::circuit_fast_track::LayeredCircuit;
 use linear_gkr::{prover::zk_prover, verifier::zk_verifier};
+use prime_field::FieldElement;
 use std::env;
 
 fn main() {
@@ -18,6 +19,8 @@ fn main() {
 
     type Prover = zk_prover;
     type LatCir = LayeredCircuit;
+
+    type vecT = Vec<FieldElement>;
 
     let ptr_zk_p = &mut zk_p as *mut Prover;
     let ptr_zk_v_arit_cir = &mut zk_v.aritmetic_circuit as *mut LatCir;
