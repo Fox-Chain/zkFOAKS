@@ -407,8 +407,8 @@ impl zk_verifier {
                 Self::generate_randomness(self.aritmetic_circuit.circuit[i - 1].bit_length);
 
             //todo: solve bug
-            //let direct_relay_value = alpha * Self::direct_relay(self, i, r_0.clone(), r_u.clone())
-            //  + beta * Self::direct_relay(self, i, r_1.clone(), r_u.clone());
+            //let direct_relay_value = alpha * direct_relay(self, i, r_0, r_u)
+            //  + beta * direct_relay(, i, r_1, r_u);
 
             if (i == 1) {
                 for j in 0..self.aritmetic_circuit.circuit[i - 1].bit_length {
