@@ -305,10 +305,10 @@ impl zk_prover {
         length_v: usize,
         alpha: FieldElement,
         beta: FieldElement,
-        r_0: Vec<FieldElement>,
-        r_1: Vec<FieldElement>,
-        one_minus_r_0: Vec<FieldElement>,
-        one_minus_r_1: Vec<FieldElement>,
+        r_0: &Vec<FieldElement>,
+        r_1: &Vec<FieldElement>,
+        one_minus_r_0: &Vec<FieldElement>,
+        one_minus_r_1: &Vec<FieldElement>,
     ) {
         self.r_0 = r_0.clone();
         self.r_1 = r_1.clone();

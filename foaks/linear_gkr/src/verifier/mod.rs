@@ -372,8 +372,13 @@ impl zk_verifier {
         let t_a = SystemTime::now();
         println!("Calc V_output(r)");
         // unsafe{
-        let mut a_0 =
-            (*self.prover.unwrap()).V_res(one_minus_r_0, r_0, result, capacity, (1 << capacity));
+        let mut a_0 = (*self.prover.unwrap()).V_res(
+            one_minus_r_0.clone(),
+            r_0.clone(),
+            result,
+            capacity,
+            (1 << capacity),
+        );
         // }
         let t_b = SystemTime::now();
         let time_span = (t_b.duration_since(t_a)).unwrap();
@@ -384,19 +389,19 @@ impl zk_verifier {
 
         for i in (self.aritmetic_circuit.total_depth - 1)..1 {
             let rho = FieldElement::new_random();
-            //todo: solve bug
-            //(*self.prover.unwrap()).sumcheck_init(
-            //  i,
-            //  self.aritmetic_circuit.circuit[i].bit_length,
-            //self.aritmetic_circuit.circuit[i - 1].bit_length,
-            //self.aritmetic_circuit.circuit[i - 1].bit_length,
-            //alpha,
-            //beta,
-            //r_0,
-            //r_1,
-            //one_minus_r_0,
-            //one_minus_r_1,
-            //);
+
+            (*self.prover.unwrap()).sumcheck_init(
+                i,
+                self.aritmetic_circuit.circuit[i].bit_length,
+                self.aritmetic_circuit.circuit[i - 1].bit_length,
+                self.aritmetic_circuit.circuit[i - 1].bit_length,
+                alpha,
+                beta,
+                &r_0,
+                &r_1,
+                &one_minus_r_0,
+                &one_minus_r_1,
+            );
 
             (*self.prover.unwrap()).sumcheck_phase1_init();
 
@@ -406,11 +411,10 @@ impl zk_verifier {
             let mut r_v =
                 Self::generate_randomness(self.aritmetic_circuit.circuit[i - 1].bit_length);
 
-            //todo: solve bug
-            //let direct_relay_value = alpha * direct_relay(self, i, r_0, r_u)
-            //  + beta * direct_relay(, i, r_1, r_u);
+            let direct_relay_value = alpha * Self::direct_relay(self, i, &r_0, &r_u)
+                + beta * Self::direct_relay(self, i, &r_1, &r_u);
 
-            if (i == 1) {
+            if i == 1 {
                 for j in 0..self.aritmetic_circuit.circuit[i - 1].bit_length {
                     r_v[j] = FieldElement::zero();
                 }
@@ -431,13 +435,14 @@ impl zk_verifier {
     }
 
     pub fn direct_relay(
-        &self,
+        &mut self,
         depth: usize,
-        r_g: Vec<FieldElement>,
-        r_u: Vec<FieldElement>,
+        r_g: &Vec<FieldElement>,
+        r_u: &Vec<FieldElement>,
     ) -> FieldElement {
         if depth != 1 {
-            FieldElement::from_real(0)
+            let ret = FieldElement::from_real(0);
+            return ret;
         } else {
             let mut ret = FieldElement::from_real(1);
             for i in 0..(self.aritmetic_circuit.circuit[depth].bit_length) {
@@ -445,7 +450,7 @@ impl zk_verifier {
                     * (FieldElement::from_real(1) - r_g[i] - r_u[i]
                         + FieldElement::from_real(2) * r_g[i] * r_u[i]);
             }
-            ret
+            return ret;
         }
     }
 
