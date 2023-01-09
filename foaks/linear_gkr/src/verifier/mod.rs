@@ -554,8 +554,64 @@ impl zk_verifier {
         }
     }
 
-    pub fn beta_init() {
-        todo!()
+    pub fn beta_init(
+        &mut self,
+        depth: usize,
+        alpha: FieldElement,
+        beta: FieldElement,
+        r_0: Vec<FieldElement>,
+        r_1: Vec<FieldElement>,
+        r_u: Vec<FieldElement>,
+        r_v: Vec<FieldElement>,
+        one_minus_r_0: Vec<FieldElement>,
+        one_minus_r_1: Vec<FieldElement>,
+        one_minus_r_u: Vec<FieldElement>,
+        one_minus_r_v: Vec<FieldElement>,
+    ) {
+        let debug_mode = false;
+        if !self.aritmetic_circuit.circuit[depth].is_parallel || debug_mode {
+            let mut beta_g_r0_first_half = vec![alpha];
+            let mut beta_g_r1_first_half = vec![beta];
+            let mut beta_g_r0_second_half = vec![FieldElement::from_real(1)];
+            let mut beta_g_r1_second_half = vec![FieldElement::from_real(1)];
+
+            let first_half_len = self.aritmetic_circuit.circuit[depth].bit_length / 2;
+            let second_half_len = self.aritmetic_circuit.circuit[depth].bit_length - first_half_len;
+
+            for i in 0..first_half_len {
+                let r0 = r_0[i];
+                let r1 = r_1[i];
+                let or0 = one_minus_r_0[i];
+                let or1 = one_minus_r_1[i];
+
+                for j in 0..(1 << i) {
+                    beta_g_r0_first_half[j | (1 << i)] = beta_g_r0_first_half[j] * r0;
+                    beta_g_r1_first_half[j | (1 << i)] = beta_g_r1_first_half[j] * r1;
+                }
+
+                for j in 0..(1 << i) {
+                    beta_g_r0_first_half[j] = beta_g_r0_first_half[j] * or0;
+                    beta_g_r1_first_half[j] = beta_g_r1_first_half[j] * or1;
+                }
+            }
+
+            for i in 0..second_half_len {
+                let r0 = r_0[i + first_half_len];
+                let r1 = r_1[i + first_half_len];
+                let or0 = one_minus_r_0[i + first_half_len];
+                let or1 = one_minus_r_1[i + first_half_len];
+
+                for j in 0..(1 << i) {
+                    beta_g_r0_second_half[j | (1 << i)] = beta_g_r0_second_half[j] * r0;
+                    beta_g_r1_second_half[j | (1 << i)] = beta_g_r1_second_half[j] * r1;
+                }
+
+                for j in 0..(1 << i) {
+                    beta_g_r0_second_half[j] = beta_g_r0_second_half[j] * or0;
+                    beta_g_r1_second_half[j] = beta_g_r1_second_half[j] * or1;
+                }
+            }
+        }
     }
 
     pub fn delete_self() {}
