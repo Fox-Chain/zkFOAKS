@@ -32,8 +32,8 @@ pub struct zk_prover {
     /** @name Basic
     	* Basic information and variables about the arithmetic circuit*/
     //< two random gates v_u and v_v queried by V in each layer    v_u: FieldElement,
-    v_v: FieldElement,
-    v_u: FieldElement,
+    pub v_v: FieldElement,
+    pub v_u: FieldElement,
     pub total_uv: usize,
     pub aritmetic_circuit: Option<*mut LayeredCircuit>, //	c++ code: layered_circuit *C;
     pub circuit_value: Vec<Vec<FieldElement>>,
@@ -732,22 +732,22 @@ impl zk_prover {
                 add_mult_sum_new[i].a = self.add_mult_sum[g_one].b - add_mult_sum_new[i].b;
             } else {
                 v_mult_add_new[i].b =
-                    (self.v_mult_add[g_zero].a * previous_random + self.v_mult_add[g_zero].b);
-                v_mult_add_new[i].a = (self.v_mult_add[g_one].a * previous_random
+                    self.v_mult_add[g_zero].a * previous_random + self.v_mult_add[g_zero].b;
+                v_mult_add_new[i].a = self.v_mult_add[g_one].a * previous_random
                     + self.v_mult_add[g_one].b
-                    - v_mult_add_new[i].b);
+                    - v_mult_add_new[i].b;
 
                 add_v_array_new[i].b =
-                    (self.add_v_array[g_zero].a * previous_random + self.add_v_array[g_zero].b);
-                add_v_array_new[i].a = (self.add_v_array[g_one].a * previous_random
+                    self.add_v_array[g_zero].a * previous_random + self.add_v_array[g_zero].b;
+                add_v_array_new[i].a = self.add_v_array[g_one].a * previous_random
                     + self.add_v_array[g_one].b
-                    - add_v_array_new[i].b);
+                    - add_v_array_new[i].b;
 
                 add_mult_sum_new[i].b =
-                    (self.add_mult_sum[g_zero].a * previous_random + self.add_mult_sum[g_zero].b);
-                add_mult_sum_new[i].a = (self.add_mult_sum[g_one].a * previous_random
+                    self.add_mult_sum[g_zero].a * previous_random + self.add_mult_sum[g_zero].b;
+                add_mult_sum_new[i].a = self.add_mult_sum[g_one].a * previous_random
                     + self.add_mult_sum[g_one].b
-                    - add_mult_sum_new[i].b);
+                    - add_mult_sum_new[i].b;
             }
         }
         swap(&mut self.v_mult_add, &mut v_mult_add_new);
@@ -1088,7 +1088,102 @@ impl zk_prover {
         }
     }
 
-    pub fn sumcheck_phase2_update() {}
+    pub unsafe fn sumcheck_phase2_update(
+        &mut self,
+        previous_random: FieldElement,
+        current_bit: usize,
+    ) -> QuadraticPoly {
+        let t0 = SystemTime::now();
+        let mut ret = QuadraticPoly::zero();
+
+        //todo
+        //#pragma omp parallel for
+
+        for i in 0..(self.total_uv >> 1) {
+            let g_zero = i << 1;
+            let g_one = i << 1 | 1;
+
+            if current_bit == 0 {
+                v_mult_add_new[i].b = self.v_mult_add[g_zero].b;
+                v_mult_add_new[i].a = self.v_mult_add[g_one].b - v_mult_add_new[i].b;
+
+                add_v_array_new[i].b = self.add_v_array[g_zero].b;
+                add_v_array_new[i].a = self.add_v_array[g_one].b - add_v_array_new[i].b;
+
+                add_mult_sum_new[i].b = self.add_mult_sum[g_zero].b;
+                add_mult_sum_new[i].a = self.add_mult_sum[g_one].b - add_mult_sum_new[i].b;
+            } else {
+                v_mult_add_new[i].b =
+                    self.v_mult_add[g_zero].a * previous_random + self.v_mult_add[g_zero].b;
+                v_mult_add_new[i].a = self.v_mult_add[g_one].a * previous_random
+                    + self.v_mult_add[g_one].b
+                    - v_mult_add_new[i].b;
+
+                add_v_array_new[i].b =
+                    self.add_v_array[g_zero].a * previous_random + self.add_v_array[g_zero].b;
+                add_v_array_new[i].a = self.add_v_array[g_one].a * previous_random
+                    + self.add_v_array[g_one].b
+                    - add_v_array_new[i].b;
+
+                add_mult_sum_new[i].b =
+                    self.add_mult_sum[g_zero].a * previous_random + self.add_mult_sum[g_zero].b;
+                add_mult_sum_new[i].a = self.add_mult_sum[g_one].a * previous_random
+                    + self.add_mult_sum[g_one].b
+                    - add_mult_sum_new[i].b;
+            }
+            ret.a = (ret.a + self.add_mult_sum[i].a * self.v_mult_add[i].a);
+            ret.b = (ret.b
+                + self.add_mult_sum[i].a * self.v_mult_add[i].b
+                + self.add_mult_sum[i].b * self.v_mult_add[i].a
+                + self.add_v_array[i].a);
+            ret.c = (ret.c + self.add_mult_sum[i].b * self.v_mult_add[i].b + self.add_v_array[i].b);
+        }
+        swap(&mut self.v_mult_add, &mut v_mult_add_new);
+        swap(&mut self.add_v_array, &mut add_v_array_new);
+        swap(&mut self.add_mult_sum, &mut add_mult_sum_new);
+
+        //parallel addition tree
+        //todo
+        //#pragma omp parallel for
+        for i in 0..(self.total_uv >> 1) {
+            rets_prev[i].a = self.add_mult_sum[i].a * self.v_mult_add[i].a;
+            rets_prev[i].b = self.add_mult_sum[i].a * self.v_mult_add[i].b
+                + self.add_mult_sum[i].b * self.v_mult_add[i].a
+                + self.add_v_array[i].a;
+            rets_prev[i].c = self.add_mult_sum[i].b * self.v_mult_add[i].b + self.add_v_array[i].b;
+        }
+
+        let tot = self.total_uv >> 1;
+        let mut iter = 1;
+        while (1 << iter) <= (self.total_uv >> 1) {
+            //todo
+            //#pragma omp parallel for
+            for j in 0..(tot >> iter) {
+                rets_cur[j] = rets_prev[j * 2] + rets_prev[j * 2 + 1];
+            }
+            //todo
+            //#pragma omp barrier
+            swap(&mut rets_prev, &mut rets_cur);
+            iter += 1;
+        }
+        ret = rets_prev[0];
+
+        self.total_uv >>= 1;
+
+        let t1 = SystemTime::now();
+        let time_span = (t1.duration_since(t0)).unwrap();
+        self.total_time += time_span.as_secs();
+
+        ret
+    }
+
+    pub fn sumcheck_finalize(
+        &mut self,
+        previous_random: FieldElement,
+    ) -> (FieldElement, FieldElement) {
+        self.v_v = self.v_mult_add[0].eval(previous_random);
+        (self.v_u, self.v_v)
+    }
 }
 
 #[cfg(test)]

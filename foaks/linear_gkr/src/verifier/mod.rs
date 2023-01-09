@@ -4,6 +4,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::mem;
+use std::time;
 
 // use poly_commitment::PolyCommitProver;
 use prime_field::FieldElement;
@@ -469,7 +470,55 @@ impl zk_verifier {
             //	std::cerr << "Bound v start" << std::endl;
 
             (*self.prover.unwrap()).sumcheck_phase2_init(previous_random, r_u, one_minus_r_u);
-            let previous_random = FieldElement::zero();
+            let mut previous_random = FieldElement::zero();
+            for j in 0..self.aritmetic_circuit.circuit[i - 1].bit_length {
+                if i == 1 {
+                    r_v[j] = FieldElement::zero();
+                }
+                let poly = (*self.prover.unwrap()).sumcheck_phase2_update(previous_random, j);
+                self.proof_size += mem::size_of::<QuadraticPoly>();
+                //poly.c = poly.c; ???
+
+                previous_random = r_v[j];
+
+                if poly.eval(&FieldElement::zero())
+                    + poly.eval(&FieldElement::real_one())
+                    + direct_relay_value * (*self.prover.unwrap()).v_u
+                    != alpha_beta_sum
+                {
+                    //todo: Improve error handling
+                    println!(
+                        "Verification fail, phase2, circuit {}, current bit {}",
+                        i, j
+                    );
+                    //todo: return false ==  panic!() ???
+                    //return false;
+                    panic!()
+                } else {
+                    //println!(
+                    //  "Verification fail, phase1, circuit {}, current bit {}",
+                    //i, j
+                    //);
+                }
+                alpha_beta_sum =
+                    poly.eval(&r_v[j]) + direct_relay_value * (*self.prover.unwrap()).v_u;
+            }
+            //Add one more round for maskR
+            //quadratic_poly poly p->sumcheck_finalroundR(previous_random, C.current[i - 1].bit_length);
+
+            let final_claims = (*self.prover.unwrap()).sumcheck_finalize(previous_random);
+
+            let v_u = final_claims.0;
+            let v_v = final_claims.1;
+
+            let predicates_calc = time::Instant::now();
+
+            //todo
+            Self::beta_init();
+            //todo
+
+            let predicates_calc_span = predicates_calc.elapsed();
+            //predicates_calc_span.as_millis());
         }
 
         todo!()
@@ -503,6 +552,10 @@ impl zk_verifier {
             }
             return ret;
         }
+    }
+
+    pub fn beta_init() {
+        todo!()
     }
 
     pub fn delete_self() {}
