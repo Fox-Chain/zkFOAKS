@@ -514,7 +514,7 @@ impl zk_verifier {
             let predicates_calc = time::Instant::now();
 
             //todo
-            Self::beta_init();
+            // Self::beta_init();
             //todo
 
             let predicates_calc_span = predicates_calc.elapsed();
@@ -575,8 +575,9 @@ impl zk_verifier {
             let mut beta_g_r0_second_half = vec![FieldElement::from_real(1)];
             let mut beta_g_r1_second_half = vec![FieldElement::from_real(1)];
 
-            let first_half_len = self.aritmetic_circuit.circuit[depth].bit_length / 2;
-            let second_half_len = self.aritmetic_circuit.circuit[depth].bit_length - first_half_len;
+            let mut first_half_len = self.aritmetic_circuit.circuit[depth].bit_length / 2;
+            let mut second_half_len =
+                self.aritmetic_circuit.circuit[depth].bit_length - first_half_len;
 
             for i in 0..first_half_len {
                 let r0 = r_0[i];
@@ -609,6 +610,50 @@ impl zk_verifier {
                 for j in 0..(1 << i) {
                     beta_g_r0_second_half[j] = beta_g_r0_second_half[j] * or0;
                     beta_g_r1_second_half[j] = beta_g_r1_second_half[j] * or1;
+                }
+            }
+        }
+        if self.aritmetic_circuit.circuit[depth].is_parallel {
+            let mut beta_u_block_first_half = vec![FieldElement::from_real(1)];
+            let mut beta_v_block_first_half = vec![FieldElement::from_real(1)];
+            let mut beta_u_block_second_half = vec![FieldElement::from_real(1)];
+            let mut beta_v_block_second_half = vec![FieldElement::from_real(1)];
+
+            let first_half_len = self.aritmetic_circuit.circuit[depth - 1].log_block_size / 2;
+            let second_half_len =
+                self.aritmetic_circuit.circuit[depth - 1].log_block_size - first_half_len;
+
+            for i in 0..first_half_len {
+                let ru = r_u[i];
+                let rv = r_v[i];
+                let oru = one_minus_r_u[i];
+                let orv = one_minus_r_v[i];
+
+                for j in 0..(1 << i) {
+                    beta_u_block_first_half[j | (1 << i)] = beta_u_block_first_half[j] * ru;
+                    beta_v_block_first_half[j | (1 << i)] = beta_v_block_first_half[j] * rv;
+                }
+
+                for j in 0..(1 << i) {
+                    beta_u_block_first_half[j] = beta_u_block_first_half[j] * oru;
+                    beta_v_block_first_half[j] = beta_v_block_first_half[j] * orv;
+                }
+            }
+
+            for i in 0..second_half_len {
+                let ru = r_u[i + first_half_len];
+                let rv = r_v[i + first_half_len];
+                let oru = one_minus_r_u[i + first_half_len];
+                let orv = one_minus_r_v[i + first_half_len];
+
+                for j in 0..(1 << i) {
+                    beta_u_block_second_half[j | (1 << i)] = beta_u_block_second_half[j] * ru;
+                    beta_v_block_second_half[j | (1 << i)] = beta_v_block_second_half[j] * rv;
+                }
+
+                for j in 0..(1 << 1) {
+                    beta_u_block_second_half[j] = beta_u_block_second_half[j] * oru;
+                    beta_v_block_second_half[j] = beta_v_block_second_half[j] * orv;
                 }
             }
         }
