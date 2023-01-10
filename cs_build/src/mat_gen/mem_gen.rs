@@ -4,7 +4,7 @@ use ark_ff::BigInteger256;
 use ark_test_curves::bls12_381::Fr;
 
 // Constraint: (x)*(x-1)=0
-// x∈(mWr,mWr8)
+// x∈(m_wr,m_wr_8)
 pub fn boolean_check(x_in: u64) -> ConstraintMatrices<Fr> {
     let cs = ConstraintSystem::<Fr>::new_ref();
     let x = Fr::from(x_in);
@@ -27,12 +27,12 @@ pub fn boolean_check(x_in: u64) -> ConstraintMatrices<Fr> {
     matrices
 }
 
-// Constraint: (1+mWr*mWr8)(val_src-val_dst) = 0
-// mid_1 = mWr*mWr8
+// Constraint: (1+m_wr*m_wr_8)(val_src-val_dst) = 0
+// mid_1 = m_wr*m_wr_8
 // out = (1+mid_1)*(val_src-val_dst)
 pub fn val_check_matrix_gen(
-    mWr_in: u64,
-    mWr8_in: u64,
+    m_wr_in: u64,
+    m_wr_8_in: u64,
     val_src_0_in: u64,
     val_src_1_in: u64,
     val_src_2_in: u64,
@@ -43,9 +43,9 @@ pub fn val_check_matrix_gen(
     val_dst_3_in: u64,
 ) -> ConstraintMatrices<Fr> {
     let cs = ConstraintSystem::<Fr>::new_ref();
-    let mWr = Fr::from(mWr_in);
-    let mWr8 = Fr::from(mWr8_in);
-    let mid_1 = mWr * mWr8;
+    let m_wr = Fr::from(m_wr_in);
+    let m_wr_8 = Fr::from(m_wr_8_in);
+    let mid_1 = m_wr * m_wr_8;
     let val_src = Fr::from(BigInteger256::new([
         val_src_0_in,
         val_src_1_in,
@@ -60,13 +60,13 @@ pub fn val_check_matrix_gen(
     ]));
     let one = Fr::from(1u64);
 
-    let mWr = cs.new_witness_variable(|| Ok(mWr)).unwrap();
-    let mWr8 = cs.new_witness_variable(|| Ok(mWr8)).unwrap();
+    let m_wr = cs.new_witness_variable(|| Ok(m_wr)).unwrap();
+    let m_wr_8 = cs.new_witness_variable(|| Ok(m_wr_8)).unwrap();
     let mid_1 = cs.new_witness_variable(|| Ok(mid_1)).unwrap();
     let val_src = cs.new_witness_variable(|| Ok(val_src)).unwrap();
     let val_dst = cs.new_witness_variable(|| Ok(val_dst)).unwrap();
     let out = cs.new_input_variable(|| Ok(Fr::from(0u64))).unwrap();
-    cs.enforce_constraint(lc!() + mWr, lc!() + mWr8, lc!() + mid_1)
+    cs.enforce_constraint(lc!() + m_wr, lc!() + m_wr_8, lc!() + mid_1)
         .unwrap();
     cs.enforce_constraint(
         lc!() + (one, Variable::One) + mid_1,
@@ -78,7 +78,7 @@ pub fn val_check_matrix_gen(
 
     assert!(cs.is_satisfied().is_ok());
     let matrices = cs.to_matrices().unwrap();
-    // 1, out, mWr, mWr8, mid_1, val_src, val_dst
+    // 1, out, m_wr, m_wr_8, mid_1, val_src, val_dst
     // A [0,0,1,0,0,0,0]
     // [1,0,0,0,1,0,0]
     // B [0,0,0,1,0,0,0]
@@ -97,18 +97,18 @@ pub fn val_check_matrix_gen(
     matrices
 }
 
-// Constraint: (1-mWr)mWr8 = 0
-pub fn mWr_mWr8_check_matrix_gen(mWr_in: u64, mWr8_in: u64) -> ConstraintMatrices<Fr> {
+// Constraint: (1-m_wr)m_wr_8 = 0
+pub fn m_wr_m_wr_8_check_matrix_gen(m_wr_in: u64, m_wr_8_in: u64) -> ConstraintMatrices<Fr> {
     let cs = ConstraintSystem::<Fr>::new_ref();
-    let mWr = Fr::from(mWr_in);
-    let mWr8 = Fr::from(mWr8_in);
+    let m_wr = Fr::from(m_wr_in);
+    let m_wr_8 = Fr::from(m_wr_8_in);
     let one = Fr::from(1u64);
-    let mWr = cs.new_witness_variable(|| Ok(mWr)).unwrap();
-    let mWr8 = cs.new_witness_variable(|| Ok(mWr8)).unwrap();
+    let m_wr = cs.new_witness_variable(|| Ok(m_wr)).unwrap();
+    let m_wr_8 = cs.new_witness_variable(|| Ok(m_wr_8)).unwrap();
     let out = cs.new_input_variable(|| Ok(Fr::from(0u64))).unwrap();
     cs.enforce_constraint(
-        lc!() + (one, Variable::One) - mWr,
-        lc!() + mWr8,
+        lc!() + (one, Variable::One) - m_wr,
+        lc!() + m_wr_8,
         lc!() + out,
     )
     .unwrap();
@@ -116,7 +116,7 @@ pub fn mWr_mWr8_check_matrix_gen(mWr_in: u64, mWr8_in: u64) -> ConstraintMatrice
 
     assert!(cs.is_satisfied().is_ok());
     let matrices = cs.to_matrices().unwrap();
-    // 1, out, mOp, mWr
+    // 1, out, mOp, m_wr
     // A [1,0,-1,0]
     // B [0,0,0,1]
     // C [0,1,0,0]

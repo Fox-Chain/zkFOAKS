@@ -30,12 +30,12 @@ mod tests {
     #[test]
     fn mstore_check_val() {
         let file_tx =
-            File::open("./src/data/tx_mem_table.json").expect("file should open read only");
+            File::open("./src/data/test_mem_table.json").expect("file should open read only");
         let json_tx: serde_json::Value =
             serde_json::from_reader(file_tx).expect("file should be proper JSON");
         let data = json_tx.get("data").expect("file should have data key");
-        let mWr = data.as_array().unwrap()[0]["m_wr"].as_u64().unwrap();
-        let mWr8 = data.as_array().unwrap()[0]["m_wr8"].as_u64().unwrap();
+        let m_wr = data.as_array().unwrap()[0]["m_wr"].as_u64().unwrap();
+        let m_wr_8 = data.as_array().unwrap()[0]["m_wr8"].as_u64().unwrap();
         let val_src_0 = data.as_array().unwrap()[0]["val_src_0"].as_u64().unwrap();
         let val_src_1 = data.as_array().unwrap()[0]["val_src_1"].as_u64().unwrap();
         let val_src_2 = data.as_array().unwrap()[0]["val_src_2"].as_u64().unwrap();
@@ -46,7 +46,7 @@ mod tests {
         let val_dst_3 = data.as_array().unwrap()[0]["val_dst_3"].as_u64().unwrap();
 
         let matrices = val_check_matrix_gen(
-            mWr, mWr8, val_src_0, val_src_1, val_src_2, val_src_3, val_dst_0, val_dst_1, val_dst_2,
+            m_wr, m_wr_8, val_src_0, val_src_1, val_src_2, val_src_3, val_dst_0, val_dst_1, val_dst_2,
             val_dst_3,
         );
         assert_eq!(matrices.a[0], vec![(Fr::from(1u64), 2)]);
@@ -60,28 +60,29 @@ mod tests {
         assert_eq!(matrices.c[1], vec![(Fr::from(1u64), 1)]);
     }
     #[test]
-    fn mwr_mwr8_check() {
+    fn m_wr_m_wr_8_check() {
         let file_tx =
             File::open("./src/data/tx_mem_table.json").expect("file should open read only");
         let json_tx: serde_json::Value =
             serde_json::from_reader(file_tx).expect("file should be proper JSON");
         let data = json_tx.get("data").expect("file should have data key");
-        let mWr = data.as_array().unwrap()[0]["m_wr"].as_u64().unwrap();
-        let mWr8 = data.as_array().unwrap()[0]["m_wr8"].as_u64().unwrap();
-        let matrices = mWr_mWr8_check_matrix_gen(mWr, mWr8);
+        let m_wr = data.as_array().unwrap()[0]["m_wr"].as_u64().unwrap();
+        let m_wr_8 = data.as_array().unwrap()[0]["m_wr8"].as_u64().unwrap();
+        let matrices = m_wr_m_wr_8_check_matrix_gen(m_wr, m_wr_8);
         assert_eq!(matrices.a[0], vec![(Fr::from(1u64), 0), (Fr::from(-1), 2)]);
         assert_eq!(matrices.b[0], vec![(Fr::from(1u64), 3)]);
         assert_eq!(matrices.c[0], vec![(Fr::from(1u64), 1)]);
     }
 
+    #[test]
     fn bool_check() {
         let file_tx =
             File::open("./src/data/tx_mem_table.json").expect("file should open read only");
         let json_tx: serde_json::Value =
             serde_json::from_reader(file_tx).expect("file should be proper JSON");
         let data = json_tx.get("data").expect("file should have data key");
-        let mWr = data.as_array().unwrap()[0]["m_wr"].as_u64().unwrap();
-        let matrices = boolean_check(mWr);
+        let m_wr = data.as_array().unwrap()[0]["m_wr"].as_u64().unwrap();
+        let matrices = boolean_check(m_wr);
         assert_eq!(matrices.a[0], vec![(Fr::from(1u64), 2)]);
         assert_eq!(matrices.b[0], vec![(Fr::from(-1), 0), (Fr::from(1u64), 2)]);
         assert_eq!(matrices.c[0], vec![(Fr::from(1u64), 1)]);
