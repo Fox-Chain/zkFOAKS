@@ -659,5 +659,31 @@ impl zk_verifier {
         }
     }
 
+    pub fn predicates(
+        &mut self,
+        depth: usize,
+        r_0: Vec<FieldElement>,
+        r_1: Vec<FieldElement>,
+        r_u: &Vec<FieldElement>,
+        r_v: Vec<FieldElement>,
+        alpha: FieldElement,
+        beta: FieldElement,
+    ) {
+        let gate_type_count = 15;
+        let mut ret_para = vec![FieldElement::zero(); gate_type_count];
+        let mut ret = vec![FieldElement::zero(); gate_type_count];
+
+        for i in 0..gate_type_count {
+            ret[i] = FieldElement::zero();
+            ret_para[i] = FieldElement::zero();
+        }
+
+        if depth == 1 {
+            ret;
+        }
+
+        let debug_mode = false;
+    }
+
     pub fn delete_self() {}
 }
