@@ -1,5 +1,6 @@
 //#![feature(core_intrinsics)]
 
+use std::borrow::Borrow;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
@@ -386,7 +387,7 @@ impl zk_verifier {
             r_0.clone(),
             result,
             capacity,
-            (1 << capacity),
+            1 << capacity,
         );
         // }
         let t_b = SystemTime::now();
@@ -472,7 +473,11 @@ impl zk_verifier {
             }
             //	std::cerr << "Bound v start" << std::endl;
 
-            (*self.prover.unwrap()).sumcheck_phase2_init(previous_random, r_u, one_minus_r_u);
+            (*self.prover.unwrap()).sumcheck_phase2_init(
+                previous_random,
+                r_u.clone(),
+                one_minus_r_u.clone(),
+            );
             let mut previous_random = FieldElement::zero();
             for j in 0..self.aritmetic_circuit.circuit[i - 1].bit_length {
                 if i == 1 {
@@ -517,7 +522,20 @@ impl zk_verifier {
             let predicates_calc = time::Instant::now();
 
             //todo
-            // Self::beta_init();
+            Self::beta_init(
+                self,
+                i,
+                alpha,
+                beta,
+                &r_0,
+                &r_1,
+                &r_u,
+                &r_v,
+                &one_minus_r_0,
+                &one_minus_r_1,
+                &one_minus_r_u,
+                &one_minus_r_v,
+            );
             //todo
 
             //let predicates_calc_span = predicates_calc.elapsed();
@@ -562,14 +580,14 @@ impl zk_verifier {
         depth: usize,
         alpha: FieldElement,
         beta: FieldElement,
-        r_0: Vec<FieldElement>,
-        r_1: Vec<FieldElement>,
-        r_u: Vec<FieldElement>,
-        r_v: Vec<FieldElement>,
-        one_minus_r_0: Vec<FieldElement>,
-        one_minus_r_1: Vec<FieldElement>,
-        one_minus_r_u: Vec<FieldElement>,
-        one_minus_r_v: Vec<FieldElement>,
+        r_0: &Vec<FieldElement>,
+        r_1: &Vec<FieldElement>,
+        r_u: &Vec<FieldElement>,
+        r_v: &Vec<FieldElement>,
+        one_minus_r_0: &Vec<FieldElement>,
+        one_minus_r_1: &Vec<FieldElement>,
+        one_minus_r_u: &Vec<FieldElement>,
+        one_minus_r_v: &Vec<FieldElement>,
     ) {
         let debug_mode = false;
         if !self.aritmetic_circuit.circuit[depth].is_parallel || debug_mode {
@@ -686,6 +704,20 @@ impl zk_verifier {
         }
 
         let debug_mode = false;
+        if self.aritmetic_circuit.circuit[depth].is_parallel {
+            let first_half_g = self.aritmetic_circuit.circuit[depth].log_block_size / 2;
+            let first_half_uv = self.aritmetic_circuit.circuit[depth - 1].log_block_size / 2;
+
+            let mut one_block_alpha = vec![FieldElement::zero(); gate_type_count];
+            let mut one_block_beta = vec![FieldElement::zero(); gate_type_count];
+
+            for i in 0..gate_type_count {
+                one_block_alpha[i] = FieldElement::zero();
+                one_block_beta[i] = FieldElement::zero();
+            }
+
+            // assert!()
+        }
     }
 
     pub fn delete_self() {}
