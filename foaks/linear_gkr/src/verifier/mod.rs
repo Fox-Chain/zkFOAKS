@@ -140,14 +140,15 @@ impl zk_verifier {
                 if ty != 3 {
                     if ty == 5 {
                         assert!(
-                            u >= 0 && u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)
+                            //u >= 0 && u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)
+                            u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)
                         );
                         assert!(
                             v > u && v <= (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)
                         );
                     } else {
-                        if !(u >= 0 && u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length))
-                        {
+                        //if !(u >= 0 && u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length))
+                        if !(u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)) {
                             println!(
                                 "{} {} {} {} {} ",
                                 ty,
@@ -158,10 +159,11 @@ impl zk_verifier {
                             );
                         }
                         assert!(
-                            u >= 0 && u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)
+                            //u >= 0 && u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)
+                            u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)
                         );
-                        if !(v >= 0 && v < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length))
-                        {
+                        //if !(v >= 0 && v < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length))
+                        if !(v < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)) {
                             println!(
                                 "{} {} {} {} {} ",
                                 ty,
@@ -172,7 +174,8 @@ impl zk_verifier {
                             );
                         }
                         assert!(
-                            v >= 0 && v < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)
+                            //v >= 0 && v < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)
+                            v < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)
                         );
                     }
                 }
@@ -517,7 +520,7 @@ impl zk_verifier {
             // Self::beta_init();
             //todo
 
-            let predicates_calc_span = predicates_calc.elapsed();
+            //let predicates_calc_span = predicates_calc.elapsed();
             //predicates_calc_span.as_millis());
         }
 
