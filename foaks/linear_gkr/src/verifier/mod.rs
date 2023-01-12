@@ -9,6 +9,7 @@ use std::time;
 
 // use poly_commitment::PolyCommitProver;
 use prime_field::FieldElement;
+use prime_field::VecFieldElement;
 
 use crate::circuit_fast_track::Gate;
 use crate::circuit_fast_track::Layer;
@@ -372,12 +373,16 @@ impl zk_verifier {
             self.aritmetic_circuit.circuit[self.aritmetic_circuit.total_depth - 1].bit_length;
         let r_0 = Self::generate_randomness(capacity);
         let r_1 = Self::generate_randomness(capacity);
-        let mut one_minus_r_0 = vec![FieldElement::zero(); capacity];
-        let mut one_minus_r_1 = vec![FieldElement::zero(); capacity];
+        let mut one_minus_r_0 = VecFieldElement::new(capacity);
+        let mut one_minus_r_1 = VecFieldElement::new(capacity);
 
         for i in 0..capacity {
-            one_minus_r_0.push(FieldElement::from_real(1) - r_0[i]);
-            one_minus_r_1.push(FieldElement::from_real(1) - r_1[i]);
+            one_minus_r_0
+                .vec
+                .push(FieldElement::from_real(1) - r_0.vec[i]);
+            one_minus_r_1
+                .vec
+                .push(FieldElement::from_real(1) - r_1.vec[i]);
         }
         let t_a = SystemTime::now();
         println!("Calc V_output(r)");
@@ -407,8 +412,8 @@ impl zk_verifier {
                 self.aritmetic_circuit.circuit[i - 1].bit_length,
                 alpha,
                 beta,
-                &r_0,
-                &r_1,
+                r_0.clone(),
+                r_1.clone(),
                 &one_minus_r_0,
                 &one_minus_r_1,
             );
@@ -426,31 +431,35 @@ impl zk_verifier {
 
             if i == 1 {
                 for j in 0..self.aritmetic_circuit.circuit[i - 1].bit_length {
-                    r_v[j] = FieldElement::zero();
+                    r_v.vec[j] = FieldElement::zero();
                 }
             }
 
             //V should test the maskR for two points, V does random linear combination of these points first
-            let random_combine = Self::generate_randomness(1)[0];
+            let random_combine = Self::generate_randomness(1).vec[0];
 
             //Every time all one test to V, V needs to do a linear combination for security.
-            let linear_combine = Self::generate_randomness(1)[0]; // mem leak
+            let linear_combine = Self::generate_randomness(1).vec[0]; // mem leak
 
             let mut one_minus_r_u =
-                vec![FieldElement::zero(); self.aritmetic_circuit.circuit[i - 1].bit_length];
+                VecFieldElement::new(self.aritmetic_circuit.circuit[i - 1].bit_length);
             let mut one_minus_r_v =
-                vec![FieldElement::zero(); self.aritmetic_circuit.circuit[i - 1].bit_length];
+                VecFieldElement::new(self.aritmetic_circuit.circuit[i - 1].bit_length);
 
             for j in 0..(self.aritmetic_circuit.circuit[i - 1].bit_length) {
-                one_minus_r_u.push(FieldElement::from_real(1) - r_u[j]);
-                one_minus_r_v.push(FieldElement::from_real(1) - r_v[j]);
+                one_minus_r_u
+                    .vec
+                    .push(FieldElement::from_real(1) - r_u.vec[j]);
+                one_minus_r_v
+                    .vec
+                    .push(FieldElement::from_real(1) - r_v.vec[j]);
             }
 
             for j in 0..(self.aritmetic_circuit.circuit[i - 1].bit_length) {
                 let poly = (*self.prover.unwrap()).sumcheck_phase1_update(previous_random, j);
 
                 self.proof_size += mem::size_of::<QuadraticPoly>();
-                previous_random = r_u[j];
+                previous_random = r_u.vec[j];
                 //todo: Debug eval() fn
                 if poly.eval(&FieldElement::zero()) + poly.eval(&FieldElement::real_one())
                     != alpha_beta_sum
@@ -469,7 +478,7 @@ impl zk_verifier {
                     //i, j
                     //);
                 }
-                alpha_beta_sum = poly.eval(&r_u[j]);
+                alpha_beta_sum = poly.eval(&r_u.vec[j]);
             }
             //	std::cerr << "Bound v start" << std::endl;
 
@@ -481,13 +490,13 @@ impl zk_verifier {
             let mut previous_random = FieldElement::zero();
             for j in 0..self.aritmetic_circuit.circuit[i - 1].bit_length {
                 if i == 1 {
-                    r_v[j] = FieldElement::zero();
+                    r_v.vec[j] = FieldElement::zero();
                 }
                 let poly = (*self.prover.unwrap()).sumcheck_phase2_update(previous_random, j);
                 self.proof_size += mem::size_of::<QuadraticPoly>();
                 //poly.c = poly.c; ???
 
-                previous_random = r_v[j];
+                previous_random = r_v.vec[j];
 
                 if poly.eval(&FieldElement::zero())
                     + poly.eval(&FieldElement::real_one())
@@ -509,7 +518,7 @@ impl zk_verifier {
                     //);
                 }
                 alpha_beta_sum =
-                    poly.eval(&r_v[j]) + direct_relay_value * (*self.prover.unwrap()).v_u;
+                    poly.eval(&r_v.vec[j]) + direct_relay_value * (*self.prover.unwrap()).v_u;
             }
             //Add one more round for maskR
             //quadratic_poly poly p->sumcheck_finalroundR(previous_random, C.current[i - 1].bit_length);
@@ -520,8 +529,6 @@ impl zk_verifier {
             let v_v = final_claims.1;
 
             let predicates_calc = time::Instant::now();
-
-            //todo
             Self::beta_init(
                 self,
                 i,
@@ -536,6 +543,9 @@ impl zk_verifier {
                 &one_minus_r_u,
                 &one_minus_r_v,
             );
+
+            let predicates_value =
+                Self::predicates(self, i, r_0.clone(), r_1.clone(), &r_u, r_v, alpha, beta);
             //todo
 
             //let predicates_calc_span = predicates_calc.elapsed();
@@ -545,12 +555,12 @@ impl zk_verifier {
         todo!()
     }
 
-    pub fn generate_randomness(size: usize) -> Vec<FieldElement> {
+    pub fn generate_randomness(size: usize) -> VecFieldElement {
         let k = size;
-        let mut ret = vec![FieldElement::zero(); k];
+        let mut ret = VecFieldElement::new(k);
 
         for i in 0..k {
-            ret.push(FieldElement::new_random());
+            ret.vec.push(FieldElement::new_random());
         }
         ret
     }
@@ -558,8 +568,8 @@ impl zk_verifier {
     pub fn direct_relay(
         &mut self,
         depth: usize,
-        r_g: &Vec<FieldElement>,
-        r_u: &Vec<FieldElement>,
+        r_g: &VecFieldElement,
+        r_u: &VecFieldElement,
     ) -> FieldElement {
         if depth != 1 {
             let ret = FieldElement::from_real(0);
@@ -568,8 +578,8 @@ impl zk_verifier {
             let mut ret = FieldElement::from_real(1);
             for i in 0..(self.aritmetic_circuit.circuit[depth].bit_length) {
                 ret = ret
-                    * (FieldElement::from_real(1) - r_g[i] - r_u[i]
-                        + FieldElement::from_real(2) * r_g[i] * r_u[i]);
+                    * (FieldElement::from_real(1) - r_g.vec[i] - r_u.vec[i]
+                        + FieldElement::from_real(2) * r_g.vec[i] * r_u.vec[i]);
             }
             return ret;
         }
@@ -580,101 +590,194 @@ impl zk_verifier {
         depth: usize,
         alpha: FieldElement,
         beta: FieldElement,
-        r_0: &Vec<FieldElement>,
-        r_1: &Vec<FieldElement>,
-        r_u: &Vec<FieldElement>,
-        r_v: &Vec<FieldElement>,
-        one_minus_r_0: &Vec<FieldElement>,
-        one_minus_r_1: &Vec<FieldElement>,
-        one_minus_r_u: &Vec<FieldElement>,
-        one_minus_r_v: &Vec<FieldElement>,
+        r_0: &VecFieldElement,
+        r_1: &VecFieldElement,
+        r_u: &VecFieldElement,
+        r_v: &VecFieldElement,
+        one_minus_r_0: &VecFieldElement,
+        one_minus_r_1: &VecFieldElement,
+        one_minus_r_u: &VecFieldElement,
+        one_minus_r_v: &VecFieldElement,
     ) {
         let debug_mode = false;
         if !self.aritmetic_circuit.circuit[depth].is_parallel || debug_mode {
-            let mut beta_g_r0_first_half = vec![alpha];
-            let mut beta_g_r1_first_half = vec![beta];
-            let mut beta_g_r0_second_half = vec![FieldElement::from_real(1)];
-            let mut beta_g_r1_second_half = vec![FieldElement::from_real(1)];
+            self.beta_g_r0_first_half[0] = alpha;
+            self.beta_g_r1_first_half[0] = beta;
+            self.beta_g_r0_second_half[0] = FieldElement::from_real(1);
+            self.beta_g_r1_second_half[0] = FieldElement::from_real(1);
 
             let mut first_half_len = self.aritmetic_circuit.circuit[depth].bit_length / 2;
             let mut second_half_len =
                 self.aritmetic_circuit.circuit[depth].bit_length - first_half_len;
 
             for i in 0..first_half_len {
-                let r0 = r_0[i];
-                let r1 = r_1[i];
-                let or0 = one_minus_r_0[i];
-                let or1 = one_minus_r_1[i];
+                let r0 = r_0.vec[i];
+                let r1 = r_1.vec[i];
+                let or0 = one_minus_r_0.vec[i];
+                let or1 = one_minus_r_1.vec[i];
 
                 for j in 0..(1 << i) {
-                    beta_g_r0_first_half[j | (1 << i)] = beta_g_r0_first_half[j] * r0;
-                    beta_g_r1_first_half[j | (1 << i)] = beta_g_r1_first_half[j] * r1;
+                    self.beta_g_r0_first_half[j | (1 << i)] = self.beta_g_r0_first_half[j] * r0;
+                    self.beta_g_r1_first_half[j | (1 << i)] = self.beta_g_r1_first_half[j] * r1;
                 }
 
                 for j in 0..(1 << i) {
-                    beta_g_r0_first_half[j] = beta_g_r0_first_half[j] * or0;
-                    beta_g_r1_first_half[j] = beta_g_r1_first_half[j] * or1;
+                    self.beta_g_r0_first_half[j] = self.beta_g_r0_first_half[j] * or0;
+                    self.beta_g_r1_first_half[j] = self.beta_g_r1_first_half[j] * or1;
                 }
             }
 
             for i in 0..second_half_len {
-                let r0 = r_0[i + first_half_len];
-                let r1 = r_1[i + first_half_len];
-                let or0 = one_minus_r_0[i + first_half_len];
-                let or1 = one_minus_r_1[i + first_half_len];
+                let r0 = r_0.vec[i + first_half_len];
+                let r1 = r_1.vec[i + first_half_len];
+                let or0 = one_minus_r_0.vec[i + first_half_len];
+                let or1 = one_minus_r_1.vec[i + first_half_len];
 
                 for j in 0..(1 << i) {
-                    beta_g_r0_second_half[j | (1 << i)] = beta_g_r0_second_half[j] * r0;
-                    beta_g_r1_second_half[j | (1 << i)] = beta_g_r1_second_half[j] * r1;
+                    self.beta_g_r0_second_half[j | (1 << i)] = self.beta_g_r0_second_half[j] * r0;
+                    self.beta_g_r1_second_half[j | (1 << i)] = self.beta_g_r1_second_half[j] * r1;
                 }
 
                 for j in 0..(1 << i) {
-                    beta_g_r0_second_half[j] = beta_g_r0_second_half[j] * or0;
-                    beta_g_r1_second_half[j] = beta_g_r1_second_half[j] * or1;
+                    self.beta_g_r0_second_half[j] = self.beta_g_r0_second_half[j] * or0;
+                    self.beta_g_r1_second_half[j] = self.beta_g_r1_second_half[j] * or1;
+                }
+            }
+
+            self.beta_u_first_half[0] = FieldElement::real_one();
+            self.beta_v_first_half[0] = FieldElement::real_one();
+            self.beta_u_second_half[0] = FieldElement::real_one();
+            self.beta_v_second_half[0] = FieldElement::real_one();
+            let first_half_len = self.aritmetic_circuit.circuit[depth - 1].bit_length / 2;
+            let second_half_len =
+                self.aritmetic_circuit.circuit[depth - 1].bit_length - first_half_len;
+
+            for i in 0..first_half_len {
+                let ru = r_u.vec[i];
+                let rv = r_v.vec[i];
+                let oru = one_minus_r_u.vec[i];
+                let orv = one_minus_r_v.vec[i];
+
+                for j in 0..(1 << i) {
+                    self.beta_u_first_half[j | (1 << i)] = self.beta_u_first_half[j] * ru;
+                    self.beta_v_first_half[j | (1 << i)] = self.beta_v_first_half[j] * rv;
+                }
+
+                for j in 0..(1 << i) {
+                    self.beta_u_first_half[j] = self.beta_u_first_half[j] * oru;
+                    self.beta_v_first_half[j] = self.beta_v_first_half[j] * orv;
+                }
+            }
+
+            for i in 0..second_half_len {
+                let ru = r_u.vec[i + first_half_len];
+                let rv = r_v.vec[i + first_half_len];
+                let oru = one_minus_r_u.vec[i + first_half_len];
+                let orv = one_minus_r_v.vec[i + first_half_len];
+
+                for j in 0..(1 << i) {
+                    self.beta_u_second_half[j | (1 << i)] = self.beta_u_second_half[j] * ru;
+                    self.beta_v_second_half[j | (1 << i)] = self.beta_v_second_half[j] * rv;
+                }
+
+                for j in 0..(1 << i) {
+                    self.beta_u_second_half[j] = self.beta_u_second_half[j] * oru;
+                    self.beta_v_second_half[j] = self.beta_v_second_half[j] * orv;
                 }
             }
         }
+
         if self.aritmetic_circuit.circuit[depth].is_parallel {
-            let mut beta_u_block_first_half = vec![FieldElement::from_real(1)];
-            let mut beta_v_block_first_half = vec![FieldElement::from_real(1)];
-            let mut beta_u_block_second_half = vec![FieldElement::from_real(1)];
-            let mut beta_v_block_second_half = vec![FieldElement::from_real(1)];
+            self.beta_g_r0_block_first_half[0] = alpha;
+            self.beta_g_r1_block_first_half[0] = beta;
+            self.beta_g_r0_block_second_half[0] = FieldElement::from_real(1);
+            self.beta_g_r1_block_second_half[0] = FieldElement::from_real(1);
 
             let first_half_len = self.aritmetic_circuit.circuit[depth - 1].log_block_size / 2;
             let second_half_len =
                 self.aritmetic_circuit.circuit[depth - 1].log_block_size - first_half_len;
 
             for i in 0..first_half_len {
-                let ru = r_u[i];
-                let rv = r_v[i];
-                let oru = one_minus_r_u[i];
-                let orv = one_minus_r_v[i];
+                let r0 = r_0.vec[i + first_half_len];
+                let r1 = r_1.vec[i + first_half_len];
+                let or0 = one_minus_r_0.vec[i + first_half_len];
+                let or1 = one_minus_r_1.vec[i + first_half_len];
 
                 for j in 0..(1 << i) {
-                    beta_u_block_first_half[j | (1 << i)] = beta_u_block_first_half[j] * ru;
-                    beta_v_block_first_half[j | (1 << i)] = beta_v_block_first_half[j] * rv;
+                    self.beta_g_r0_block_first_half[j | (1 << i)] =
+                        self.beta_g_r0_block_first_half[j] * r0;
+                    self.beta_g_r1_block_first_half[j | (1 << i)] =
+                        self.beta_g_r1_block_first_half[j] * r1;
                 }
 
                 for j in 0..(1 << i) {
-                    beta_u_block_first_half[j] = beta_u_block_first_half[j] * oru;
-                    beta_v_block_first_half[j] = beta_v_block_first_half[j] * orv;
+                    self.beta_g_r0_block_first_half[j] = self.beta_g_r0_block_first_half[j] * or0;
+                    self.beta_g_r1_block_first_half[j] = self.beta_g_r1_block_first_half[j] * or1;
                 }
             }
 
             for i in 0..second_half_len {
-                let ru = r_u[i + first_half_len];
-                let rv = r_v[i + first_half_len];
-                let oru = one_minus_r_u[i + first_half_len];
-                let orv = one_minus_r_v[i + first_half_len];
+                let r0 = r_0.vec[i + first_half_len];
+                let r1 = r_1.vec[i + first_half_len];
+                let or0 = one_minus_r_0.vec[i + first_half_len];
+                let or1 = one_minus_r_1.vec[i + first_half_len];
 
                 for j in 0..(1 << i) {
-                    beta_u_block_second_half[j | (1 << i)] = beta_u_block_second_half[j] * ru;
-                    beta_v_block_second_half[j | (1 << i)] = beta_v_block_second_half[j] * rv;
+                    self.beta_g_r0_block_second_half[j | (1 << i)] =
+                        self.beta_g_r0_block_second_half[j] * r0;
+                    self.beta_g_r1_block_second_half[j | (1 << i)] =
+                        self.beta_g_r1_block_second_half[j] * r1;
                 }
 
                 for j in 0..(1 << 1) {
-                    beta_u_block_second_half[j] = beta_u_block_second_half[j] * oru;
-                    beta_v_block_second_half[j] = beta_v_block_second_half[j] * orv;
+                    self.beta_g_r0_block_second_half[j] = self.beta_g_r0_block_second_half[j] * or0;
+                    self.beta_g_r1_block_second_half[j] = self.beta_g_r1_block_second_half[j] * or1;
+                }
+            }
+
+            self.beta_u_block_first_half[0] = FieldElement::real_one();
+            self.beta_v_block_first_half[0] = FieldElement::real_one();
+            self.beta_u_block_second_half[0] = FieldElement::real_one();
+            self.beta_v_block_second_half[0] = FieldElement::real_one();
+            let first_half_len = self.aritmetic_circuit.circuit[depth - 1].bit_length / 2;
+            let second_half_len =
+                self.aritmetic_circuit.circuit[depth - 1].bit_length - first_half_len;
+
+            for i in 0..first_half_len {
+                let ru = r_u.vec[i];
+                let rv = r_v.vec[i];
+                let oru = one_minus_r_u.vec[i];
+                let orv = one_minus_r_v.vec[i];
+
+                for j in 0..(1 << i) {
+                    self.beta_u_block_first_half[j | (1 << i)] =
+                        self.beta_u_block_first_half[j] * ru;
+                    self.beta_v_block_first_half[j | (1 << i)] =
+                        self.beta_v_block_first_half[j] * rv;
+                }
+
+                for j in 0..(1 << i) {
+                    self.beta_u_block_first_half[j] = self.beta_u_block_first_half[j] * oru;
+                    self.beta_v_block_first_half[j] = self.beta_v_block_first_half[j] * orv;
+                }
+            }
+
+            for i in 0..second_half_len {
+                let ru = r_u.vec[i + first_half_len];
+                let rv = r_v.vec[i + first_half_len];
+                let oru = one_minus_r_u.vec[i + first_half_len];
+                let orv = one_minus_r_v.vec[i + first_half_len];
+
+                for j in 0..(1 << i) {
+                    self.beta_u_block_second_half[j | (1 << i)] =
+                        self.beta_u_block_second_half[j] * ru;
+                    self.beta_v_block_second_half[j | (1 << i)] =
+                        self.beta_v_block_second_half[j] * rv;
+                }
+
+                for j in 0..(1 << i) {
+                    self.beta_u_block_second_half[j] = self.beta_u_block_second_half[j] * oru;
+                    self.beta_v_block_second_half[j] = self.beta_v_block_second_half[j] * orv;
                 }
             }
         }
@@ -683,10 +786,10 @@ impl zk_verifier {
     pub fn predicates(
         &mut self,
         depth: usize,
-        r_0: Vec<FieldElement>,
-        r_1: Vec<FieldElement>,
-        r_u: &Vec<FieldElement>,
-        r_v: Vec<FieldElement>,
+        r_0: VecFieldElement,
+        r_1: VecFieldElement,
+        r_u: &VecFieldElement,
+        r_v: VecFieldElement,
         alpha: FieldElement,
         beta: FieldElement,
     ) {
