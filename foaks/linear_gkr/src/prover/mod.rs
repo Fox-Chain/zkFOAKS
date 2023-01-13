@@ -28,7 +28,7 @@ pub fn from_string(s: &str) -> FieldElement {
 
 #[derive(Default, Debug)]
 pub struct zk_prover {
-    //poly_prover: PolyCommitProver,
+    pub poly_prover: PolyCommitProver,
     /** @name Basic
     	* Basic information and variables about the arithmetic circuit*/
     //< two random gates v_u and v_v queried by V in each layer    v_u: FieldElement,

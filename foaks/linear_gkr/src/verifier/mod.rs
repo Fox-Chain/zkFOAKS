@@ -6,7 +6,9 @@ use std::io::prelude::*;
 use std::io::BufReader;
 use std::mem;
 use std::time;
+use std::time::SystemTime;
 
+use infrastructure::constants::SLICE_NUMBER;
 // use poly_commitment::PolyCommitProver;
 use prime_field::FieldElement;
 use prime_field::VecFieldElement;
@@ -17,7 +19,9 @@ use crate::circuit_fast_track::LayeredCircuit;
 use crate::polynomial::QuadraticPoly;
 use crate::prover::zk_prover;
 
-use std::time::SystemTime;
+//Todo: Debug variable
+
+static mut Q_EVAL_REAL: Vec<FieldElement> = Vec::new();
 enum gate_types {
     add = 0,
     mult = 1,
@@ -218,7 +222,7 @@ impl zk_verifier {
                         Gate::from_params(ty, u, v);
                 }
 
-                //break;
+                //
             }
             if i == 1 {
                 for g in number_gates..n_pad {
@@ -279,7 +283,7 @@ impl zk_verifier {
             }
 
             //can uncomment the below break sentence to break the for loop
-            //break;
+            //
         }
         self.aritmetic_circuit.circuit[0].is_parallel = false;
 
@@ -352,9 +356,9 @@ impl zk_verifier {
     pub unsafe fn verify_orion(&mut self, output_path: &String) {
         self.proof_size = 0;
         //there is a way to compress binlinear pairing element
-        let verification_time = 0;
-        let predicates_calc_time = 0;
-        let verification_rdl_time = 0;
+        let mut verification_time = 0;
+        let mut predicates_calc_time = 0;
+        let mut verification_rdl_time = 0;
 
         //Below function is not implemented neither in virgo repo nor orion repo
         //prime_field::init_random();
@@ -366,13 +370,13 @@ impl zk_verifier {
         let zkp = self.prover.unwrap();
         let result = (*zkp).evaluate();
         // }
-        let alpha = FieldElement::from_real(1);
-        let beta = FieldElement::from_real(0);
+        let mut alpha = FieldElement::from_real(1);
+        let mut beta = FieldElement::from_real(0);
         //	random_oracle oracle; // Orion dont use this here
         let capacity =
             self.aritmetic_circuit.circuit[self.aritmetic_circuit.total_depth - 1].bit_length;
-        let r_0 = Self::generate_randomness(capacity);
-        let r_1 = Self::generate_randomness(capacity);
+        let mut r_0 = Self::generate_randomness(capacity);
+        let mut r_1 = Self::generate_randomness(capacity);
         let mut one_minus_r_0 = VecFieldElement::new(capacity);
         let mut one_minus_r_1 = VecFieldElement::new(capacity);
 
@@ -478,7 +482,7 @@ impl zk_verifier {
                     //i, j
                     //);
                 }
-                alpha_beta_sum = poly.eval(&r_u.vec[j]);
+                alpha_beta_sum = poly.eval(&r_u.vec[j].clone());
             }
             //	std::cerr << "Bound v start" << std::endl;
 
@@ -496,7 +500,7 @@ impl zk_verifier {
                 self.proof_size += mem::size_of::<QuadraticPoly>();
                 //poly.c = poly.c; ???
 
-                previous_random = r_v.vec[j];
+                previous_random = r_v.vec[j].clone();
 
                 if poly.eval(&FieldElement::zero())
                     + poly.eval(&FieldElement::real_one())
@@ -544,13 +548,92 @@ impl zk_verifier {
                 &one_minus_r_v,
             );
 
-            let predicates_value =
-                Self::predicates(self, i, r_0.clone(), r_1.clone(), &r_u, r_v, alpha, beta);
+            let predicates_value = Self::predicates(
+                self,
+                i,
+                r_0.clone(),
+                r_1.clone(),
+                r_u.clone(),
+                r_v.clone(),
+                alpha,
+                beta,
+            );
+
             //todo
 
-            //let predicates_calc_span = predicates_calc.elapsed();
-            //predicates_calc_span.as_millis());
+            let predicates_calc_span = predicates_calc.elapsed();
+            if self.aritmetic_circuit.circuit[i].is_parallel == false {
+                verification_rdl_time += predicates_calc_span.as_millis();
+            }
+            verification_time += predicates_calc_span.as_millis();
+            predicates_calc_time += predicates_calc_span.as_millis();
+
+            let mult_value = predicates_value[1];
+            let add_value = predicates_value[0];
+            let not_value = predicates_value[6];
+            let minus_value = predicates_value[7];
+            let xor_value = predicates_value[8];
+            let naab_value = predicates_value[9];
+            let sum_value = predicates_value[5];
+            let relay_value = predicates_value[10];
+            let exp_sum_value = predicates_value[12];
+            let bit_test_value = predicates_value[13];
+            let custom_comb_value = predicates_value[14];
+
+            let mut r = Vec::new();
+            for j in 0..self.aritmetic_circuit.circuit[i - 1].bit_length {
+                r.push(r_u.vec[j].clone());
+            }
+            for j in 0..self.aritmetic_circuit.circuit[i - 1].bit_length {
+                r.push(r_v.vec[j].clone());
+            }
+
+            if alpha_beta_sum
+                != (add_value * (v_u + v_v)
+                    + mult_value * v_u * v_v
+                    + not_value * (FieldElement::real_one() - v_u)
+                    + minus_value * (v_u - v_v)
+                    + xor_value * (v_u + v_v - FieldElement::from_real(2) * v_u * v_v)
+                    + naab_value * (v_v - v_u * v_v)
+                    + sum_value * v_u
+                    + custom_comb_value * v_u
+                    + relay_value * v_u
+                    + exp_sum_value * v_u
+                    + bit_test_value * (FieldElement::real_one() - v_v) * v_u)
+                    + direct_relay_value * v_u
+            {
+                //Todo: improve error handling
+                println!("Verification fail, semi final, circuit level {}", i,);
+                panic!();
+            }
+            let tmp_alpha = Self::generate_randomness(1);
+            let tmp_beta = Self::generate_randomness(1);
+            alpha = tmp_alpha.vec[0];
+            beta = tmp_beta.vec[0];
+
+            if (i != 1) {
+                alpha_beta_sum = alpha * v_u + beta * v_v;
+            } else {
+                alpha_beta_sum = v_u;
+            }
+            r_0 = r_u;
+            r_1 = r_v;
+            one_minus_r_0 = one_minus_r_u;
+            one_minus_r_1 = one_minus_r_v;
         }
+
+        println!("GKR Prove Time: {}", (*self.prover.unwrap()).total_time);
+        let all_sum = vec![FieldElement::zero(); SLICE_NUMBER];
+        println!(
+            "GKR witness size: {}",
+            1 << self.aritmetic_circuit.circuit[0].bit_length
+        );
+
+        //Todo!: Implement this function in "poly_commitment" module
+        //let merkle_root_l = (*self.prover.unwrap()).poly_prover.commit_private_array(
+        //  (*self.prover.unwrap()).circuit_value[0],
+        //  self.aritmetic_circuit.circuit[0].bit_length,
+        //  );
 
         todo!()
     }
@@ -788,11 +871,11 @@ impl zk_verifier {
         depth: usize,
         r_0: VecFieldElement,
         r_1: VecFieldElement,
-        r_u: &VecFieldElement,
+        r_u: VecFieldElement,
         r_v: VecFieldElement,
         alpha: FieldElement,
         beta: FieldElement,
-    ) {
+    ) -> Vec<FieldElement> {
         let gate_type_count = 15;
         let mut ret_para = vec![FieldElement::zero(); gate_type_count];
         let mut ret = vec![FieldElement::zero(); gate_type_count];
@@ -803,7 +886,7 @@ impl zk_verifier {
         }
 
         if depth == 1 {
-            ret;
+            return ret;
         }
 
         let debug_mode = false;
@@ -815,12 +898,534 @@ impl zk_verifier {
             let mut one_block_beta = vec![FieldElement::zero(); gate_type_count];
 
             for i in 0..gate_type_count {
-                one_block_alpha[i] = FieldElement::zero();
-                one_block_beta[i] = FieldElement::zero();
+                one_block_alpha.push(FieldElement::zero());
+                one_block_beta.push(FieldElement::zero());
             }
 
-            // assert!()
+            assert!(
+                (1 << self.aritmetic_circuit.circuit[depth].log_block_size)
+                    == self.aritmetic_circuit.circuit[depth].block_size
+            );
+
+            for i in 0..self.aritmetic_circuit.circuit[depth].log_block_size {
+                let mut g = i;
+                let mut u = self.aritmetic_circuit.circuit[depth].gates[i].u;
+                let mut v = self.aritmetic_circuit.circuit[depth].gates[i].v;
+                g = g & ((1 << self.aritmetic_circuit.circuit[depth].log_block_size) - 1);
+                u = u & ((1 << self.aritmetic_circuit.circuit[depth - 1].log_block_size) - 1);
+                v = v & ((1 << self.aritmetic_circuit.circuit[depth - 1].log_block_size) - 1);
+
+                match self.aritmetic_circuit.circuit[depth].gates[i].ty {
+                    0 => {
+                        let g_first_half = g & ((1 << first_half_g) - 1);
+                        let g_second_half = (g >> first_half_g);
+                        let u_first_half = u & ((1 << first_half_uv) - 1);
+                        let u_second_half = u >> first_half_uv;
+                        let v_first_half = v & ((1 << first_half_uv) - 1);
+                        let v_second_half = v >> first_half_uv;
+                        let uv_value = (self.beta_u_block_first_half[u_first_half]
+                            * self.beta_u_block_second_half[u_second_half])
+                            * (self.beta_v_block_first_half[v_first_half]
+                                * self.beta_v_block_second_half[v_second_half]);
+                        one_block_alpha[0] = one_block_alpha[0]
+                            + (self.beta_g_r0_block_first_half[g_first_half]
+                                * self.beta_g_r0_block_second_half[g_second_half])
+                                * uv_value;
+                        one_block_beta[0] = one_block_beta[0]
+                            + (self.beta_g_r1_block_first_half[g_first_half]
+                                * self.beta_g_r1_block_second_half[g_second_half])
+                                * uv_value;
+                    }
+                    1 => {
+                        let g_first_half = g & ((1 << first_half_g) - 1);
+                        let g_second_half = (g >> first_half_g);
+                        let u_first_half = u & ((1 << first_half_uv) - 1);
+                        let u_second_half = u >> first_half_uv;
+                        let v_first_half = v & ((1 << first_half_uv) - 1);
+                        let v_second_half = v >> first_half_uv;
+                        let uv_value = (self.beta_u_block_first_half[u_first_half]
+                            * self.beta_u_block_second_half[u_second_half])
+                            * (self.beta_v_block_first_half[v_first_half]
+                                * self.beta_v_block_second_half[v_second_half]);
+                        one_block_alpha[1] = one_block_alpha[1]
+                            + (self.beta_g_r0_block_first_half[g_first_half]
+                                * self.beta_g_r0_block_second_half[g_second_half])
+                                * uv_value;
+                        one_block_beta[1] = one_block_beta[1]
+                            + (self.beta_g_r1_block_first_half[g_first_half]
+                                * self.beta_g_r1_block_second_half[g_second_half])
+                                * uv_value;
+                    }
+                    2 => {}
+                    3 => {}
+                    4 => {}
+                    5 => {
+                        let g_first_half = g & ((1 << first_half_g) - 1);
+                        let g_second_half = (g >> first_half_g);
+
+                        let beta_g_val_alpha = self.beta_g_r0_block_first_half[g_first_half]
+                            * self.beta_g_r0_block_second_half[g_second_half];
+                        let beta_g_val_beta = self.beta_g_r1_block_first_half[g_first_half]
+                            * self.beta_g_r1_block_second_half[g_second_half];
+                        let beta_v_0 =
+                            self.beta_v_block_first_half[0] * self.beta_v_block_second_half[0];
+                        for j in u..v {
+                            let u_first_half = j & ((1 << first_half_uv) - 1);
+                            let u_second_half = j >> first_half_uv;
+                            one_block_alpha[5] = one_block_alpha[5]
+                                + beta_g_val_alpha
+                                    * beta_v_0
+                                    * (self.beta_u_block_first_half[u_first_half]
+                                        * self.beta_u_block_second_half[u_second_half]);
+                            one_block_beta[5] = one_block_beta[5]
+                                + beta_g_val_beta
+                                    * beta_v_0
+                                    * (self.beta_u_block_first_half[u_first_half]
+                                        * self.beta_u_block_second_half[u_second_half]);
+                        }
+                    }
+                    12 => {
+                        let g_first_half = g & ((1 << first_half_g) - 1);
+                        let g_second_half = (g >> first_half_g);
+
+                        let beta_g_val_alpha = self.beta_g_r0_block_first_half[g_first_half]
+                            * self.beta_g_r0_block_second_half[g_second_half];
+                        let beta_g_val_beta = self.beta_g_r1_block_first_half[g_first_half]
+                            * self.beta_g_r1_block_second_half[g_second_half];
+                        let mut beta_v_0 =
+                            self.beta_v_block_first_half[0] * self.beta_v_block_second_half[0];
+                        for j in u..=v {
+                            let u_first_half = j & ((1 << first_half_uv) - 1);
+                            let u_second_half = j >> first_half_uv;
+                            one_block_alpha[12] = one_block_alpha[12]
+                                + beta_g_val_alpha
+                                    * beta_v_0
+                                    * (self.beta_u_block_first_half[u_first_half]
+                                        * self.beta_u_block_second_half[u_second_half]);
+                            one_block_beta[12] = one_block_beta[12]
+                                + beta_g_val_beta
+                                    * beta_v_0
+                                    * (self.beta_u_block_first_half[u_first_half]
+                                        * self.beta_u_block_second_half[u_second_half]);
+
+                            beta_v_0 = beta_v_0 + beta_v_0;
+                        }
+                    }
+                    6 => {
+                        let g_first_half = g & ((1 << first_half_g) - 1);
+                        let g_second_half = g >> first_half_g;
+                        let u_first_half = u & ((1 << first_half_uv) - 1);
+                        let u_second_half = u >> first_half_uv;
+                        let v_first_half = v & ((1 << first_half_uv) - 1);
+                        let v_second_half = v >> first_half_uv;
+                        let uv_value = (self.beta_u_block_first_half[u_first_half]
+                            * self.beta_u_block_second_half[u_second_half])
+                            * (self.beta_v_block_first_half[v_first_half]
+                                * self.beta_v_block_second_half[v_second_half]);
+                        one_block_alpha[6] = one_block_alpha[6]
+                            + (self.beta_g_r0_block_first_half[g_first_half]
+                                * self.beta_g_r0_block_second_half[g_second_half])
+                                * uv_value;
+                        one_block_beta[6] = one_block_beta[6]
+                            + (self.beta_g_r1_block_first_half[g_first_half]
+                                * self.beta_g_r1_block_second_half[g_second_half])
+                                * uv_value;
+                    }
+                    7 => {
+                        let g_first_half = g & ((1 << first_half_g) - 1);
+                        let g_second_half = (g >> first_half_g);
+                        let u_first_half = u & ((1 << first_half_uv) - 1);
+                        let u_second_half = u >> first_half_uv;
+                        let v_first_half = v & ((1 << first_half_uv) - 1);
+                        let v_second_half = v >> first_half_uv;
+                        let uv_value = (self.beta_u_block_first_half[u_first_half]
+                            * self.beta_u_block_second_half[u_second_half])
+                            * (self.beta_v_block_first_half[v_first_half]
+                                * self.beta_v_block_second_half[v_second_half]);
+                        one_block_alpha[7] = one_block_alpha[7]
+                            + (self.beta_g_r0_block_first_half[g_first_half]
+                                * self.beta_g_r0_block_second_half[g_second_half])
+                                * uv_value;
+                        one_block_beta[7] = one_block_beta[7]
+                            + (self.beta_g_r1_block_first_half[g_first_half]
+                                * self.beta_g_r1_block_second_half[g_second_half])
+                                * uv_value;
+                    }
+                    8 => {
+                        let g_first_half = g & ((1 << first_half_g) - 1);
+                        let g_second_half = (g >> first_half_g);
+                        let u_first_half = u & ((1 << first_half_uv) - 1);
+                        let u_second_half = u >> first_half_uv;
+                        let v_first_half = v & ((1 << first_half_uv) - 1);
+                        let v_second_half = v >> first_half_uv;
+                        let uv_value = (self.beta_u_block_first_half[u_first_half]
+                            * self.beta_u_block_second_half[u_second_half])
+                            * (self.beta_v_block_first_half[v_first_half]
+                                * self.beta_v_block_second_half[v_second_half]);
+                        one_block_alpha[8] = one_block_alpha[8]
+                            + (self.beta_g_r0_block_first_half[g_first_half]
+                                * self.beta_g_r0_block_second_half[g_second_half])
+                                * uv_value;
+                        one_block_beta[8] = one_block_beta[8]
+                            + (self.beta_g_r1_block_first_half[g_first_half]
+                                * self.beta_g_r1_block_second_half[g_second_half])
+                                * uv_value;
+                    }
+                    9 => {
+                        let g_first_half = g & ((1 << first_half_g) - 1);
+                        let g_second_half = (g >> first_half_g);
+                        let u_first_half = u & ((1 << first_half_uv) - 1);
+                        let u_second_half = u >> first_half_uv;
+                        let v_first_half = v & ((1 << first_half_uv) - 1);
+                        let v_second_half = v >> first_half_uv;
+                        let uv_value = (self.beta_u_block_first_half[u_first_half]
+                            * self.beta_u_block_second_half[u_second_half])
+                            * (self.beta_v_block_first_half[v_first_half]
+                                * self.beta_v_block_second_half[v_second_half]);
+                        one_block_alpha[9] = one_block_alpha[9]
+                            + (self.beta_g_r0_block_first_half[g_first_half]
+                                * self.beta_g_r0_block_second_half[g_second_half])
+                                * uv_value;
+                        one_block_beta[9] = one_block_beta[9]
+                            + (self.beta_g_r1_block_first_half[g_first_half]
+                                * self.beta_g_r1_block_second_half[g_second_half])
+                                * uv_value;
+                    }
+                    10 => {
+                        let g_first_half = g & ((1 << first_half_g) - 1);
+                        let g_second_half = (g >> first_half_g);
+                        let u_first_half = u & ((1 << first_half_uv) - 1);
+                        let u_second_half = u >> first_half_uv;
+                        let v_first_half = v & ((1 << first_half_uv) - 1);
+                        let v_second_half = v >> first_half_uv;
+                        let uv_value = (self.beta_u_block_first_half[u_first_half]
+                            * self.beta_u_block_second_half[u_second_half])
+                            * (self.beta_v_block_first_half[v_first_half]
+                                * self.beta_v_block_second_half[v_second_half]);
+                        one_block_alpha[10] = one_block_alpha[10]
+                            + (self.beta_g_r0_block_first_half[g_first_half]
+                                * self.beta_g_r0_block_second_half[g_second_half])
+                                * uv_value;
+                        one_block_beta[10] = one_block_beta[10]
+                            + (self.beta_g_r1_block_first_half[g_first_half]
+                                * self.beta_g_r1_block_second_half[g_second_half])
+                                * uv_value;
+                    }
+                    13 => {
+                        let g_first_half = g & ((1 << first_half_g) - 1);
+                        let g_second_half = (g >> first_half_g);
+                        let u_first_half = u & ((1 << first_half_uv) - 1);
+                        let u_second_half = u >> first_half_uv;
+                        let v_first_half = v & ((1 << first_half_uv) - 1);
+                        let v_second_half = v >> first_half_uv;
+                        let uv_value = (self.beta_u_block_first_half[u_first_half]
+                            * self.beta_u_block_second_half[u_second_half])
+                            * (self.beta_v_block_first_half[v_first_half]
+                                * self.beta_v_block_second_half[v_second_half]);
+                        one_block_alpha[13] = one_block_alpha[13]
+                            + (self.beta_g_r0_block_first_half[g_first_half]
+                                * self.beta_g_r0_block_second_half[g_second_half])
+                                * uv_value;
+                        one_block_beta[13] = one_block_beta[13]
+                            + (self.beta_g_r1_block_first_half[g_first_half]
+                                * self.beta_g_r1_block_second_half[g_second_half])
+                                * uv_value;
+                    }
+                    _ => {}
+                }
+            }
+            let one = FieldElement::real_one();
+            for i in 0..self.aritmetic_circuit.circuit[depth].repeat_num {
+                let mut prefix_alpha = one;
+                let mut prefix_beta = one;
+                let mut prefix_alpha_v0 = one;
+                let mut prefix_beta_v0 = one;
+
+                for j in 0..self.aritmetic_circuit.circuit[depth].log_repeat_num {
+                    if (i >> j) > 0 {
+                        let uv_value = r_u.vec
+                            [j + self.aritmetic_circuit.circuit[depth - 1].log_block_size]
+                            * r_v.vec[j + self.aritmetic_circuit.circuit[depth - 1].log_block_size];
+                        prefix_alpha = prefix_alpha
+                            * r_0.vec[j + self.aritmetic_circuit.circuit[depth].log_block_size]
+                            * uv_value;
+                        prefix_beta = prefix_beta
+                            * r_1.vec[j + self.aritmetic_circuit.circuit[depth].log_block_size]
+                            * uv_value;
+                    } else {
+                        let uv_value = (one
+                            - r_u.vec
+                                [j + self.aritmetic_circuit.circuit[depth - 1].log_block_size])
+                            * (one
+                                - r_v.vec
+                                    [j + self.aritmetic_circuit.circuit[depth - 1].log_block_size]);
+                        prefix_alpha = prefix_alpha
+                            * (one
+                                - r_0.vec
+                                    [j + self.aritmetic_circuit.circuit[depth].log_block_size])
+                            * uv_value;
+                        prefix_beta = prefix_beta
+                            * (one
+                                - r_1.vec
+                                    [j + self.aritmetic_circuit.circuit[depth].log_block_size])
+                            * uv_value;
+                    }
+                }
+                for j in 0..self.aritmetic_circuit.circuit[depth].log_repeat_num {
+                    if (i >> j) > 0 {
+                        let uv_value = r_u.vec
+                            [j + self.aritmetic_circuit.circuit[depth - 1].log_block_size]
+                            * (one
+                                - r_v.vec
+                                    [j + self.aritmetic_circuit.circuit[depth - 1].log_block_size]);
+                        prefix_alpha_v0 = prefix_alpha_v0
+                            * r_0.vec[j + self.aritmetic_circuit.circuit[depth].log_block_size]
+                            * uv_value;
+                        prefix_beta_v0 = prefix_beta_v0
+                            * r_1.vec[j + self.aritmetic_circuit.circuit[depth].log_block_size]
+                            * uv_value;
+                    } else {
+                        let uv_value = (one
+                            - r_u.vec
+                                [j + self.aritmetic_circuit.circuit[depth - 1].log_block_size])
+                            * (one
+                                - r_v.vec
+                                    [j + self.aritmetic_circuit.circuit[depth - 1].log_block_size]);
+                        prefix_alpha_v0 = prefix_alpha_v0
+                            * (one
+                                - r_0.vec
+                                    [j + self.aritmetic_circuit.circuit[depth].log_block_size])
+                            * uv_value;
+                        prefix_beta_v0 = prefix_beta_v0
+                            * (one
+                                - r_1.vec
+                                    [j + self.aritmetic_circuit.circuit[depth].log_block_size])
+                            * uv_value;
+                    }
+                }
+                for j in 0..gate_type_count {
+                    if (j == 6 || j == 10 || j == 5 || j == 12) {
+                        ret_para[j] = ret_para[j]
+                            + prefix_alpha_v0 * one_block_alpha[j]
+                            + prefix_beta_v0 * one_block_beta[j];
+                    } else {
+                        ret_para[j] = ret_para[j]
+                            + prefix_alpha * one_block_alpha[j]
+                            + prefix_beta * one_block_beta[j];
+                    }
+                }
+            }
+            if (!debug_mode) {
+                ret = ret_para.clone();
+            }
         }
+        if !self.aritmetic_circuit.circuit[depth].is_parallel || debug_mode {
+            let first_half_g = self.aritmetic_circuit.circuit[depth].bit_length / 2;
+            let first_half_uv = self.aritmetic_circuit.circuit[depth - 1].bit_length / 2;
+
+            //Todo: Debug tmp_u_val
+            let mut tmp_u_val = vec![
+                FieldElement::zero();
+                1 << self.aritmetic_circuit.circuit[depth - 1].bit_length
+            ];
+            let zero_v = self.beta_v_first_half[0] * self.beta_v_second_half[0];
+            let mut relay_set = false;
+            for i in 0..(1 << self.aritmetic_circuit.circuit[depth].bit_length) {
+                let g = i;
+                let u = self.aritmetic_circuit.circuit[depth].gates[i].u;
+                let v = self.aritmetic_circuit.circuit[depth].gates[i].v;
+
+                let g_first_half = g & ((1 << first_half_g) - 1);
+                let g_second_half = (g >> first_half_g);
+                let u_first_half = u & ((1 << first_half_uv) - 1);
+                let u_second_half = u >> first_half_uv;
+                let v_first_half = v & ((1 << first_half_uv) - 1);
+                let v_second_half = v >> first_half_uv;
+
+                match (self.aritmetic_circuit.circuit[depth].gates[i].ty) {
+                    0 => {
+                        ret[0] = ret[0]
+                            + (self.beta_g_r0_first_half[g_first_half]
+                                * self.beta_g_r0_second_half[g_second_half]
+                                + self.beta_g_r1_first_half[g_first_half]
+                                    * self.beta_g_r1_second_half[g_second_half])
+                                * (self.beta_u_first_half[u_first_half]
+                                    * self.beta_u_second_half[u_second_half])
+                                * (self.beta_v_first_half[v_first_half]
+                                    * self.beta_v_second_half[v_second_half]);
+                    }
+                    1 => {
+                        ret[1] = ret[1]
+                            + (self.beta_g_r0_first_half[g_first_half]
+                                * self.beta_g_r0_second_half[g_second_half]
+                                + self.beta_g_r1_first_half[g_first_half]
+                                    * self.beta_g_r1_second_half[g_second_half])
+                                * (self.beta_u_first_half[u_first_half]
+                                    * self.beta_u_second_half[u_second_half])
+                                * (self.beta_v_first_half[v_first_half]
+                                    * self.beta_v_second_half[v_second_half]);
+                    }
+                    2 => {}
+                    3 => {}
+                    4 => {}
+                    5 => {
+                        let beta_g_val = self.beta_g_r0_first_half[g_first_half]
+                            * self.beta_g_r0_second_half[g_second_half]
+                            + self.beta_g_r1_first_half[g_first_half]
+                                * self.beta_g_r1_second_half[g_second_half];
+                        let beta_v_0 = self.beta_v_first_half[0] * self.beta_v_second_half[0];
+                        for j in u..v {
+                            let u_first_half = j & ((1 << first_half_uv) - 1);
+                            let u_second_half = j >> first_half_uv;
+                            ret[5] = ret[5]
+                                + beta_g_val
+                                    * beta_v_0
+                                    * (self.beta_u_first_half[u_first_half]
+                                        * self.beta_u_second_half[u_second_half]);
+                        }
+                    }
+                    12 => {
+                        let g_first_half = g & ((1 << first_half_g) - 1);
+                        let g_second_half = (g >> first_half_g);
+
+                        let beta_g_val = self.beta_g_r0_first_half[g_first_half]
+                            * self.beta_g_r0_second_half[g_second_half]
+                            + self.beta_g_r1_first_half[g_first_half]
+                                * self.beta_g_r1_second_half[g_second_half];
+                        let mut beta_v_0 = self.beta_v_first_half[0] * self.beta_v_second_half[0];
+                        for j in u..=v {
+                            let u_first_half = j & ((1 << first_half_uv) - 1);
+                            let u_second_half = j >> first_half_uv;
+                            ret[12] = ret[12]
+                                + beta_g_val
+                                    * beta_v_0
+                                    * (self.beta_u_first_half[u_first_half]
+                                        * self.beta_u_second_half[u_second_half]);
+                            beta_v_0 = beta_v_0 + beta_v_0;
+                        }
+                    }
+                    14 => {
+                        let g_first_half = g & ((1 << first_half_g) - 1);
+                        let g_second_half = (g >> first_half_g);
+
+                        let beta_g_val = self.beta_g_r0_first_half[g_first_half]
+                            * self.beta_g_r0_second_half[g_second_half]
+                            + self.beta_g_r1_first_half[g_first_half]
+                                * self.beta_g_r1_second_half[g_second_half];
+                        let beta_v_0 = self.beta_v_first_half[0] * self.beta_v_second_half[0];
+                        for j in 0..self.aritmetic_circuit.circuit[depth].gates[i].parameter_length
+                        {
+                            let src = self.aritmetic_circuit.circuit[depth].gates[i].src[j];
+                            let u_first_half = src & ((1 << first_half_uv) - 1);
+                            let u_second_half = src >> first_half_uv;
+                            let weight = self.aritmetic_circuit.circuit[depth].gates[i].weight[j];
+                            ret[14] = ret[14]
+                                + beta_g_val
+                                    * beta_v_0
+                                    * (self.beta_u_first_half[u_first_half]
+                                        * self.beta_u_second_half[u_second_half])
+                                    * weight;
+                        }
+                    }
+                    6 => {
+                        ret[6] = ret[6]
+                            + (self.beta_g_r0_first_half[g_first_half]
+                                * self.beta_g_r0_second_half[g_second_half]
+                                + self.beta_g_r1_first_half[g_first_half]
+                                    * self.beta_g_r1_second_half[g_second_half])
+                                * (self.beta_u_first_half[u_first_half]
+                                    * self.beta_u_second_half[u_second_half])
+                                * (self.beta_v_first_half[v_first_half]
+                                    * self.beta_v_second_half[v_second_half]);
+                    }
+                    7 => {
+                        ret[7] = ret[7]
+                            + (self.beta_g_r0_first_half[g_first_half]
+                                * self.beta_g_r0_second_half[g_second_half]
+                                + self.beta_g_r1_first_half[g_first_half]
+                                    * self.beta_g_r1_second_half[g_second_half])
+                                * (self.beta_u_first_half[u_first_half]
+                                    * self.beta_u_second_half[u_second_half])
+                                * (self.beta_v_first_half[v_first_half]
+                                    * self.beta_v_second_half[v_second_half]);
+                    }
+                    8 => {
+                        ret[8] = ret[8]
+                            + (self.beta_g_r0_first_half[g_first_half]
+                                * self.beta_g_r0_second_half[g_second_half]
+                                + self.beta_g_r1_first_half[g_first_half]
+                                    * self.beta_g_r1_second_half[g_second_half])
+                                * (self.beta_u_first_half[u_first_half]
+                                    * self.beta_u_second_half[u_second_half])
+                                * (self.beta_v_first_half[v_first_half]
+                                    * self.beta_v_second_half[v_second_half]);
+                    }
+                    9 => {
+                        ret[9] = ret[9]
+                            + (self.beta_g_r0_first_half[g_first_half]
+                                * self.beta_g_r0_second_half[g_second_half]
+                                + self.beta_g_r1_first_half[g_first_half]
+                                    * self.beta_g_r1_second_half[g_second_half])
+                                * (self.beta_u_first_half[u_first_half]
+                                    * self.beta_u_second_half[u_second_half])
+                                * (self.beta_v_first_half[v_first_half]
+                                    * self.beta_v_second_half[v_second_half]);
+                    }
+                    10 => {
+                        if (relay_set == false) {
+                            tmp_u_val = vec![
+                                FieldElement::zero();
+                                1 << self.aritmetic_circuit.circuit[depth - 1]
+                                    .bit_length
+                            ];
+
+                            for i in 0..(1 << self.aritmetic_circuit.circuit[depth - 1].bit_length)
+                            {
+                                let u_first_half = i & ((1 << first_half_uv) - 1);
+                                let u_second_half = i >> first_half_uv;
+                                tmp_u_val[i] = self.beta_u_first_half[u_first_half]
+                                    * self.beta_u_second_half[u_second_half];
+                            }
+
+                            relay_set = true;
+                        }
+                        let g_first_half = g & ((1 << first_half_g) - 1);
+                        let g_second_half = (g >> first_half_g);
+                        ret[10] = ret[10]
+                            + (self.beta_g_r0_first_half[g_first_half]
+                                * self.beta_g_r0_second_half[g_second_half]
+                                + self.beta_g_r1_first_half[g_first_half]
+                                    * self.beta_g_r1_second_half[g_second_half])
+                                * tmp_u_val[u];
+                    }
+                    13 => {
+                        let g_first_half = g & ((1 << first_half_g) - 1);
+                        let g_second_half = (g >> first_half_g);
+                        let u_first_half = u & ((1 << first_half_uv) - 1);
+                        let u_second_half = u >> first_half_uv;
+                        let v_first_half = v & ((1 << first_half_uv) - 1);
+                        let v_second_half = v >> first_half_uv;
+                        ret[13] = ret[13]
+                            + (self.beta_g_r0_first_half[g_first_half]
+                                * self.beta_g_r0_second_half[g_second_half]
+                                + self.beta_g_r1_first_half[g_first_half]
+                                    * self.beta_g_r1_second_half[g_second_half])
+                                * (self.beta_u_first_half[u_first_half]
+                                    * self.beta_u_second_half[u_second_half])
+                                * (self.beta_v_first_half[v_first_half]
+                                    * self.beta_v_second_half[v_second_half]);
+                    }
+                    _ => {}
+                }
+            }
+            ret[10] = ret[10] * zero_v;
+        }
+        for i in 0..gate_type_count {
+            if self.aritmetic_circuit.circuit[depth].is_parallel {
+                assert!(ret[i] == ret_para[i]);
+            }
+        }
+        ret
     }
 
     pub fn delete_self() {}

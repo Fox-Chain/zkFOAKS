@@ -46,7 +46,7 @@ pub struct PolyCommitContext {
     pub slice_real_ele_cnt: usize,
     pub pre_prepare_executed: bool,
 }
-
+#[derive(Debug, Default)]
 pub struct PolyCommitProver {
     total_time: f64,
     ctx: PolyCommitContext,
