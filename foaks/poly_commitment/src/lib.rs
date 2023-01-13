@@ -130,6 +130,17 @@ impl PolyCommitProver {
 
         unimplemented!()
     }
+
+    pub fn commit_public_array(
+        &mut self,
+        all_pub_msk: Vec<FieldElement>,
+        public_array: FieldElement,
+        r_0_len: usize,
+        target_sum: FieldElement,
+        all_sum: FieldElement,
+    ) {
+        let t0 = now.elapsed();
+    }
 }
 
 pub fn commit_phrase_step(r: FieldElement) -> HashDigest {
