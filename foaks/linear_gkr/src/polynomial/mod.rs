@@ -7,6 +7,12 @@ pub struct LinearPoly {
 }
 
 impl LinearPoly {
+    //maps from FieldElement to LinearPoly
+    // unfinished, check C/C++ repo
+    pub fn maps(arg: FieldElement) -> Self {
+        Self { a: arg, b: arg }
+    }
+
     pub fn zero() -> Self {
         Self {
             a: FieldElement::zero(),

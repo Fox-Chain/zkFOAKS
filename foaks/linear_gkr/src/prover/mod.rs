@@ -28,6 +28,8 @@ pub fn from_string(s: &str) -> FieldElement {
 
 #[derive(Default, Debug)]
 pub struct zk_prover {
+    pub aritmetic_circuit: Option<*mut LayeredCircuit>, //	c++ code: layered_circuit *C;
+
     pub poly_prover: PolyCommitProver,
     /** @name Basic
     	* Basic information and variables about the arithmetic circuit*/
@@ -35,7 +37,6 @@ pub struct zk_prover {
     pub v_v: FieldElement,
     pub v_u: FieldElement,
     pub total_uv: usize,
-    pub aritmetic_circuit: Option<*mut LayeredCircuit>, //	c++ code: layered_circuit *C;
     pub circuit_value: Vec<Vec<FieldElement>>,
     sumcheck_layer_id: usize,
     length_g: usize,
@@ -48,10 +49,10 @@ pub struct zk_prover {
     beta: FieldElement,
 
     //< c++ code: const prime_field::field_element *r_0, *r_1; How to deal with "const"
-    r_0: VecFieldElement,
-    r_1: VecFieldElement,
-    one_minus_r_0: VecFieldElement,
-    one_minus_r_1: VecFieldElement,
+    r_0: Vec<FieldElement>,
+    r_1: Vec<FieldElement>,
+    one_minus_r_0: Vec<FieldElement>,
+    one_minus_r_1: Vec<FieldElement>,
 
     pub add_v_array: Vec<LinearPoly>,
     pub v_mult_add: Vec<LinearPoly>,
@@ -121,8 +122,8 @@ impl zk_prover {
 
     pub fn V_res(
         &mut self,
-        one_minus_r_0: VecFieldElement,
-        r_0: VecFieldElement,
+        one_minus_r_0: Vec<FieldElement>,
+        r_0: Vec<FieldElement>,
         output_raw: Vec<FieldElement>,
         r_0_size: usize,
         output_size: usize,
@@ -135,8 +136,7 @@ impl zk_prover {
         }
         for i in 0..r_0_size {
             for j in 0..(outputsize >> 1) {
-                output[j] =
-                    (output[j << 1] * one_minus_r_0.vec[i] + output[j << 1 | 1] * r_0.vec[i]);
+                output[j] = (output[j << 1] * one_minus_r_0[i] + output[j << 1 | 1] * r_0[i]);
             }
             outputsize >>= 1;
         }
@@ -296,10 +296,10 @@ impl zk_prover {
         length_v: usize,
         alpha: FieldElement,
         beta: FieldElement,
-        r_0: VecFieldElement,
-        r_1: VecFieldElement,
-        one_minus_r_0: &VecFieldElement,
-        one_minus_r_1: &VecFieldElement,
+        r_0: Vec<FieldElement>,
+        r_1: Vec<FieldElement>,
+        one_minus_r_0: &Vec<FieldElement>,
+        one_minus_r_1: &Vec<FieldElement>,
     ) {
         self.r_0 = r_0;
         self.r_1 = r_1;
@@ -323,7 +323,9 @@ impl zk_prover {
         let zero = FieldElement::zero();
         for i in 0..self.total_uv {
             //todo! linear_poly != FieldElement
-            //v_mult_add[i] = self.circuit_value[self.sumcheck_layer_id - 1][i];
+            self.v_mult_add[i] =
+                LinearPoly::maps(self.circuit_value[self.sumcheck_layer_id - 1][i]);
+            //self.v_mult_add[i] = self.circuit_value[self.sumcheck_layer_id - 1][i];
             self.add_v_array[i].a = zero;
             self.add_v_array[i].b = zero;
             self.add_mult_sum[i].a = zero;
@@ -340,10 +342,10 @@ impl zk_prover {
 
         for i in 0..first_half {
             for j in 0..1 << i {
-                self.beta_g_r0_fhalf[j | (1 << i)] = self.beta_g_r0_fhalf[j] * self.r_0.vec[i];
-                self.beta_g_r0_fhalf[j] = self.beta_g_r0_fhalf[j] * self.one_minus_r_0.vec[i];
-                self.beta_g_r1_fhalf[j | (1 << i)] = self.beta_g_r1_fhalf[j] * self.r_1.vec[i];
-                self.beta_g_r1_fhalf[j] = self.beta_g_r1_fhalf[j] * self.one_minus_r_1.vec[i];
+                self.beta_g_r0_fhalf[j | (1 << i)] = self.beta_g_r0_fhalf[j] * self.r_0[i];
+                self.beta_g_r0_fhalf[j] = self.beta_g_r0_fhalf[j] * self.one_minus_r_0[i];
+                self.beta_g_r1_fhalf[j | (1 << i)] = self.beta_g_r1_fhalf[j] * self.r_1[i];
+                self.beta_g_r1_fhalf[j] = self.beta_g_r1_fhalf[j] * self.one_minus_r_1[i];
             }
         }
 
@@ -793,8 +795,8 @@ impl zk_prover {
     pub unsafe fn sumcheck_phase2_init(
         &mut self,
         previous_random: FieldElement,
-        r_u: VecFieldElement,
-        one_minus_r_u: VecFieldElement,
+        r_u: Vec<FieldElement>,
+        one_minus_r_u: Vec<FieldElement>,
     ) {
         let t0 = SystemTime::now();
         self.v_u = self.v_mult_add[0].eval(previous_random);
@@ -807,15 +809,15 @@ impl zk_prover {
 
         for i in 0..first_half {
             for j in 0..(1 << i) {
-                self.beta_u_fhalf[j | (1 << i)] = self.beta_u_fhalf[j] * r_u.vec[i];
-                self.beta_u_fhalf[j] = self.beta_u_fhalf[j] * one_minus_r_u.vec[i];
+                self.beta_u_fhalf[j | (1 << i)] = self.beta_u_fhalf[j] * r_u[i];
+                self.beta_u_fhalf[j] = self.beta_u_fhalf[j] * one_minus_r_u[i];
             }
         }
 
         for i in 0..second_half {
             for j in 0..(1 << i) {
-                self.beta_u_shalf[j | (1 << i)] = self.beta_u_shalf[j] * r_u.vec[i + first_half];
-                self.beta_u_shalf[j] = self.beta_u_shalf[j] * one_minus_r_u.vec[i + first_half];
+                self.beta_u_shalf[j | (1 << i)] = self.beta_u_shalf[j] * r_u[i + first_half];
+                self.beta_u_shalf[j] = self.beta_u_shalf[j] * one_minus_r_u[i + first_half];
             }
         }
 
@@ -836,6 +838,8 @@ impl zk_prover {
             self.add_v_array[i].b = zero;
             //todo! linear_poly != FieldElement
             //self.v_mult_add[i] = self.circuit_value[self.sumcheck_layer_id - 1][i];
+            self.v_mult_add[i] =
+                LinearPoly::maps(self.circuit_value[self.sumcheck_layer_id - 1][i]);
         }
 
         let mut intermediates0 = vec![FieldElement::zero(); total_g];

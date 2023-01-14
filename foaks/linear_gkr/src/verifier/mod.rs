@@ -11,7 +11,7 @@ use std::time::SystemTime;
 use infrastructure::constants::SLICE_NUMBER;
 // use poly_commitment::PolyCommitProver;
 use prime_field::FieldElement;
-use prime_field::VecFieldElement;
+//use prime_field::VecFieldElement;
 
 use crate::circuit_fast_track::Gate;
 use crate::circuit_fast_track::Layer;
@@ -40,6 +40,8 @@ enum gate_types {
 #[derive(Default, Debug)]
 
 pub struct zk_verifier {
+    pub prover: Option<*mut zk_prover>, // The prover
+    //pub prover: zk_prover, // ZY suggestion
     pub proof_size: usize,
     pub v_time: u64,
     //poly_verifier: PolyCommitVerifier,
@@ -64,7 +66,6 @@ pub struct zk_verifier {
     beta_v_block_second_half: Vec<FieldElement>,
 
     pub aritmetic_circuit: LayeredCircuit, // The circuit
-    pub prover: Option<*mut zk_prover>,    // The prover
 
     VPD_randomness: Vec<FieldElement>,
     one_minus_VPD_randomness: Vec<FieldElement>,
@@ -377,16 +378,12 @@ impl zk_verifier {
             self.aritmetic_circuit.circuit[self.aritmetic_circuit.total_depth - 1].bit_length;
         let mut r_0 = Self::generate_randomness(capacity);
         let mut r_1 = Self::generate_randomness(capacity);
-        let mut one_minus_r_0 = VecFieldElement::new(capacity);
-        let mut one_minus_r_1 = VecFieldElement::new(capacity);
+        let mut one_minus_r_0 = vec![FieldElement::zero(); capacity];
+        let mut one_minus_r_1 = vec![FieldElement::zero(); capacity];
 
         for i in 0..capacity {
-            one_minus_r_0
-                .vec
-                .push(FieldElement::from_real(1) - r_0.vec[i]);
-            one_minus_r_1
-                .vec
-                .push(FieldElement::from_real(1) - r_1.vec[i]);
+            one_minus_r_0.push(FieldElement::from_real(1) - r_0[i]);
+            one_minus_r_1.push(FieldElement::from_real(1) - r_1[i]);
         }
         let t_a = SystemTime::now();
         println!("Calc V_output(r)");
@@ -435,35 +432,31 @@ impl zk_verifier {
 
             if i == 1 {
                 for j in 0..self.aritmetic_circuit.circuit[i - 1].bit_length {
-                    r_v.vec[j] = FieldElement::zero();
+                    r_v[j] = FieldElement::zero();
                 }
             }
 
             //V should test the maskR for two points, V does random linear combination of these points first
-            let random_combine = Self::generate_randomness(1).vec[0];
+            let random_combine = Self::generate_randomness(1)[0];
 
             //Every time all one test to V, V needs to do a linear combination for security.
-            let linear_combine = Self::generate_randomness(1).vec[0]; // mem leak
+            let linear_combine = Self::generate_randomness(1)[0]; // mem leak
 
             let mut one_minus_r_u =
-                VecFieldElement::new(self.aritmetic_circuit.circuit[i - 1].bit_length);
+                vec![FieldElement::zero(); self.aritmetic_circuit.circuit[i - 1].bit_length];
             let mut one_minus_r_v =
-                VecFieldElement::new(self.aritmetic_circuit.circuit[i - 1].bit_length);
+                vec![FieldElement::zero(); self.aritmetic_circuit.circuit[i - 1].bit_length];
 
             for j in 0..(self.aritmetic_circuit.circuit[i - 1].bit_length) {
-                one_minus_r_u
-                    .vec
-                    .push(FieldElement::from_real(1) - r_u.vec[j]);
-                one_minus_r_v
-                    .vec
-                    .push(FieldElement::from_real(1) - r_v.vec[j]);
+                one_minus_r_u.push(FieldElement::from_real(1) - r_u[j]);
+                one_minus_r_v.push(FieldElement::from_real(1) - r_v[j]);
             }
 
             for j in 0..(self.aritmetic_circuit.circuit[i - 1].bit_length) {
                 let poly = (*self.prover.unwrap()).sumcheck_phase1_update(previous_random, j);
 
                 self.proof_size += mem::size_of::<QuadraticPoly>();
-                previous_random = r_u.vec[j];
+                previous_random = r_u[j];
                 //todo: Debug eval() fn
                 if poly.eval(&FieldElement::zero()) + poly.eval(&FieldElement::real_one())
                     != alpha_beta_sum
@@ -482,7 +475,7 @@ impl zk_verifier {
                     //i, j
                     //);
                 }
-                alpha_beta_sum = poly.eval(&r_u.vec[j].clone());
+                alpha_beta_sum = poly.eval(&r_u[j].clone());
             }
             //	std::cerr << "Bound v start" << std::endl;
 
@@ -494,13 +487,13 @@ impl zk_verifier {
             let mut previous_random = FieldElement::zero();
             for j in 0..self.aritmetic_circuit.circuit[i - 1].bit_length {
                 if i == 1 {
-                    r_v.vec[j] = FieldElement::zero();
+                    r_v[j] = FieldElement::zero();
                 }
                 let poly = (*self.prover.unwrap()).sumcheck_phase2_update(previous_random, j);
                 self.proof_size += mem::size_of::<QuadraticPoly>();
                 //poly.c = poly.c; ???
 
-                previous_random = r_v.vec[j].clone();
+                previous_random = r_v[j].clone();
 
                 if poly.eval(&FieldElement::zero())
                     + poly.eval(&FieldElement::real_one())
@@ -522,7 +515,7 @@ impl zk_verifier {
                     //);
                 }
                 alpha_beta_sum =
-                    poly.eval(&r_v.vec[j]) + direct_relay_value * (*self.prover.unwrap()).v_u;
+                    poly.eval(&r_v[j]) + direct_relay_value * (*self.prover.unwrap()).v_u;
             }
             //Add one more round for maskR
             //quadratic_poly poly p->sumcheck_finalroundR(previous_random, C.current[i - 1].bit_length);
@@ -582,10 +575,10 @@ impl zk_verifier {
 
             let mut r = Vec::new();
             for j in 0..self.aritmetic_circuit.circuit[i - 1].bit_length {
-                r.push(r_u.vec[j].clone());
+                r.push(r_u[j].clone());
             }
             for j in 0..self.aritmetic_circuit.circuit[i - 1].bit_length {
-                r.push(r_v.vec[j].clone());
+                r.push(r_v[j].clone());
             }
 
             if alpha_beta_sum
@@ -608,8 +601,8 @@ impl zk_verifier {
             }
             let tmp_alpha = Self::generate_randomness(1);
             let tmp_beta = Self::generate_randomness(1);
-            alpha = tmp_alpha.vec[0];
-            beta = tmp_beta.vec[0];
+            alpha = tmp_alpha[0];
+            beta = tmp_beta[0];
 
             if (i != 1) {
                 alpha_beta_sum = alpha * v_u + beta * v_v;
@@ -635,15 +628,61 @@ impl zk_verifier {
         //  self.aritmetic_circuit.circuit[0].bit_length,
         //  );
 
+        Q_EVAL_REAL = vec![FieldElement::zero(); 1 << self.aritmetic_circuit.circuit[0].bit_length];
+        Self::dfs_for_public_eval(
+            0,
+            FieldElement::real_one(),
+            r_0,
+            one_minus_r_0,
+            self.aritmetic_circuit.circuit[0].bit_length,
+            0,
+        );
+        //let merkle_root_h = (*self.prover.unwrap()).poly_prover.commit_public_array(
+        //   Q_EVAL_REAL,
+        //   self.aritmetic_circuit.circuit[0].bit_length,
+        //    alpha_beta_sum,
+        //     all_sum,
+        //);
+
         todo!()
     }
 
-    pub fn generate_randomness(size: usize) -> VecFieldElement {
+    pub unsafe fn dfs_for_public_eval(
+        dep: usize,
+        val: FieldElement,
+        r_0: Vec<FieldElement>,
+        one_minus_r_0: Vec<FieldElement>,
+        r_0_len: usize,
+        pos: usize,
+    ) {
+        if (dep == r_0_len) {
+            Q_EVAL_REAL[pos] = val;
+        } else {
+            Self::dfs_for_public_eval(
+                dep + 1,
+                val * one_minus_r_0[r_0_len - 1 - dep],
+                r_0.clone(),
+                one_minus_r_0.clone(),
+                r_0_len,
+                pos << 1,
+            );
+            Self::dfs_for_public_eval(
+                dep + 1,
+                val * r_0[r_0_len - 1 - dep],
+                r_0,
+                one_minus_r_0,
+                r_0_len,
+                pos << 1 | 1,
+            );
+        }
+    }
+
+    pub fn generate_randomness(size: usize) -> Vec<FieldElement> {
         let k = size;
-        let mut ret = VecFieldElement::new(k);
+        let mut ret = vec![FieldElement::zero(); k];
 
         for i in 0..k {
-            ret.vec.push(FieldElement::new_random());
+            ret.push(FieldElement::new_random());
         }
         ret
     }
@@ -651,8 +690,8 @@ impl zk_verifier {
     pub fn direct_relay(
         &mut self,
         depth: usize,
-        r_g: &VecFieldElement,
-        r_u: &VecFieldElement,
+        r_g: &Vec<FieldElement>,
+        r_u: &Vec<FieldElement>,
     ) -> FieldElement {
         if depth != 1 {
             let ret = FieldElement::from_real(0);
@@ -661,8 +700,8 @@ impl zk_verifier {
             let mut ret = FieldElement::from_real(1);
             for i in 0..(self.aritmetic_circuit.circuit[depth].bit_length) {
                 ret = ret
-                    * (FieldElement::from_real(1) - r_g.vec[i] - r_u.vec[i]
-                        + FieldElement::from_real(2) * r_g.vec[i] * r_u.vec[i]);
+                    * (FieldElement::from_real(1) - r_g[i] - r_u[i]
+                        + FieldElement::from_real(2) * r_g[i] * r_u[i]);
             }
             return ret;
         }
@@ -673,14 +712,14 @@ impl zk_verifier {
         depth: usize,
         alpha: FieldElement,
         beta: FieldElement,
-        r_0: &VecFieldElement,
-        r_1: &VecFieldElement,
-        r_u: &VecFieldElement,
-        r_v: &VecFieldElement,
-        one_minus_r_0: &VecFieldElement,
-        one_minus_r_1: &VecFieldElement,
-        one_minus_r_u: &VecFieldElement,
-        one_minus_r_v: &VecFieldElement,
+        r_0: &Vec<FieldElement>,
+        r_1: &Vec<FieldElement>,
+        r_u: &Vec<FieldElement>,
+        r_v: &Vec<FieldElement>,
+        one_minus_r_0: &Vec<FieldElement>,
+        one_minus_r_1: &Vec<FieldElement>,
+        one_minus_r_u: &Vec<FieldElement>,
+        one_minus_r_v: &Vec<FieldElement>,
     ) {
         let debug_mode = false;
         if !self.aritmetic_circuit.circuit[depth].is_parallel || debug_mode {
@@ -694,10 +733,10 @@ impl zk_verifier {
                 self.aritmetic_circuit.circuit[depth].bit_length - first_half_len;
 
             for i in 0..first_half_len {
-                let r0 = r_0.vec[i];
-                let r1 = r_1.vec[i];
-                let or0 = one_minus_r_0.vec[i];
-                let or1 = one_minus_r_1.vec[i];
+                let r0 = r_0[i];
+                let r1 = r_1[i];
+                let or0 = one_minus_r_0[i];
+                let or1 = one_minus_r_1[i];
 
                 for j in 0..(1 << i) {
                     self.beta_g_r0_first_half[j | (1 << i)] = self.beta_g_r0_first_half[j] * r0;
@@ -711,10 +750,10 @@ impl zk_verifier {
             }
 
             for i in 0..second_half_len {
-                let r0 = r_0.vec[i + first_half_len];
-                let r1 = r_1.vec[i + first_half_len];
-                let or0 = one_minus_r_0.vec[i + first_half_len];
-                let or1 = one_minus_r_1.vec[i + first_half_len];
+                let r0 = r_0[i + first_half_len];
+                let r1 = r_1[i + first_half_len];
+                let or0 = one_minus_r_0[i + first_half_len];
+                let or1 = one_minus_r_1[i + first_half_len];
 
                 for j in 0..(1 << i) {
                     self.beta_g_r0_second_half[j | (1 << i)] = self.beta_g_r0_second_half[j] * r0;
@@ -736,10 +775,10 @@ impl zk_verifier {
                 self.aritmetic_circuit.circuit[depth - 1].bit_length - first_half_len;
 
             for i in 0..first_half_len {
-                let ru = r_u.vec[i];
-                let rv = r_v.vec[i];
-                let oru = one_minus_r_u.vec[i];
-                let orv = one_minus_r_v.vec[i];
+                let ru = r_u[i];
+                let rv = r_v[i];
+                let oru = one_minus_r_u[i];
+                let orv = one_minus_r_v[i];
 
                 for j in 0..(1 << i) {
                     self.beta_u_first_half[j | (1 << i)] = self.beta_u_first_half[j] * ru;
@@ -753,10 +792,10 @@ impl zk_verifier {
             }
 
             for i in 0..second_half_len {
-                let ru = r_u.vec[i + first_half_len];
-                let rv = r_v.vec[i + first_half_len];
-                let oru = one_minus_r_u.vec[i + first_half_len];
-                let orv = one_minus_r_v.vec[i + first_half_len];
+                let ru = r_u[i + first_half_len];
+                let rv = r_v[i + first_half_len];
+                let oru = one_minus_r_u[i + first_half_len];
+                let orv = one_minus_r_v[i + first_half_len];
 
                 for j in 0..(1 << i) {
                     self.beta_u_second_half[j | (1 << i)] = self.beta_u_second_half[j] * ru;
@@ -781,10 +820,10 @@ impl zk_verifier {
                 self.aritmetic_circuit.circuit[depth - 1].log_block_size - first_half_len;
 
             for i in 0..first_half_len {
-                let r0 = r_0.vec[i + first_half_len];
-                let r1 = r_1.vec[i + first_half_len];
-                let or0 = one_minus_r_0.vec[i + first_half_len];
-                let or1 = one_minus_r_1.vec[i + first_half_len];
+                let r0 = r_0[i + first_half_len];
+                let r1 = r_1[i + first_half_len];
+                let or0 = one_minus_r_0[i + first_half_len];
+                let or1 = one_minus_r_1[i + first_half_len];
 
                 for j in 0..(1 << i) {
                     self.beta_g_r0_block_first_half[j | (1 << i)] =
@@ -800,10 +839,10 @@ impl zk_verifier {
             }
 
             for i in 0..second_half_len {
-                let r0 = r_0.vec[i + first_half_len];
-                let r1 = r_1.vec[i + first_half_len];
-                let or0 = one_minus_r_0.vec[i + first_half_len];
-                let or1 = one_minus_r_1.vec[i + first_half_len];
+                let r0 = r_0[i + first_half_len];
+                let r1 = r_1[i + first_half_len];
+                let or0 = one_minus_r_0[i + first_half_len];
+                let or1 = one_minus_r_1[i + first_half_len];
 
                 for j in 0..(1 << i) {
                     self.beta_g_r0_block_second_half[j | (1 << i)] =
@@ -827,10 +866,10 @@ impl zk_verifier {
                 self.aritmetic_circuit.circuit[depth - 1].bit_length - first_half_len;
 
             for i in 0..first_half_len {
-                let ru = r_u.vec[i];
-                let rv = r_v.vec[i];
-                let oru = one_minus_r_u.vec[i];
-                let orv = one_minus_r_v.vec[i];
+                let ru = r_u[i];
+                let rv = r_v[i];
+                let oru = one_minus_r_u[i];
+                let orv = one_minus_r_v[i];
 
                 for j in 0..(1 << i) {
                     self.beta_u_block_first_half[j | (1 << i)] =
@@ -846,10 +885,10 @@ impl zk_verifier {
             }
 
             for i in 0..second_half_len {
-                let ru = r_u.vec[i + first_half_len];
-                let rv = r_v.vec[i + first_half_len];
-                let oru = one_minus_r_u.vec[i + first_half_len];
-                let orv = one_minus_r_v.vec[i + first_half_len];
+                let ru = r_u[i + first_half_len];
+                let rv = r_v[i + first_half_len];
+                let oru = one_minus_r_u[i + first_half_len];
+                let orv = one_minus_r_v[i + first_half_len];
 
                 for j in 0..(1 << i) {
                     self.beta_u_block_second_half[j | (1 << i)] =
@@ -869,10 +908,10 @@ impl zk_verifier {
     pub fn predicates(
         &mut self,
         depth: usize,
-        r_0: VecFieldElement,
-        r_1: VecFieldElement,
-        r_u: VecFieldElement,
-        r_v: VecFieldElement,
+        r_0: Vec<FieldElement>,
+        r_1: Vec<FieldElement>,
+        r_u: Vec<FieldElement>,
+        r_v: Vec<FieldElement>,
         alpha: FieldElement,
         beta: FieldElement,
     ) -> Vec<FieldElement> {
@@ -1143,63 +1182,53 @@ impl zk_verifier {
 
                 for j in 0..self.aritmetic_circuit.circuit[depth].log_repeat_num {
                     if (i >> j) > 0 {
-                        let uv_value = r_u.vec
+                        let uv_value = r_u
                             [j + self.aritmetic_circuit.circuit[depth - 1].log_block_size]
-                            * r_v.vec[j + self.aritmetic_circuit.circuit[depth - 1].log_block_size];
+                            * r_v[j + self.aritmetic_circuit.circuit[depth - 1].log_block_size];
                         prefix_alpha = prefix_alpha
-                            * r_0.vec[j + self.aritmetic_circuit.circuit[depth].log_block_size]
+                            * r_0[j + self.aritmetic_circuit.circuit[depth].log_block_size]
                             * uv_value;
                         prefix_beta = prefix_beta
-                            * r_1.vec[j + self.aritmetic_circuit.circuit[depth].log_block_size]
+                            * r_1[j + self.aritmetic_circuit.circuit[depth].log_block_size]
                             * uv_value;
                     } else {
                         let uv_value = (one
-                            - r_u.vec
-                                [j + self.aritmetic_circuit.circuit[depth - 1].log_block_size])
+                            - r_u[j + self.aritmetic_circuit.circuit[depth - 1].log_block_size])
                             * (one
-                                - r_v.vec
+                                - r_v
                                     [j + self.aritmetic_circuit.circuit[depth - 1].log_block_size]);
                         prefix_alpha = prefix_alpha
-                            * (one
-                                - r_0.vec
-                                    [j + self.aritmetic_circuit.circuit[depth].log_block_size])
+                            * (one - r_0[j + self.aritmetic_circuit.circuit[depth].log_block_size])
                             * uv_value;
                         prefix_beta = prefix_beta
-                            * (one
-                                - r_1.vec
-                                    [j + self.aritmetic_circuit.circuit[depth].log_block_size])
+                            * (one - r_1[j + self.aritmetic_circuit.circuit[depth].log_block_size])
                             * uv_value;
                     }
                 }
                 for j in 0..self.aritmetic_circuit.circuit[depth].log_repeat_num {
                     if (i >> j) > 0 {
-                        let uv_value = r_u.vec
+                        let uv_value = r_u
                             [j + self.aritmetic_circuit.circuit[depth - 1].log_block_size]
                             * (one
-                                - r_v.vec
+                                - r_v
                                     [j + self.aritmetic_circuit.circuit[depth - 1].log_block_size]);
                         prefix_alpha_v0 = prefix_alpha_v0
-                            * r_0.vec[j + self.aritmetic_circuit.circuit[depth].log_block_size]
+                            * r_0[j + self.aritmetic_circuit.circuit[depth].log_block_size]
                             * uv_value;
                         prefix_beta_v0 = prefix_beta_v0
-                            * r_1.vec[j + self.aritmetic_circuit.circuit[depth].log_block_size]
+                            * r_1[j + self.aritmetic_circuit.circuit[depth].log_block_size]
                             * uv_value;
                     } else {
                         let uv_value = (one
-                            - r_u.vec
-                                [j + self.aritmetic_circuit.circuit[depth - 1].log_block_size])
+                            - r_u[j + self.aritmetic_circuit.circuit[depth - 1].log_block_size])
                             * (one
-                                - r_v.vec
+                                - r_v
                                     [j + self.aritmetic_circuit.circuit[depth - 1].log_block_size]);
                         prefix_alpha_v0 = prefix_alpha_v0
-                            * (one
-                                - r_0.vec
-                                    [j + self.aritmetic_circuit.circuit[depth].log_block_size])
+                            * (one - r_0[j + self.aritmetic_circuit.circuit[depth].log_block_size])
                             * uv_value;
                         prefix_beta_v0 = prefix_beta_v0
-                            * (one
-                                - r_1.vec
-                                    [j + self.aritmetic_circuit.circuit[depth].log_block_size])
+                            * (one - r_1[j + self.aritmetic_circuit.circuit[depth].log_block_size])
                             * uv_value;
                     }
                 }

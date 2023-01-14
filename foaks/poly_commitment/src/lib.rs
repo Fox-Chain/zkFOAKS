@@ -139,7 +139,7 @@ impl PolyCommitProver {
         target_sum: FieldElement,
         all_sum: FieldElement,
     ) {
-        let t0 = now.elapsed();
+        //let t0 = now.elapsed();
     }
 }
 
