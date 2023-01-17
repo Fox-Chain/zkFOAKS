@@ -1,6 +1,7 @@
 use std::time;
 
 use prime_field::FieldElement;
+use vpd::prover;
 
 use infrastructure::constants::*;
 use infrastructure::my_hash::HashDigest;
@@ -128,6 +129,17 @@ impl PolyCommitProver {
         let elapsed_time = now.elapsed();
         println!("FFT Prepare time: {} ms", elapsed_time.as_millis());
 
+        // let ret =
+        //     prover::vpd_prover_init(l_eval, l_coef, log_array_length, slice_size, slice_count);
+
+        // auto ret = vpd_prover_init(l_eval, l_coef, log_array_length, slice_size, slice_count);
+
+        // std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+        // std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t1 - t0);
+        // total_time += time_span.count();
+        // // printf("VPD prepare time %lf\n", time_span.count());
+        // return ret;
+
         unimplemented!()
     }
 
@@ -139,7 +151,14 @@ impl PolyCommitProver {
         target_sum: FieldElement,
         all_sum: FieldElement,
     ) {
-        //let t0 = now.elapsed();
+        let t0 = time::Instant::now();
+        assert!(self.ctx.pre_prepare_executed);
+        // fri::virtual_oracle_witness = new prime_field::field_element[slice_size * slice_count];
+        // fri::virtual_oracle_witness_msk = new prime_field::field_element[slice_size];
+        // fri::virtual_oracle_witness_msk_mapping = new int[slice_size];
+        // fri::virtual_oracle_witness_mapping = new int[slice_size * slice_count];
+        // q_eval_len = l_eval_len;
+        // q_eval = new prime_field::field_element[q_eval_len];
     }
 }
 #[derive(Default, Debug)]
