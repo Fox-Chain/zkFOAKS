@@ -48,8 +48,8 @@ pub struct PolyCommitContext {
 }
 #[derive(Debug, Default)]
 pub struct PolyCommitProver {
-    total_time: f64,
-    ctx: PolyCommitContext,
+    pub total_time: f64,
+    pub ctx: PolyCommitContext,
 }
 
 impl PolyCommitProver {
@@ -142,7 +142,12 @@ impl PolyCommitProver {
         //let t0 = now.elapsed();
     }
 }
+#[derive(Default, Debug)]
 
+pub struct PolyCommitVerifier {
+    pub pc_prover: Option<*mut PolyCommitProver>,
+    //ctx: PolyCommitContext,
+}
 pub fn commit_phrase_step(r: FieldElement) -> HashDigest {
     HashDigest::new()
 }

@@ -1,14 +1,18 @@
 //#![feature(core_intrinsics)]
-
+use infrastructure::constants::LOG_SLICE_NUMBER;
+use infrastructure::constants::SLICE_NUMBER;
+use infrastructure::my_hash::HashDigest;
+use poly_commitment::PolyCommitVerifier;
 use std::borrow::Borrow;
+use std::clone;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
+use std::io::{Error, Write};
+
 use std::mem;
 use std::time;
 use std::time::SystemTime;
-
-use infrastructure::constants::SLICE_NUMBER;
 // use poly_commitment::PolyCommitProver;
 use prime_field::FieldElement;
 //use prime_field::VecFieldElement;
@@ -22,6 +26,8 @@ use crate::prover::zk_prover;
 //Todo: Debug variable
 
 static mut Q_EVAL_REAL: Vec<FieldElement> = Vec::new();
+static mut q_eval_verifier: Vec<FieldElement> = Vec::new();
+static mut q_ratio: Vec<FieldElement> = Vec::new();
 enum gate_types {
     add = 0,
     mult = 1,
@@ -43,8 +49,8 @@ pub struct zk_verifier {
     pub prover: Option<*mut zk_prover>, // The prover
     //pub prover: zk_prover, // ZY suggestion
     pub proof_size: usize,
-    pub v_time: u64,
-    //poly_verifier: PolyCommitVerifier,
+    pub v_time: u128,
+    poly_verifier: PolyCommitVerifier,
     /** @name Randomness&Const
     	* Storing randomness or constant for simplifying computation*/
     beta_g_r0_first_half: Vec<FieldElement>,
@@ -354,7 +360,7 @@ impl zk_verifier {
 
     //Decided to implemente the verify() function from orion repo
 
-    pub unsafe fn verify_orion(&mut self, output_path: &String) {
+    pub unsafe fn verify_orion(&mut self, output_path: &String) -> bool {
         self.proof_size = 0;
         //there is a way to compress binlinear pairing element
         let mut verification_time = 0;
@@ -632,8 +638,8 @@ impl zk_verifier {
         Self::dfs_for_public_eval(
             0,
             FieldElement::real_one(),
-            r_0,
-            one_minus_r_0,
+            r_0.clone(),
+            one_minus_r_0.clone(),
             self.aritmetic_circuit.circuit[0].bit_length,
             0,
         );
@@ -644,9 +650,177 @@ impl zk_verifier {
         //     all_sum,
         //);
 
-        todo!()
+        self.proof_size += 2 * mem::size_of::<HashDigest>();
+        self.VPD_randomness = r_0.clone();
+        self.one_minus_VPD_randomness = one_minus_r_0.clone();
+        self.poly_verifier.pc_prover = (*self.prover.unwrap()).poly_prover;
+
+        let public_array = Self::public_array_prepare(
+            r_0.clone(),
+            one_minus_r_0,
+            self.aritmetic_circuit.circuit[0].bit_length,
+            Q_EVAL_REAL.clone(),
+        );
+        //prime_field::field_element *public_array = public_array_prepare_generic(q_eval_real, C.circuit[0].bit_length);
+
+        let input_0_verify = true;
+        //Below function is not implemented neither in virgo repo nor orion repo
+        //let input_0_verify = self.poly_verifier.verify_poly_commitment(
+        //  all_sum,
+        //self.aritmetic_circuit.circuit[0].bit_length,
+        //public_array,
+        //verification_time,
+        //self.proof_size,
+        //(*self.prover.unwrap()).total_time,
+        //merkle_root_l,
+        //merkle_root_h,
+        //);
+        (*self.prover.unwrap()).total_time +=
+            (*(*self.prover.unwrap()).poly_prover.unwrap()).total_time;
+        if !(input_0_verify) {
+            println!("Verification fail, input vpd");
+            panic!();
+        } else {
+            println!("Verification pass");
+            println!("Prove Time: {}", (*self.prover.unwrap()).total_time);
+            println!("Verification rdl time: {}", verification_rdl_time);
+            //verification rdl time is the non-parallel part of the circuit. In all of our experiments and most applications, it can be calculated in O(log n) or O(log^2 n) time. We didn't implement the fast method due to the deadline.
+            println!(
+                "Verification Time: {}",
+                verification_time - verification_rdl_time
+            );
+            self.v_time = verification_time - verification_rdl_time;
+            println!("Proof size(bytes): {} ", self.proof_size);
+
+            let res = Self::write_file(
+                output_path,
+                (*self.prover.unwrap()).total_time,
+                verification_time,
+                predicates_calc_time,
+                verification_rdl_time,
+                self.proof_size,
+            );
+        }
+        true
     }
 
+    pub fn write_file(
+        output_path: &String,
+        total_time: f64,
+        verification_time: u128,
+        predicates_calc_time: u128,
+        verification_rdl_time: u128,
+        proof_size: usize,
+    ) -> Result<(), Error> {
+        let mut result_file = File::create(output_path)?;
+        writeln!(
+            result_file,
+            "{} {} {} {} {}",
+            total_time, verification_time, predicates_calc_time, verification_rdl_time, proof_size
+        )?;
+        Ok(())
+    }
+
+    pub unsafe fn public_array_prepare(
+        r: Vec<FieldElement>,
+        one_minus_r: Vec<FieldElement>,
+        log_length: usize,
+        q_eval_real: Vec<FieldElement>,
+    ) -> Vec<FieldElement> {
+        q_eval_verifier = vec![FieldElement::zero(); 1 << (log_length - LOG_SLICE_NUMBER)];
+        q_ratio = vec![FieldElement::zero(); 1 << LOG_SLICE_NUMBER];
+        //Todo: Debug aritmetic pointes
+        let mov_pos = log_length - LOG_SLICE_NUMBER;
+        Self::dfs_ratio(
+            0,
+            FieldElement::real_one(),
+            r.clone(),
+            mov_pos,
+            one_minus_r.clone(),
+            0,
+        );
+        Self::dfs_coef(
+            0,
+            FieldElement::real_one(),
+            r.clone(),
+            one_minus_r.clone(),
+            0,
+            log_length - LOG_SLICE_NUMBER,
+        );
+        let q_coef_verifier = vec![FieldElement::zero(); 1 << (log_length - LOG_SLICE_NUMBER)];
+        //Below function is not implemented neither in virgo repo nor orion repo
+        //    inverse_fast_fourier_transform(q_eval_verifier, (1 << (log_length - log_slice_number)), (1 << (log_length - log_slice_number)), prime_field::get_root_of_unity(log_length - log_slice_number), q_coef_verifier);
+        let mut q_coef_arr = vec![FieldElement::zero(); 1 << log_length];
+        let coef_slice_size = (1 << (log_length - LOG_SLICE_NUMBER));
+        for i in 0..(1 << LOG_SLICE_NUMBER) {
+            for j in 0..coef_slice_size {
+                q_coef_arr[i * coef_slice_size + j] = q_coef_verifier[j] * q_ratio[i];
+                assert!(q_eval_real[i * coef_slice_size + j] == q_ratio[i] * q_eval_verifier[j]);
+            }
+        }
+        q_coef_arr
+    }
+
+    pub unsafe fn dfs_coef(
+        dep: usize,
+        val: FieldElement,
+        r: Vec<FieldElement>,
+        one_minus_r: Vec<FieldElement>,
+        pos: usize,
+        r_len: usize,
+    ) {
+        if dep == r_len {
+            q_eval_verifier[pos] = val;
+        } else {
+            Self::dfs_coef(
+                dep + 1,
+                val * one_minus_r[r_len - 1 - dep],
+                r.clone(),
+                one_minus_r.clone(),
+                pos << 1,
+                r_len,
+            );
+            Self::dfs_coef(
+                dep + 1,
+                val * r[r_len - 1 - dep],
+                r,
+                one_minus_r,
+                pos << 1 | 1,
+                r_len,
+            );
+        }
+    }
+
+    //Todo: Debug aritmetic pointes
+    pub unsafe fn dfs_ratio(
+        dep: usize,
+        val: FieldElement,
+        r: Vec<FieldElement>,
+        mov_pos: usize,
+        one_minus_r: Vec<FieldElement>,
+        pos: usize,
+    ) {
+        if dep == LOG_SLICE_NUMBER {
+            q_ratio[pos] = val;
+        } else {
+            Self::dfs_ratio(
+                dep + 1,
+                val * one_minus_r[mov_pos + LOG_SLICE_NUMBER - 1 - dep],
+                r.clone(),
+                0,
+                one_minus_r.clone(),
+                pos << 1,
+            );
+            Self::dfs_ratio(
+                dep + 1,
+                val * r[mov_pos + LOG_SLICE_NUMBER - 1 - dep],
+                r,
+                0,
+                one_minus_r,
+                pos << 1 | 1,
+            );
+        }
+    }
     pub unsafe fn dfs_for_public_eval(
         dep: usize,
         val: FieldElement,
@@ -655,7 +829,7 @@ impl zk_verifier {
         r_0_len: usize,
         pos: usize,
     ) {
-        if (dep == r_0_len) {
+        if dep == r_0_len {
             Q_EVAL_REAL[pos] = val;
         } else {
             Self::dfs_for_public_eval(

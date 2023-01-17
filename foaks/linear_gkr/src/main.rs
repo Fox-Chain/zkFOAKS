@@ -23,7 +23,7 @@ fn main() {
     let ptr_zk_p = &mut zk_p as *mut Prover;
     let ptr_zk_v_arit_cir = &mut zk_v.aritmetic_circuit as *mut LatCir;
 
-    zk_p.init_total_time(0);
+    zk_p.init_total_time(0.0);
 
     zk_v.get_prover(ptr_zk_p);
     zk_v.read_circuit(&args[2], &args[3]);
@@ -31,5 +31,6 @@ fn main() {
     unsafe {
         println!("{:?}", (*zk_p.aritmetic_circuit.unwrap()).total_depth);
         let result = zk_v.verify_orion(&args[4]);
+        println!("Pass verification? : {}", result);
     }
 }

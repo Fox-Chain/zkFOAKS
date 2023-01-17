@@ -30,7 +30,7 @@ pub fn from_string(s: &str) -> FieldElement {
 pub struct zk_prover {
     pub aritmetic_circuit: Option<*mut LayeredCircuit>, //	c++ code: layered_circuit *C;
 
-    pub poly_prover: PolyCommitProver,
+    pub poly_prover: Option<*mut PolyCommitProver>,
     /** @name Basic
     	* Basic information and variables about the arithmetic circuit*/
     //< two random gates v_u and v_v queried by V in each layer    v_u: FieldElement,
@@ -67,7 +67,7 @@ pub struct zk_prover {
     beta_g: Vec<FieldElement>,
     pub add_mult_sum: Vec<LinearPoly>,
 
-    pub total_time: u64,
+    pub total_time: f64,
 }
 
 impl zk_prover {
@@ -142,7 +142,7 @@ impl zk_prover {
         }
         let t1 = SystemTime::now();
         let time_span = (t1.duration_since(t0)).unwrap();
-        self.total_time += time_span.as_secs();
+        self.total_time += time_span.as_secs_f64();
         let res = output[0];
         res
     }
@@ -312,7 +312,7 @@ impl zk_prover {
         self.one_minus_r_0 = one_minus_r_0.clone();
         self.one_minus_r_1 = one_minus_r_1.clone();
     }
-    pub fn init_total_time(&mut self, val: u64) {
+    pub fn init_total_time(&mut self, val: f64) {
         self.total_time = val;
     }
 
@@ -705,7 +705,7 @@ impl zk_prover {
         }
         let t1 = SystemTime::now();
         let time_span = (t1.duration_since(t0)).unwrap();
-        self.total_time += time_span.as_secs();
+        self.total_time += time_span.as_secs_f64();
     }
 
     //new zk function
@@ -787,7 +787,7 @@ impl zk_prover {
 
         let t1 = SystemTime::now();
         let time_span = (t1.duration_since(t0)).unwrap();
-        self.total_time += time_span.as_secs();
+        self.total_time += time_span.as_secs_f64();
 
         ret
     }
@@ -1177,7 +1177,7 @@ impl zk_prover {
 
         let t1 = SystemTime::now();
         let time_span = (t1.duration_since(t0)).unwrap();
-        self.total_time += time_span.as_secs();
+        self.total_time += time_span.as_secs_f64();
 
         ret
     }
