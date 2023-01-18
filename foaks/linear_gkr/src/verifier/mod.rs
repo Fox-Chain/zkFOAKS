@@ -2,6 +2,7 @@
 use infrastructure::constants::LOG_SLICE_NUMBER;
 use infrastructure::constants::SLICE_NUMBER;
 use infrastructure::my_hash::HashDigest;
+use poly_commitment::PolyCommitProver;
 use poly_commitment::PolyCommitVerifier;
 use std::borrow::Borrow;
 use std::clone;
@@ -12,6 +13,7 @@ use std::io::{Error, Write};
 
 use std::mem;
 use std::time;
+use std::time::Instant;
 use std::time::SystemTime;
 // use poly_commitment::PolyCommitProver;
 use prime_field::FieldElement;
@@ -50,7 +52,7 @@ pub struct zk_verifier {
     //pub prover: zk_prover, // ZY suggestion
     pub proof_size: usize,
     pub v_time: u128,
-    poly_verifier: PolyCommitVerifier,
+    pub poly_verifier: PolyCommitVerifier,
     /** @name Randomness&Const
     	* Storing randomness or constant for simplifying computation*/
     beta_g_r0_first_half: Vec<FieldElement>,
@@ -93,14 +95,14 @@ impl zk_verifier {
         let mut lines_iter = circuit_reader.lines().map(|l| l.unwrap());
         let d: usize = lines_iter.next().unwrap().parse().unwrap();
 
-        println!("d: {:?}", d);
+        //println!("d: {:?}", d);
 
         self.aritmetic_circuit.circuit = vec![Layer::new(); d + 1];
         self.aritmetic_circuit.total_depth = d + 1;
-        println!(
-            "aritmetic_circuit.circuit[0]: {:?}",
-            self.aritmetic_circuit.circuit[0]
-        );
+        //println!(
+        //    "aritmetic_circuit.circuit[0]: {:?}",
+        //    self.aritmetic_circuit.circuit[0]
+        //);
 
         let mut max_bit_length: isize = -1;
         let mut n_pad: usize;
@@ -110,7 +112,7 @@ impl zk_verifier {
             let next_line = lines_iter.next().unwrap();
             let mut next_line_splited = next_line.split_whitespace();
             let mut number_gates: usize = next_line_splited.next().unwrap().parse().unwrap();
-            println!("number_gates: {}", number_gates);
+            //println!("number_gates: {}", number_gates);
             if d > 3 {
                 pad_requirement = 17;
             } else {
@@ -146,9 +148,9 @@ impl zk_verifier {
                 let u: usize = next_line_splited.next().unwrap().parse().unwrap();
                 let mut v: usize = next_line_splited.next().unwrap().parse().unwrap();
 
-                if j % number_gates / 4 == 0 {
-                    println!("ty:{} g:{} u:{} v:{}", ty, g, u, v,);
-                }
+                //if j % number_gates / 4 == 0 {
+                //    println!("ty:{} g:{} u:{} v:{}", ty, g, u, v,);
+                //}
 
                 if ty != 3 {
                     if ty == 5 {
@@ -238,10 +240,10 @@ impl zk_verifier {
                 }
                 number_gates = n_pad;
                 previous_g = n_pad as isize - 1;
-                println!(
-                    "aritmetic_circuit.circuit[1].gates[0]: {:?}",
-                    self.aritmetic_circuit.circuit[1].gates[0]
-                );
+                //println!(
+                //    "aritmetic_circuit.circuit[1].gates[0]: {:?}",
+                //   self.aritmetic_circuit.circuit[1].gates[0]
+                // );
             }
 
             max_gate = previous_g;
@@ -331,7 +333,7 @@ impl zk_verifier {
             (*x).init_array(max_bit_length.try_into().unwrap());
         }
 
-        println!("max_bit_length:{}", max_bit_length);
+        //println!("max_bit_length:{}", max_bit_length);
         Self::init_array(self, max_bit_length);
     }
 
@@ -363,9 +365,9 @@ impl zk_verifier {
     pub unsafe fn verify_orion(&mut self, output_path: &String) -> bool {
         self.proof_size = 0;
         //there is a way to compress binlinear pairing element
-        let mut verification_time = 0;
-        let mut predicates_calc_time = 0;
-        let mut verification_rdl_time = 0;
+        let mut verification_time: u128 = 0;
+        let mut predicates_calc_time: u128 = 0;
+        let mut verification_rdl_time: u128 = 0;
 
         //Below function is not implemented neither in virgo repo nor orion repo
         //prime_field::init_random();
@@ -391,7 +393,8 @@ impl zk_verifier {
             one_minus_r_0.push(FieldElement::from_real(1) - r_0[i]);
             one_minus_r_1.push(FieldElement::from_real(1) - r_1[i]);
         }
-        let t_a = SystemTime::now();
+        let t_a = time::Instant::now();
+
         println!("Calc V_output(r)");
         // unsafe{
         let mut a_0 = (*self.prover.unwrap()).V_res(
@@ -402,9 +405,8 @@ impl zk_verifier {
             1 << capacity,
         );
         // }
-        let t_b = SystemTime::now();
-        let time_span = (t_b.duration_since(t_a)).unwrap();
-        println!("microsecs: {}", time_span.as_micros());
+        let time_span = t_a.elapsed();
+        println!("    Time:: {}", time_span.as_secs_f64());
         a_0 = alpha * a_0;
         let mut alpha_beta_sum = a_0;
         let direct_relay_value: FieldElement;
@@ -562,10 +564,10 @@ impl zk_verifier {
 
             let predicates_calc_span = predicates_calc.elapsed();
             if self.aritmetic_circuit.circuit[i].is_parallel == false {
-                verification_rdl_time += predicates_calc_span.as_millis();
+                verification_rdl_time += predicates_calc_span.as_micros();
             }
-            verification_time += predicates_calc_span.as_millis();
-            predicates_calc_time += predicates_calc_span.as_millis();
+            verification_time += predicates_calc_span.as_micros();
+            predicates_calc_time += predicates_calc_span.as_micros();
 
             let mult_value = predicates_value[1];
             let add_value = predicates_value[0];
@@ -653,7 +655,11 @@ impl zk_verifier {
         self.proof_size += 2 * mem::size_of::<HashDigest>();
         self.VPD_randomness = r_0.clone();
         self.one_minus_VPD_randomness = one_minus_r_0.clone();
-        self.poly_verifier.pc_prover = (*self.prover.unwrap()).poly_prover;
+
+        type PCProver = PolyCommitProver;
+        let ptr_p_c_prover = &mut (*self.prover.unwrap()).poly_prover as *mut PCProver;
+
+        self.poly_verifier.pc_prover = Some(ptr_p_c_prover);
 
         let public_array = Self::public_array_prepare(
             r_0.clone(),
@@ -675,8 +681,7 @@ impl zk_verifier {
         //merkle_root_l,
         //merkle_root_h,
         //);
-        (*self.prover.unwrap()).total_time +=
-            (*(*self.prover.unwrap()).poly_prover.unwrap()).total_time;
+        (*self.prover.unwrap()).total_time += (*self.prover.unwrap()).poly_prover.total_time;
         if !(input_0_verify) {
             println!("Verification fail, input vpd");
             panic!();

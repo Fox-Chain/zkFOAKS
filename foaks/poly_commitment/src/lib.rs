@@ -1,7 +1,7 @@
 use std::time;
 
 use prime_field::FieldElement;
-use vpd::prover;
+//use vpd::prover;
 
 use infrastructure::constants::*;
 use infrastructure::my_hash::HashDigest;

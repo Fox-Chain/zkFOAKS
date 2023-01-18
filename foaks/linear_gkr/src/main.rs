@@ -13,9 +13,12 @@ fn main() {
     //   println!("The fourth argument is {}", args[4]);
     //}
 
-    //prime_field::init() // we don't need this line of code is it?
+    //Below function is not implemented neither in virgo repo nor orion repo
+    //prime_field::init()
     let mut zk_v = zk_verifier::new();
     let mut zk_p = zk_prover::new2();
+
+    //println!("{:?}", zk_v);
 
     type Prover = zk_prover;
     type LatCir = LayeredCircuit;
@@ -28,8 +31,11 @@ fn main() {
     zk_v.get_prover(ptr_zk_p);
     zk_v.read_circuit(&args[2], &args[3]);
     zk_p.get_circuit(ptr_zk_v_arit_cir);
+
     unsafe {
-        println!("{:?}", (*zk_p.aritmetic_circuit.unwrap()).total_depth);
+        //println!("poly_prover: {:?}", (*zk_v.prover.unwrap()).poly_prover);
+
+        //println!("{:?}", (*zk_p.aritmetic_circuit.unwrap()).total_depth);
         let result = zk_v.verify_orion(&args[4]);
         println!("Pass verification? : {}", result);
     }

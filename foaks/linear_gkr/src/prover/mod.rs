@@ -5,7 +5,7 @@ use poly_commitment::PolyCommitProver;
 use prime_field::{FieldElement, VecFieldElement};
 
 use std::mem::swap;
-use std::time::SystemTime;
+use std::time::{self, SystemTime};
 
 static mut INV_2: FieldElement = FieldElement::zero();
 static mut v_mult_add_new: Vec<LinearPoly> = Vec::new();
@@ -30,7 +30,7 @@ pub fn from_string(s: &str) -> FieldElement {
 pub struct zk_prover {
     pub aritmetic_circuit: Option<*mut LayeredCircuit>, //	c++ code: layered_circuit *C;
 
-    pub poly_prover: Option<*mut PolyCommitProver>,
+    pub poly_prover: PolyCommitProver,
     /** @name Basic
     	* Basic information and variables about the arithmetic circuit*/
     //< two random gates v_u and v_v queried by V in each layer    v_u: FieldElement,
@@ -107,7 +107,6 @@ impl zk_prover {
         self.add_mult_sum = vec![LinearPoly::zero(); 1 << half_length];
         self.v_mult_add = vec![LinearPoly::zero(); 1 << half_length];
         self.add_v_array = vec![LinearPoly::zero(); 1 << half_length];
-        println!("Init!");
     }
 
     pub fn get_circuit(&mut self, from_verifier: *mut LayeredCircuit) {
@@ -128,7 +127,7 @@ impl zk_prover {
         r_0_size: usize,
         output_size: usize,
     ) -> FieldElement {
-        let t0 = SystemTime::now();
+        let t0 = time::Instant::now();
         let mut outputsize = output_size;
         let mut output = vec![FieldElement::zero(); outputsize];
         for i in 0..output_size {
@@ -140,8 +139,7 @@ impl zk_prover {
             }
             outputsize >>= 1;
         }
-        let t1 = SystemTime::now();
-        let time_span = (t1.duration_since(t0)).unwrap();
+        let time_span = t0.elapsed();
         self.total_time += time_span.as_secs_f64();
         let res = output[0];
         res
@@ -150,7 +148,8 @@ impl zk_prover {
     pub unsafe fn evaluate(&mut self) -> Vec<FieldElement> {
         //let mut depth: usize;
         //unsafe {
-        let t0 = SystemTime::now();
+        let t0 = time::Instant::now();
+
         self.circuit_value.push(vec![
             FieldElement::zero();
             1 << (*self.aritmetic_circuit.unwrap()).circuit[0]
@@ -168,8 +167,6 @@ impl zk_prover {
         let depth = (*self.aritmetic_circuit.unwrap()).total_depth;
 
         for i in 1..depth {
-            println!("len: {}", self.circuit_value.len());
-            println!("cap: {}", self.circuit_value.capacity());
             self.circuit_value.push(vec![
                 FieldElement::zero();
                 1 << (*self.aritmetic_circuit.unwrap()).circuit[i]
@@ -269,9 +266,12 @@ impl zk_prover {
             }
         }
 
-        let t1 = SystemTime::now();
-        let time_span = t1.duration_since(t0);
-        println!("total evaluation time: {:?} seconds", time_span.unwrap());
+        let time_span = t0.elapsed();
+
+        println!(
+            "total evaluation time: {:?} seconds",
+            time_span.as_secs_f64()
+        );
 
         let depth = (*self.aritmetic_circuit.unwrap()).total_depth;
         //}
@@ -317,7 +317,7 @@ impl zk_prover {
     }
 
     pub unsafe fn sumcheck_phase1_init(&mut self) {
-        let t0 = SystemTime::now();
+        let t0 = time::Instant::now();
         self.total_uv =
             1 << (*self.aritmetic_circuit.unwrap()).circuit[self.sumcheck_layer_id - 1].bit_length;
         let zero = FieldElement::zero();
@@ -703,8 +703,7 @@ impl zk_prover {
                 ),
             }
         }
-        let t1 = SystemTime::now();
-        let time_span = (t1.duration_since(t0)).unwrap();
+        let time_span = t0.elapsed();
         self.total_time += time_span.as_secs_f64();
     }
 
@@ -714,7 +713,7 @@ impl zk_prover {
         previous_random: FieldElement,
         current_bit: usize,
     ) -> QuadraticPoly {
-        let t0 = SystemTime::now();
+        let t0 = time::Instant::now();
         let mut ret = QuadraticPoly::zero();
 
         //todo
@@ -785,8 +784,7 @@ impl zk_prover {
 
         self.total_uv >>= 1;
 
-        let t1 = SystemTime::now();
-        let time_span = (t1.duration_since(t0)).unwrap();
+        let time_span = t0.elapsed();
         self.total_time += time_span.as_secs_f64();
 
         ret
@@ -1098,7 +1096,7 @@ impl zk_prover {
         previous_random: FieldElement,
         current_bit: usize,
     ) -> QuadraticPoly {
-        let t0 = SystemTime::now();
+        let t0 = time::Instant::now();
         let mut ret = QuadraticPoly::zero();
 
         //todo
@@ -1175,8 +1173,7 @@ impl zk_prover {
 
         self.total_uv >>= 1;
 
-        let t1 = SystemTime::now();
-        let time_span = (t1.duration_since(t0)).unwrap();
+        let time_span = t0.elapsed();
         self.total_time += time_span.as_secs_f64();
 
         ret
