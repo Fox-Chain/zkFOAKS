@@ -8,5 +8,5 @@ edition = "2021"
 [dependencies]
 infrastructure = { path = "../infrastructure" }
 prime_field = { path = "../prime_field" }
-# error: cyclic package dependency: so we can do this
+# error: cyclic package dependency: so we can't do this
 #vpd = { path = "../vpd" }

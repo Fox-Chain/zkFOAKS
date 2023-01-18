@@ -8,6 +8,7 @@ use infrastructure::my_hash::HashDigest;
 use infrastructure::rs_polynomial::{self, fast_fourier_transform, inverse_fast_fourier_transform};
 use infrastructure::utility;
 
+// use ggez::timer;
 #[derive(Default)]
 pub struct LdtCommitment {
     pub commitment_hash: Vec<HashDigest>,
@@ -60,6 +61,9 @@ impl PolyCommitProver {
         log_array_length: usize,
     ) -> HashDigest {
         self.total_time = 0.;
+        let now = time::Instant::now();
+
+        let t0 = now.elapsed();
 
         self.ctx.pre_prepare_executed = true;
 
@@ -81,8 +85,6 @@ impl PolyCommitProver {
         let mut tmp = Vec::<FieldElement>::with_capacity(slice_real_ele_cnt);
 
         let order = slice_size * slice_count;
-
-        let now = time::Instant::now();
 
         let mut scratch_pad = rs_polynomial::ScratchPad::from_order(order);
 
@@ -129,18 +131,15 @@ impl PolyCommitProver {
         let elapsed_time = now.elapsed();
         println!("FFT Prepare time: {} ms", elapsed_time.as_millis());
 
+        // Can't figure out how to implement this one yet
         // let ret =
         //     prover::vpd_prover_init(l_eval, l_coef, log_array_length, slice_size, slice_count);
 
-        // auto ret = vpd_prover_init(l_eval, l_coef, log_array_length, slice_size, slice_count);
-
-        // std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
-        // std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t1 - t0);
-        // total_time += time_span.count();
-        // // printf("VPD prepare time %lf\n", time_span.count());
+        let t1 = now.elapsed();
+        let time_span = t1 - t0;
+        self.total_time += time_span.as_secs_f64();
+        println!("VPD prepare time {:?}", time_span);
         // return ret;
-
-        unimplemented!()
     }
 
     pub fn commit_public_array(
@@ -162,7 +161,6 @@ impl PolyCommitProver {
     }
 }
 #[derive(Default, Debug)]
-
 pub struct PolyCommitVerifier {
     pub pc_prover: Option<*mut PolyCommitProver>,
     //ctx: PolyCommitContext,
