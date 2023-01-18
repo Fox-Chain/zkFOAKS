@@ -3,7 +3,7 @@ use sha3::{Digest, Sha3_256};
 use std::io::Cursor;
 
 /// TODO: https://doc.rust-lang.org/beta/core/arch/x86_64/struct.__m128i.html
-#[derive(Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Default, PartialEq, Eq, Debug)]
 pub struct HashDigest {
     pub h0: i128,
     pub h1: i128,

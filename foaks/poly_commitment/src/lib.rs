@@ -12,7 +12,7 @@ use infrastructure::utility;
 pub struct LdtCommitment {
     pub commitment_hash: Vec<HashDigest>,
     pub randomness: Vec<FieldElement>,
-    // final_rs_code: FieldElement,
+    pub final_rs_code: Vec<FieldElement>,
     pub mx_depth: usize,
     // repeat_no: usize,
 }
