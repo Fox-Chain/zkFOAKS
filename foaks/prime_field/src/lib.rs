@@ -76,7 +76,7 @@ pub fn packed_my_mod(x: i256) -> i256 {
     intrinsics::i256::srl(&x, 61) + (x & MOD.as_i256())
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Serialize, Default, Debug, PartialEq, Eq, Clone)]
 pub struct VecFieldElement {
     pub vec: Vec<FieldElement>,
 }

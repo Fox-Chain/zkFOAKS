@@ -117,9 +117,9 @@ pub fn request_init_commit(
     *log_current_witness_size_per_slice = bit_len + RS_CODE_RATE - LOG_SLICE_NUMBER;
     *witness_bit_length_per_slice = (bit_len - LOG_SLICE_NUMBER).try_into().unwrap();
 
-    let now = time::Instant::now();
+    let _now = time::Instant::now();
 
-    let sliced_input_length_per_block = 1 << *witness_bit_length_per_slice;
+    let _sliced_input_length_per_block = 1 << *witness_bit_length_per_slice;
     assert!(*witness_bit_length_per_slice >= 0);
 
     let mut root_of_unity =
@@ -162,7 +162,7 @@ pub fn request_init_commit(
 
         witness_rs_mapping[oracle_indicator].0[i].reserve(1 << *log_current_witness_size_per_slice);
 
-        let a = FieldElement::zero();
+        let _a = FieldElement::zero();
         for j in 0..(1 << (*log_current_witness_size_per_slice - 1)) {
             assert!((j << log_leaf_size | (i << 1) | 1) < (1 << (bit_len + RS_CODE_RATE)));
             assert!((j << log_leaf_size | (i << 1) | 1) < slice_size * slice_count);
@@ -175,11 +175,11 @@ pub fn request_init_commit(
     }
 
     leaf_hash[oracle_indicator].reserve(1 << (*log_current_witness_size_per_slice - 1));
-    for i in 0..(1 << (*log_current_witness_size_per_slice - 1)) {
-        let tmp_hash = HashDigest::new();
-        let data = [HashDigest::new(), HashDigest::new()];
+    for _i in 0..(1 << (*log_current_witness_size_per_slice - 1)) {
+        let _tmp_hash = HashDigest::new();
+        let _data = [HashDigest::new(), HashDigest::new()];
 
-        for j in 0..(1 << log_leaf_size) {}
+        for _j in 0..(1 << log_leaf_size) {}
     }
 
     unimplemented!()

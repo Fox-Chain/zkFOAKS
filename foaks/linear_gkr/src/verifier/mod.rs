@@ -1,11 +1,12 @@
 //#![feature(core_intrinsics)]
+use commit_array::commit_array::commit_private_array;
 use infrastructure::constants::LOG_SLICE_NUMBER;
 use infrastructure::constants::SLICE_NUMBER;
 use infrastructure::my_hash::HashDigest;
 use poly_commitment::poly_commitment::PolyCommitProver;
 use poly_commitment::poly_commitment::PolyCommitVerifier;
-use std::borrow::Borrow;
-use std::clone;
+// use std::borrow::Borrow;
+// use std::clone;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
@@ -13,8 +14,8 @@ use std::io::{Error, Write};
 
 use std::mem;
 use std::time;
-use std::time::Instant;
-use std::time::SystemTime;
+// use std::time::Instant;
+// use std::time::SystemTime;
 // use poly_commitment::PolyCommitProver;
 use prime_field::FieldElement;
 //use prime_field::VecFieldElement;
@@ -409,10 +410,10 @@ impl zk_verifier {
         println!("    Time:: {}", time_span.as_secs_f64());
         a_0 = alpha * a_0;
         let mut alpha_beta_sum = a_0;
-        let direct_relay_value: FieldElement;
+        let _direct_relay_value: FieldElement;
 
         for i in (1..=(self.aritmetic_circuit.total_depth - 1)).rev() {
-            let rho = FieldElement::new_random();
+            let _rho = FieldElement::new_random();
 
             (*self.prover.unwrap()).sumcheck_init(
                 i,
@@ -445,10 +446,10 @@ impl zk_verifier {
             }
 
             //V should test the maskR for two points, V does random linear combination of these points first
-            let random_combine = Self::generate_randomness(1)[0];
+            let _random_combine = Self::generate_randomness(1)[0];
 
             //Every time all one test to V, V needs to do a linear combination for security.
-            let linear_combine = Self::generate_randomness(1)[0]; // mem leak
+            let _linear_combine = Self::generate_randomness(1)[0]; // mem leak
 
             let mut one_minus_r_u =
                 vec![FieldElement::zero(); self.aritmetic_circuit.circuit[i - 1].bit_length];
@@ -612,7 +613,7 @@ impl zk_verifier {
             alpha = tmp_alpha[0];
             beta = tmp_beta[0];
 
-            if (i != 1) {
+            if i != 1 {
                 alpha_beta_sum = alpha * v_u + beta * v_v;
             } else {
                 alpha_beta_sum = v_u;
@@ -624,17 +625,24 @@ impl zk_verifier {
         }
 
         println!("GKR Prove Time: {}", (*self.prover.unwrap()).total_time);
-        let all_sum = vec![FieldElement::zero(); SLICE_NUMBER];
+        let _all_sum = vec![FieldElement::zero(); SLICE_NUMBER];
         println!(
             "GKR witness size: {}",
             1 << self.aritmetic_circuit.circuit[0].bit_length
         );
 
         //Todo!: Implement this function in "poly_commitment" module
-        //let merkle_root_l = (*self.prover.unwrap()).poly_prover.commit_private_array(
-        //  (*self.prover.unwrap()).circuit_value[0],
-        //  self.aritmetic_circuit.circuit[0].bit_length,
-        //  );
+        // let merkle_root_l = (*self.prover.unwrap()).poly_prover.commit_private_array(
+        //     (*self.prover.unwrap()).circuit_value[0],
+        //     self.aritmetic_circuit.circuit[0].bit_length,
+        // );
+
+        let merkle_root_l = commit_private_array(
+            (*self.prover.unwrap()).poly_prover.clone(),
+            &(*self.prover.unwrap()).circuit_value[0],
+            self.aritmetic_circuit.circuit[0].bit_length,
+        );
+        println!("Merkle_root: {:?}", merkle_root_l);
 
         Q_EVAL_REAL = vec![FieldElement::zero(); 1 << self.aritmetic_circuit.circuit[0].bit_length];
         Self::dfs_for_public_eval(
@@ -661,7 +669,7 @@ impl zk_verifier {
 
         self.poly_verifier.pc_prover = Some(ptr_p_c_prover);
 
-        let public_array = Self::public_array_prepare(
+        let _public_array = Self::public_array_prepare(
             r_0.clone(),
             one_minus_r_0,
             self.aritmetic_circuit.circuit[0].bit_length,
@@ -697,7 +705,7 @@ impl zk_verifier {
             self.v_time = verification_time - verification_rdl_time;
             println!("Proof size(bytes): {} ", self.proof_size);
 
-            let res = Self::write_file(
+            let _res = Self::write_file(
                 output_path,
                 (*self.prover.unwrap()).total_time,
                 verification_time,
@@ -756,7 +764,7 @@ impl zk_verifier {
         //Below function is not implemented neither in virgo repo nor orion repo
         //    inverse_fast_fourier_transform(q_eval_verifier, (1 << (log_length - log_slice_number)), (1 << (log_length - log_slice_number)), prime_field::get_root_of_unity(log_length - log_slice_number), q_coef_verifier);
         let mut q_coef_arr = vec![FieldElement::zero(); 1 << log_length];
-        let coef_slice_size = (1 << (log_length - LOG_SLICE_NUMBER));
+        let coef_slice_size = 1 << (log_length - LOG_SLICE_NUMBER);
         for i in 0..(1 << LOG_SLICE_NUMBER) {
             for j in 0..coef_slice_size {
                 q_coef_arr[i * coef_slice_size + j] = q_coef_verifier[j] * q_ratio[i];
@@ -860,7 +868,7 @@ impl zk_verifier {
         let k = size;
         let mut ret = vec![FieldElement::zero(); k];
 
-        for i in 0..k {
+        for _i in 0..k {
             ret.push(FieldElement::new_random());
         }
         ret
@@ -907,9 +915,8 @@ impl zk_verifier {
             self.beta_g_r0_second_half[0] = FieldElement::from_real(1);
             self.beta_g_r1_second_half[0] = FieldElement::from_real(1);
 
-            let mut first_half_len = self.aritmetic_circuit.circuit[depth].bit_length / 2;
-            let mut second_half_len =
-                self.aritmetic_circuit.circuit[depth].bit_length - first_half_len;
+            let first_half_len = self.aritmetic_circuit.circuit[depth].bit_length / 2;
+            let second_half_len = self.aritmetic_circuit.circuit[depth].bit_length - first_half_len;
 
             for i in 0..first_half_len {
                 let r0 = r_0[i];
@@ -1091,8 +1098,8 @@ impl zk_verifier {
         r_1: Vec<FieldElement>,
         r_u: Vec<FieldElement>,
         r_v: Vec<FieldElement>,
-        alpha: FieldElement,
-        beta: FieldElement,
+        _alpha: FieldElement,
+        _beta: FieldElement,
     ) -> Vec<FieldElement> {
         let gate_type_count = 15;
         let mut ret_para = vec![FieldElement::zero(); gate_type_count];
@@ -1115,7 +1122,7 @@ impl zk_verifier {
             let mut one_block_alpha = vec![FieldElement::zero(); gate_type_count];
             let mut one_block_beta = vec![FieldElement::zero(); gate_type_count];
 
-            for i in 0..gate_type_count {
+            for _i in 0..gate_type_count {
                 one_block_alpha.push(FieldElement::zero());
                 one_block_beta.push(FieldElement::zero());
             }
@@ -1136,7 +1143,7 @@ impl zk_verifier {
                 match self.aritmetic_circuit.circuit[depth].gates[i].ty {
                     0 => {
                         let g_first_half = g & ((1 << first_half_g) - 1);
-                        let g_second_half = (g >> first_half_g);
+                        let g_second_half = g >> first_half_g;
                         let u_first_half = u & ((1 << first_half_uv) - 1);
                         let u_second_half = u >> first_half_uv;
                         let v_first_half = v & ((1 << first_half_uv) - 1);
@@ -1156,7 +1163,7 @@ impl zk_verifier {
                     }
                     1 => {
                         let g_first_half = g & ((1 << first_half_g) - 1);
-                        let g_second_half = (g >> first_half_g);
+                        let g_second_half = g >> first_half_g;
                         let u_first_half = u & ((1 << first_half_uv) - 1);
                         let u_second_half = u >> first_half_uv;
                         let v_first_half = v & ((1 << first_half_uv) - 1);
@@ -1179,7 +1186,7 @@ impl zk_verifier {
                     4 => {}
                     5 => {
                         let g_first_half = g & ((1 << first_half_g) - 1);
-                        let g_second_half = (g >> first_half_g);
+                        let g_second_half = g >> first_half_g;
 
                         let beta_g_val_alpha = self.beta_g_r0_block_first_half[g_first_half]
                             * self.beta_g_r0_block_second_half[g_second_half];
@@ -1204,7 +1211,7 @@ impl zk_verifier {
                     }
                     12 => {
                         let g_first_half = g & ((1 << first_half_g) - 1);
-                        let g_second_half = (g >> first_half_g);
+                        let g_second_half = g >> first_half_g;
 
                         let beta_g_val_alpha = self.beta_g_r0_block_first_half[g_first_half]
                             * self.beta_g_r0_block_second_half[g_second_half];
@@ -1251,7 +1258,7 @@ impl zk_verifier {
                     }
                     7 => {
                         let g_first_half = g & ((1 << first_half_g) - 1);
-                        let g_second_half = (g >> first_half_g);
+                        let g_second_half = g >> first_half_g;
                         let u_first_half = u & ((1 << first_half_uv) - 1);
                         let u_second_half = u >> first_half_uv;
                         let v_first_half = v & ((1 << first_half_uv) - 1);
@@ -1271,7 +1278,7 @@ impl zk_verifier {
                     }
                     8 => {
                         let g_first_half = g & ((1 << first_half_g) - 1);
-                        let g_second_half = (g >> first_half_g);
+                        let g_second_half = g >> first_half_g;
                         let u_first_half = u & ((1 << first_half_uv) - 1);
                         let u_second_half = u >> first_half_uv;
                         let v_first_half = v & ((1 << first_half_uv) - 1);
@@ -1291,7 +1298,7 @@ impl zk_verifier {
                     }
                     9 => {
                         let g_first_half = g & ((1 << first_half_g) - 1);
-                        let g_second_half = (g >> first_half_g);
+                        let g_second_half = g >> first_half_g;
                         let u_first_half = u & ((1 << first_half_uv) - 1);
                         let u_second_half = u >> first_half_uv;
                         let v_first_half = v & ((1 << first_half_uv) - 1);
@@ -1311,7 +1318,7 @@ impl zk_verifier {
                     }
                     10 => {
                         let g_first_half = g & ((1 << first_half_g) - 1);
-                        let g_second_half = (g >> first_half_g);
+                        let g_second_half = g >> first_half_g;
                         let u_first_half = u & ((1 << first_half_uv) - 1);
                         let u_second_half = u >> first_half_uv;
                         let v_first_half = v & ((1 << first_half_uv) - 1);
@@ -1331,7 +1338,7 @@ impl zk_verifier {
                     }
                     13 => {
                         let g_first_half = g & ((1 << first_half_g) - 1);
-                        let g_second_half = (g >> first_half_g);
+                        let g_second_half = g >> first_half_g;
                         let u_first_half = u & ((1 << first_half_uv) - 1);
                         let u_second_half = u >> first_half_uv;
                         let v_first_half = v & ((1 << first_half_uv) - 1);
@@ -1494,7 +1501,7 @@ impl zk_verifier {
                     }
                     12 => {
                         let g_first_half = g & ((1 << first_half_g) - 1);
-                        let g_second_half = (g >> first_half_g);
+                        let g_second_half = g >> first_half_g;
 
                         let beta_g_val = self.beta_g_r0_first_half[g_first_half]
                             * self.beta_g_r0_second_half[g_second_half]
@@ -1514,7 +1521,7 @@ impl zk_verifier {
                     }
                     14 => {
                         let g_first_half = g & ((1 << first_half_g) - 1);
-                        let g_second_half = (g >> first_half_g);
+                        let g_second_half = g >> first_half_g;
 
                         let beta_g_val = self.beta_g_r0_first_half[g_first_half]
                             * self.beta_g_r0_second_half[g_second_half]
@@ -1580,7 +1587,7 @@ impl zk_verifier {
                                     * self.beta_v_second_half[v_second_half]);
                     }
                     10 => {
-                        if (relay_set == false) {
+                        if relay_set == false {
                             tmp_u_val = vec![
                                 FieldElement::zero();
                                 1 << self.aritmetic_circuit.circuit[depth - 1]
@@ -1598,7 +1605,7 @@ impl zk_verifier {
                             relay_set = true;
                         }
                         let g_first_half = g & ((1 << first_half_g) - 1);
-                        let g_second_half = (g >> first_half_g);
+                        let g_second_half = g >> first_half_g;
                         ret[10] = ret[10]
                             + (self.beta_g_r0_first_half[g_first_half]
                                 * self.beta_g_r0_second_half[g_second_half]
@@ -1608,7 +1615,7 @@ impl zk_verifier {
                     }
                     13 => {
                         let g_first_half = g & ((1 << first_half_g) - 1);
-                        let g_second_half = (g >> first_half_g);
+                        let g_second_half = g >> first_half_g;
                         let u_first_half = u & ((1 << first_half_uv) - 1);
                         let u_second_half = u >> first_half_uv;
                         let v_first_half = v & ((1 << first_half_uv) - 1);

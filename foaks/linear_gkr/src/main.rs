@@ -1,6 +1,6 @@
 use linear_gkr::circuit_fast_track::LayeredCircuit;
 use linear_gkr::{prover::zk_prover, verifier::zk_verifier};
-use prime_field::FieldElement;
+
 use std::env;
 
 fn main() {

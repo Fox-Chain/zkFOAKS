@@ -18,7 +18,7 @@ pub struct LdtCommitment {
     // repeat_no: usize,
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct PolyCommitContext {
     pub twiddle_factor: Vec<FieldElement>,
     pub inv_twiddle_factor: Vec<FieldElement>,
@@ -48,7 +48,7 @@ pub struct PolyCommitContext {
     pub slice_real_ele_cnt: usize,
     pub pre_prepare_executed: bool,
 }
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct PolyCommitProver {
     pub total_time_pc_p: f64,
     pub ctx: PolyCommitContext,

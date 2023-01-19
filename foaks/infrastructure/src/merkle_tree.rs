@@ -25,7 +25,7 @@ pub unsafe fn hash_double_field_element_merkle_damgard(
 ) -> HashDigest {
     let mut data = [HashDigest::default(); 2];
     data[0] = prev_hash;
-    let mut element = [x, y];
+    let element = [x, y];
     copy_nonoverlapping(
         std::ptr::addr_of!(element) as *const HashDigest,
         std::ptr::addr_of_mut!(data[1]),
@@ -45,7 +45,7 @@ pub unsafe fn create_tree(
     // init
     // NOTE: actually the element size is the size_of::<HashDigest>
     // NOTE: src_data.len() == element_num = true
-    let element_size = element_size_.unwrap_or(256 / 8);
+    let _element_size = element_size_.unwrap_or(256 / 8);
     let alloc_required = alloc_required_.unwrap_or(false);
     size_after_padding = 1;
     while size_after_padding < element_num {
