@@ -4,7 +4,7 @@ use infrastructure::{
     constants::{LOG_SLICE_NUMBER, MAX_BIT_LENGTH, MAX_FRI_DEPTH, RS_CODE_RATE, SLICE_NUMBER},
     my_hash::HashDigest,
 };
-use poly_commitment::PolyCommitContext;
+use poly_commitment::poly_commitment::PolyCommitContext;
 use prime_field::FieldElement;
 
 #[derive(Default)]

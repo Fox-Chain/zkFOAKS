@@ -2,8 +2,8 @@
 use infrastructure::constants::LOG_SLICE_NUMBER;
 use infrastructure::constants::SLICE_NUMBER;
 use infrastructure::my_hash::HashDigest;
-use poly_commitment::PolyCommitProver;
-use poly_commitment::PolyCommitVerifier;
+use poly_commitment::poly_commitment::PolyCommitProver;
+use poly_commitment::poly_commitment::PolyCommitVerifier;
 use std::borrow::Borrow;
 use std::clone;
 use std::fs::File;

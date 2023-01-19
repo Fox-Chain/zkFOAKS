@@ -6,7 +6,7 @@ use infrastructure::{
     my_hash::{self, HashDigest},
 };
 
-use poly_commitment::LdtCommitment;
+use poly_commitment::poly_commitment::LdtCommitment;
 use prime_field::FieldElement;
 
 use crate::fri::FRIContext;

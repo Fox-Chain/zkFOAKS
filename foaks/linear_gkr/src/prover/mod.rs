@@ -1,7 +1,7 @@
 use crate::circuit_fast_track::LayeredCircuit;
 use crate::polynomial::{LinearPoly, QuadraticPoly};
 
-use poly_commitment::PolyCommitProver;
+use poly_commitment::poly_commitment::PolyCommitProver;
 use prime_field::{FieldElement, VecFieldElement};
 
 use std::mem::swap;
