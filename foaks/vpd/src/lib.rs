@@ -1,3 +1,3 @@
-mod fri;
-mod prover;
-mod verifier;
+pub mod fri;
+pub mod prover;
+pub mod verifier;

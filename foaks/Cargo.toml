@@ -7,5 +7,6 @@ members = [
     "intrinsics",
     "poly_commitment",
     "prime_field",
-    "vpd"
+    "vpd",
+    "commit_array",
 ]
