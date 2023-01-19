@@ -55,7 +55,7 @@ pub struct zk_prover {
     one_minus_r_1: Vec<FieldElement>,
 
     pub add_v_array: Vec<LinearPoly>,
-    pub v_mult_add: Vec<LinearPoly>,
+    pub v_mult_add0: Vec<LinearPoly>,
     pub beta_g_r0_fhalf: Vec<FieldElement>,
     beta_g_r0_shalf: Vec<FieldElement>,
     beta_g_r1_fhalf: Vec<FieldElement>,
@@ -87,26 +87,26 @@ impl zk_prover {
         unsafe {
             //gate_meet size: 15 or 14
             gate_meet = [false; 15];
-            v_mult_add_new = vec![LinearPoly::zero(); 1 << half_length];
-            add_v_array_new = vec![LinearPoly::zero(); 1 << half_length];
-            add_mult_sum_new = vec![LinearPoly::zero(); 1 << half_length];
-            rets_prev = vec![QuadraticPoly::zero(); 1 << half_length];
-            rets_cur = vec![QuadraticPoly::zero(); 1 << half_length];
+            v_mult_add_new = vec![LinearPoly::zero(); 1 << max_bit_length];
+            add_v_array_new = vec![LinearPoly::zero(); 1 << max_bit_length];
+            add_mult_sum_new = vec![LinearPoly::zero(); 1 << max_bit_length];
+            rets_prev = vec![QuadraticPoly::zero(); 1 << max_bit_length];
+            rets_cur = vec![QuadraticPoly::zero(); 1 << max_bit_length];
         }
 
-        Self::init_zkprover(self, half_length);
+        Self::init_zkprover(self, max_bit_length, half_length);
     }
 
-    pub fn init_zkprover(&mut self, half_length: usize) {
+    pub fn init_zkprover(&mut self, max_bit_length: usize, half_length: usize) {
         self.beta_g_r0_fhalf = vec![FieldElement::zero(); 1 << half_length];
         self.beta_g_r0_shalf = vec![FieldElement::zero(); 1 << half_length];
         self.beta_g_r1_fhalf = vec![FieldElement::zero(); 1 << half_length];
         self.beta_g_r1_shalf = vec![FieldElement::zero(); 1 << half_length];
         self.beta_u_fhalf = vec![FieldElement::zero(); 1 << half_length];
         self.beta_u_shalf = vec![FieldElement::zero(); 1 << half_length];
-        self.add_mult_sum = vec![LinearPoly::zero(); 1 << half_length];
-        self.v_mult_add = vec![LinearPoly::zero(); 1 << half_length];
-        self.add_v_array = vec![LinearPoly::zero(); 1 << half_length];
+        self.add_mult_sum = vec![LinearPoly::zero(); 1 << max_bit_length];
+        self.v_mult_add0 = vec![LinearPoly::zero(); 1 << max_bit_length];
+        self.add_v_array = vec![LinearPoly::zero(); 1 << max_bit_length];
     }
 
     pub fn get_circuit(&mut self, from_verifier: *mut LayeredCircuit) {
@@ -323,8 +323,9 @@ impl zk_prover {
         let zero = FieldElement::zero();
         for i in 0..self.total_uv {
             //todo! linear_poly != FieldElement
-            self.v_mult_add[i] =
-                LinearPoly::maps(self.circuit_value[self.sumcheck_layer_id - 1][i]);
+            let x = LinearPoly::maps(self.circuit_value[self.sumcheck_layer_id - 1][i]);
+            self.v_mult_add0[i] = x;
+
             //self.v_mult_add[i] = self.circuit_value[self.sumcheck_layer_id - 1][i];
             self.add_v_array[i].a = zero;
             self.add_v_array[i].b = zero;
@@ -724,8 +725,8 @@ impl zk_prover {
             let g_zero = i << 1;
             let g_one = i << 1 | 1;
             if (current_bit == 0) {
-                v_mult_add_new[i].b = self.v_mult_add[g_zero].b;
-                v_mult_add_new[i].a = self.v_mult_add[g_one].b - v_mult_add_new[i].b;
+                v_mult_add_new[i].b = self.v_mult_add0[g_zero].b;
+                v_mult_add_new[i].a = self.v_mult_add0[g_one].b - v_mult_add_new[i].b;
 
                 add_v_array_new[i].b = self.add_v_array[g_zero].b;
                 add_v_array_new[i].a = self.add_v_array[g_one].b - add_v_array_new[i].b;
@@ -734,9 +735,9 @@ impl zk_prover {
                 add_mult_sum_new[i].a = self.add_mult_sum[g_one].b - add_mult_sum_new[i].b;
             } else {
                 v_mult_add_new[i].b =
-                    self.v_mult_add[g_zero].a * previous_random + self.v_mult_add[g_zero].b;
-                v_mult_add_new[i].a = self.v_mult_add[g_one].a * previous_random
-                    + self.v_mult_add[g_one].b
+                    self.v_mult_add0[g_zero].a * previous_random + self.v_mult_add0[g_zero].b;
+                v_mult_add_new[i].a = self.v_mult_add0[g_one].a * previous_random
+                    + self.v_mult_add0[g_one].b
                     - v_mult_add_new[i].b;
 
                 add_v_array_new[i].b =
@@ -752,7 +753,7 @@ impl zk_prover {
                     - add_mult_sum_new[i].b;
             }
         }
-        swap(&mut self.v_mult_add, &mut v_mult_add_new);
+        swap(&mut self.v_mult_add0, &mut v_mult_add_new);
         swap(&mut self.add_v_array, &mut add_v_array_new);
         swap(&mut self.add_mult_sum, &mut add_mult_sum_new);
 
@@ -760,11 +761,11 @@ impl zk_prover {
         //todo
         //#pragma omp parallel for
         for i in 0..(self.total_uv >> 1) {
-            rets_prev[i].a = self.add_mult_sum[i].a * self.v_mult_add[i].a;
-            rets_prev[i].b = self.add_mult_sum[i].a * self.v_mult_add[i].b
-                + self.add_mult_sum[i].b * self.v_mult_add[i].a
+            rets_prev[i].a = self.add_mult_sum[i].a * self.v_mult_add0[i].a;
+            rets_prev[i].b = self.add_mult_sum[i].a * self.v_mult_add0[i].b
+                + self.add_mult_sum[i].b * self.v_mult_add0[i].a
                 + self.add_v_array[i].a;
-            rets_prev[i].c = self.add_mult_sum[i].b * self.v_mult_add[i].b + self.add_v_array[i].b;
+            rets_prev[i].c = self.add_mult_sum[i].b * self.v_mult_add0[i].b + self.add_v_array[i].b;
         }
 
         let tot = self.total_uv >> 1;
@@ -797,7 +798,7 @@ impl zk_prover {
         one_minus_r_u: Vec<FieldElement>,
     ) {
         let t0 = SystemTime::now();
-        self.v_u = self.v_mult_add[0].eval(previous_random);
+        self.v_u = self.v_mult_add0[0].eval(previous_random);
 
         let first_half = self.length_u >> 1;
         let second_half = self.length_u - first_half;
@@ -836,7 +837,7 @@ impl zk_prover {
             self.add_v_array[i].b = zero;
             //todo! linear_poly != FieldElement
             //self.v_mult_add[i] = self.circuit_value[self.sumcheck_layer_id - 1][i];
-            self.v_mult_add[i] =
+            self.v_mult_add0[i] =
                 LinearPoly::maps(self.circuit_value[self.sumcheck_layer_id - 1][i]);
         }
 
@@ -1107,8 +1108,8 @@ impl zk_prover {
             let g_one = i << 1 | 1;
 
             if current_bit == 0 {
-                v_mult_add_new[i].b = self.v_mult_add[g_zero].b;
-                v_mult_add_new[i].a = self.v_mult_add[g_one].b - v_mult_add_new[i].b;
+                v_mult_add_new[i].b = self.v_mult_add0[g_zero].b;
+                v_mult_add_new[i].a = self.v_mult_add0[g_one].b - v_mult_add_new[i].b;
 
                 add_v_array_new[i].b = self.add_v_array[g_zero].b;
                 add_v_array_new[i].a = self.add_v_array[g_one].b - add_v_array_new[i].b;
@@ -1117,9 +1118,9 @@ impl zk_prover {
                 add_mult_sum_new[i].a = self.add_mult_sum[g_one].b - add_mult_sum_new[i].b;
             } else {
                 v_mult_add_new[i].b =
-                    self.v_mult_add[g_zero].a * previous_random + self.v_mult_add[g_zero].b;
-                v_mult_add_new[i].a = self.v_mult_add[g_one].a * previous_random
-                    + self.v_mult_add[g_one].b
+                    self.v_mult_add0[g_zero].a * previous_random + self.v_mult_add0[g_zero].b;
+                v_mult_add_new[i].a = self.v_mult_add0[g_one].a * previous_random
+                    + self.v_mult_add0[g_one].b
                     - v_mult_add_new[i].b;
 
                 add_v_array_new[i].b =
@@ -1134,14 +1135,15 @@ impl zk_prover {
                     + self.add_mult_sum[g_one].b
                     - add_mult_sum_new[i].b;
             }
-            ret.a = (ret.a + self.add_mult_sum[i].a * self.v_mult_add[i].a);
+            ret.a = (ret.a + self.add_mult_sum[i].a * self.v_mult_add0[i].a);
             ret.b = (ret.b
-                + self.add_mult_sum[i].a * self.v_mult_add[i].b
-                + self.add_mult_sum[i].b * self.v_mult_add[i].a
+                + self.add_mult_sum[i].a * self.v_mult_add0[i].b
+                + self.add_mult_sum[i].b * self.v_mult_add0[i].a
                 + self.add_v_array[i].a);
-            ret.c = (ret.c + self.add_mult_sum[i].b * self.v_mult_add[i].b + self.add_v_array[i].b);
+            ret.c =
+                (ret.c + self.add_mult_sum[i].b * self.v_mult_add0[i].b + self.add_v_array[i].b);
         }
-        swap(&mut self.v_mult_add, &mut v_mult_add_new);
+        swap(&mut self.v_mult_add0, &mut v_mult_add_new);
         swap(&mut self.add_v_array, &mut add_v_array_new);
         swap(&mut self.add_mult_sum, &mut add_mult_sum_new);
 
@@ -1149,11 +1151,11 @@ impl zk_prover {
         //todo
         //#pragma omp parallel for
         for i in 0..(self.total_uv >> 1) {
-            rets_prev[i].a = self.add_mult_sum[i].a * self.v_mult_add[i].a;
-            rets_prev[i].b = self.add_mult_sum[i].a * self.v_mult_add[i].b
-                + self.add_mult_sum[i].b * self.v_mult_add[i].a
+            rets_prev[i].a = self.add_mult_sum[i].a * self.v_mult_add0[i].a;
+            rets_prev[i].b = self.add_mult_sum[i].a * self.v_mult_add0[i].b
+                + self.add_mult_sum[i].b * self.v_mult_add0[i].a
                 + self.add_v_array[i].a;
-            rets_prev[i].c = self.add_mult_sum[i].b * self.v_mult_add[i].b + self.add_v_array[i].b;
+            rets_prev[i].c = self.add_mult_sum[i].b * self.v_mult_add0[i].b + self.add_v_array[i].b;
         }
 
         let tot = self.total_uv >> 1;
@@ -1183,7 +1185,7 @@ impl zk_prover {
         &mut self,
         previous_random: FieldElement,
     ) -> (FieldElement, FieldElement) {
-        self.v_v = self.v_mult_add[0].eval(previous_random);
+        self.v_v = self.v_mult_add0[0].eval(previous_random);
         (self.v_u, self.v_v)
     }
 }

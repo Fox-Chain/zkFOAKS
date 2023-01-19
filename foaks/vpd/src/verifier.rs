@@ -320,7 +320,7 @@ impl FRIContext {
         let mut ptr = 0;
         while codeword_size > 1 << RS_CODE_RATE {
             assert!(ptr < log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
-            randomness[ptr] = FieldElement::random();
+            randomness[ptr] = FieldElement::new_random();
             ret[ptr] = self.commit_phrase_step(randomness[ptr]);
             codeword_size /= 2;
             ptr += 1;

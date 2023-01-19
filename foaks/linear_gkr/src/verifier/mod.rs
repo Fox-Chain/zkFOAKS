@@ -51,7 +51,7 @@ pub struct zk_verifier {
     pub prover: Option<*mut zk_prover>, // The prover
     //pub prover: zk_prover, // ZY suggestion
     pub proof_size: usize,
-    pub v_time: u128,
+    pub v_time: f64,
     pub poly_verifier: PolyCommitVerifier,
     /** @name Randomness&Const
     	* Storing randomness or constant for simplifying computation*/
@@ -365,9 +365,9 @@ impl zk_verifier {
     pub unsafe fn verify_orion(&mut self, output_path: &String) -> bool {
         self.proof_size = 0;
         //there is a way to compress binlinear pairing element
-        let mut verification_time: u128 = 0;
-        let mut predicates_calc_time: u128 = 0;
-        let mut verification_rdl_time: u128 = 0;
+        let mut verification_time: f64 = 0.0;
+        let mut predicates_calc_time: f64 = 0.0;
+        let mut verification_rdl_time: f64 = 0.0;
 
         //Below function is not implemented neither in virgo repo nor orion repo
         //prime_field::init_random();
@@ -411,7 +411,7 @@ impl zk_verifier {
         let mut alpha_beta_sum = a_0;
         let direct_relay_value: FieldElement;
 
-        for i in (self.aritmetic_circuit.total_depth - 1)..1 {
+        for i in (1..=(self.aritmetic_circuit.total_depth - 1)).rev() {
             let rho = FieldElement::new_random();
 
             (*self.prover.unwrap()).sumcheck_init(
@@ -474,9 +474,7 @@ impl zk_verifier {
                         "Verification fail, phase1, circuit {}, current bit {}",
                         i, j
                     );
-                    //todo: return false ==  panic!() ???
-                    //return false;
-                    panic!()
+                    return false;
                 } else {
                     //println!(
                     //  "Verification fail, phase1, circuit {}, current bit {}",
@@ -513,9 +511,7 @@ impl zk_verifier {
                         "Verification fail, phase2, circuit {}, current bit {}",
                         i, j
                     );
-                    //todo: return false ==  panic!() ???
-                    //return false;
-                    panic!()
+                    return false;
                 } else {
                     //println!(
                     //  "Verification fail, phase1, circuit {}, current bit {}",
@@ -563,11 +559,15 @@ impl zk_verifier {
             //todo
 
             let predicates_calc_span = predicates_calc.elapsed();
+            //println!("predicates_calc_span: {:?}", predicates_calc_span);
             if self.aritmetic_circuit.circuit[i].is_parallel == false {
-                verification_rdl_time += predicates_calc_span.as_micros();
+                // todo
+                verification_rdl_time += predicates_calc_span.as_secs_f64();
             }
-            verification_time += predicates_calc_span.as_micros();
-            predicates_calc_time += predicates_calc_span.as_micros();
+            //println!("before verification_time: {}", verification_time);
+            verification_time += predicates_calc_span.as_secs_f64();
+            //println!("after verification_time: {}", verification_time);
+            predicates_calc_time += predicates_calc_span.as_secs_f64();
 
             let mult_value = predicates_value[1];
             let add_value = predicates_value[0];
@@ -605,7 +605,7 @@ impl zk_verifier {
             {
                 //Todo: improve error handling
                 println!("Verification fail, semi final, circuit level {}", i,);
-                panic!();
+                return false;
             }
             let tmp_alpha = Self::generate_randomness(1);
             let tmp_beta = Self::generate_randomness(1);
@@ -681,10 +681,10 @@ impl zk_verifier {
         //merkle_root_l,
         //merkle_root_h,
         //);
-        (*self.prover.unwrap()).total_time += (*self.prover.unwrap()).poly_prover.total_time;
+        (*self.prover.unwrap()).total_time += (*self.prover.unwrap()).poly_prover.total_time_pc_p;
         if !(input_0_verify) {
             println!("Verification fail, input vpd");
-            panic!();
+            return false;
         } else {
             println!("Verification pass");
             println!("Prove Time: {}", (*self.prover.unwrap()).total_time);
@@ -712,9 +712,9 @@ impl zk_verifier {
     pub fn write_file(
         output_path: &String,
         total_time: f64,
-        verification_time: u128,
-        predicates_calc_time: u128,
-        verification_rdl_time: u128,
+        verification_time: f64,
+        predicates_calc_time: f64,
+        verification_rdl_time: f64,
         proof_size: usize,
     ) -> Result<(), Error> {
         let mut result_file = File::create(output_path)?;

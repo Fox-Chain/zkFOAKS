@@ -50,7 +50,7 @@ pub struct PolyCommitContext {
 }
 #[derive(Debug, Default)]
 pub struct PolyCommitProver {
-    pub total_time: f64,
+    pub total_time_pc_p: f64,
     pub ctx: PolyCommitContext,
 }
 
@@ -59,8 +59,8 @@ impl PolyCommitProver {
         &mut self,
         private_array: &[FieldElement],
         log_array_length: usize,
-    ) -> HashDigest {
-        self.total_time = 0.;
+    ) {
+        self.total_time_pc_p = 0.;
         let now = time::Instant::now();
 
         let t0 = now.elapsed();
@@ -137,9 +137,9 @@ impl PolyCommitProver {
 
         let t1 = now.elapsed();
         let time_span = t1 - t0;
-        self.total_time += time_span.as_secs_f64();
+        self.total_time_pc_p += time_span.as_secs_f64();
         println!("VPD prepare time {:?}", time_span);
-        // return ret;
+        //return ret;
     }
 
     pub fn commit_public_array(
