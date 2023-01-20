@@ -14,8 +14,6 @@ use std::io::{Error, Write};
 
 use std::mem;
 use std::time;
-// use std::time::Instant;
-// use std::time::SystemTime;
 // use poly_commitment::PolyCommitProver;
 use prime_field::FieldElement;
 //use prime_field::VecFieldElement;
@@ -382,7 +380,7 @@ impl zk_verifier {
         // }
         let mut alpha = FieldElement::from_real(1);
         let mut beta = FieldElement::from_real(0);
-        //	random_oracle oracle; // Orion dont use this here
+        //	random_oracle oracle; // Orion just declare the variable but dont use it later
         let capacity =
             self.aritmetic_circuit.circuit[self.aritmetic_circuit.total_depth - 1].bit_length;
         let mut r_0 = Self::generate_randomness(capacity);
@@ -632,18 +630,19 @@ impl zk_verifier {
         );
 
         //Todo!: Implement this function in "poly_commitment" module
-        // let merkle_root_l = (*self.prover.unwrap()).poly_prover.commit_private_array(
-        //     (*self.prover.unwrap()).circuit_value[0],
-        //     self.aritmetic_circuit.circuit[0].bit_length,
-        // );
-
-        let merkle_root_l = commit_private_array(
-            (*self.prover.unwrap()).poly_prover.clone(),
-            &(*self.prover.unwrap()).circuit_value[0],
-            self.aritmetic_circuit.circuit[0].bit_length,
-        );
-        println!("Merkle_root: {:?}", merkle_root_l);
-
+        //let merkle_root_l = (*self.prover.unwrap()).poly_prover.commit_private_array(
+        //  (*self.prover.unwrap()).circuit_value[0],
+        // self.aritmetic_circuit.circuit[0].bit_length,
+        //);
+        //Todo: Debug, (*self.prover.unwrap()).poly_prover should call commit_private_array()
+        //Todo: not suppose to be a parameter cloned
+        /*let merkle_root_l = commit_private_array(
+                    (*self.prover.unwrap()).poly_prover.clone(),
+                    &(*self.prover.unwrap()).circuit_value[0],
+                    self.aritmetic_circuit.circuit[0].bit_length,
+                );
+                println!("Merkle_root: {:?}", merkle_root_l);
+        */
         Q_EVAL_REAL = vec![FieldElement::zero(); 1 << self.aritmetic_circuit.circuit[0].bit_length];
         Self::dfs_for_public_eval(
             0,
@@ -1643,5 +1642,10 @@ impl zk_verifier {
         ret
     }
 
-    pub fn delete_self() {}
+    //Todo:
+    pub fn V_in() {} //Never used
+    pub fn read_r1cs() {} //Never used, original code is all commented in Orion, empty in Virgo
+    pub fn self_inner_product_test() {} //Never used, implemented only in Virgo, empty in Orion
+    pub fn verify_poly_commitment() {} //Todo in VPD, their imput parameter is the output of
+                                       // commit_public_array() and commit_private_array()
 }

@@ -1,43 +1,44 @@
 #![feature(bigint_helper_methods)]
-
 pub mod error;
 pub mod ops;
-
-use std::{arch::x86_64::_mm256_set_epi64x, sync::atomic::AtomicBool};
-
 use ethnum::{i256, AsI256};
 use serde::Serialize;
+use std::{
+    arch::x86_64::{__m256i, _mm256_set_epi64x},
+    sync::atomic::AtomicBool,
+};
 
 use self::error::{PrimeFieldError, RootOfUnityError};
 
 pub const MOD: u64 = 2305843009213693951;
 
-pub static INITIALIZED: AtomicBool = AtomicBool::new(false);
+pub static mut INITIALIZED: AtomicBool = AtomicBool::new(false);
 
 pub const MASK: u32 = 4294967295; // 2^32 - 1
 pub const PRIME: u64 = 2305843009213693951; // 2^61 - 1
 
 pub const MAX_ORDER: usize = 62;
 
-//pub struct FieldElementContext {
-//pub packed_mod: i256,
-//  pub packed_mod_minus_one: i256,
-//}
+pub struct FieldElementContext {
+    pub packed_mod: __m256i,
+    pub packed_mod_minus_one: __m256i,
+}
 
-//impl FieldElementContext {
-//pub fn init() -> Self {
-//unsafe {
-//let packed_mod = _mm256_set_epi64x(MOD as i64, MOD as i64, MOD as i64, MOD as i64);
-//let packed_mod_minus_one = _mm256_set_epi64x(MOD - 1, MOD - 1, MOD - 1, MOD - 1);
+impl FieldElementContext {
+    pub unsafe fn init() -> Self {
+        let mod_i64 = MOD.try_into().unwrap();
+        let packed_mod = _mm256_set_epi64x(mod_i64, mod_i64, mod_i64, mod_i64);
+        let packed_mod_minus_one =
+            _mm256_set_epi64x(mod_i64 - 1, mod_i64 - 1, mod_i64 - 1, mod_i64 - 1);
 
-//  INITIALIZED = true;
-//}
-//Self {
-//    packed_mod,
-//      packed_mod_minus_one,
-//    }
-//  }
-//}
+        *INITIALIZED.get_mut() = true;
+
+        Self {
+            packed_mod,
+            packed_mod_minus_one,
+        }
+    }
+}
 
 pub fn my_mod(x: u64) -> u64 {
     (x >> 61) + (x & MOD)

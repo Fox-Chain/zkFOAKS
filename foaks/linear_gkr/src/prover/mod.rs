@@ -26,7 +26,7 @@ pub fn from_string(s: &str) -> FieldElement {
     ret
 }
 
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug)]
 pub struct zk_prover {
     pub aritmetic_circuit: Option<*mut LayeredCircuit>, //	c++ code: layered_circuit *C;
 
@@ -72,9 +72,6 @@ pub struct zk_prover {
 
 impl zk_prover {
     pub fn new() -> Self {
-        Default::default()
-    }
-    pub fn new2() -> Self {
         Self {
             circuit_value: Vec::with_capacity(1000000),
             ..Default::default()
@@ -115,9 +112,6 @@ impl zk_prover {
             INV_2 = FieldElement::from_real(2);
         }
     }
-
-    // this function calculate time ?
-    // 	prime_field::field_element a_0 = p -> V_res(one_minus_r_0, r_0, result, C.circuit[C.total_depth - 1].bit_length, (1 << (C.circuit[C.total_depth - 1].bit_length)));
 
     pub fn V_res(
         &mut self,
@@ -708,7 +702,6 @@ impl zk_prover {
         self.total_time += time_span.as_secs_f64();
     }
 
-    //new zk functions
     pub unsafe fn sumcheck_phase1_update(
         &mut self,
         previous_random: FieldElement,
@@ -1187,19 +1180,6 @@ impl zk_prover {
         self.v_v = self.v_mult_add0[0].eval(previous_random);
         (self.v_u, self.v_v)
     }
-}
 
-#[cfg(test)]
-mod tests {
-    use crate::prover::from_string;
-    #[test]
-    fn prover_from_string() {
-        let str = from_string("string");
-        assert_eq!(str.real, 7452375);
-    }
-
-    #[test]
-    fn prover_new() {
-        assert_eq!(2 + 2, 4);
-    }
+    pub fn proof_init() {} //Used, but is not implemented neither in virgo repo nor orion repo
 }

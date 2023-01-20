@@ -1,29 +1,21 @@
 use linear_gkr::circuit_fast_track::LayeredCircuit;
 use linear_gkr::{prover::zk_prover, verifier::zk_verifier};
+use prime_field::FieldElementContext;
 
 use std::env;
 
 fn main() {
     let args: Vec<_> = env::args().collect();
-    // if args.len() > 1 {
-    //   println!("The first argument is {}", args[1]);
-    //    println!("The second argument is {}", args[2]);
-    //  println!("The third argument is {}", args[3]);
-    //   println!("The fourth argument is {}", args[4]);
-    //}
 
-    //Below function is not implemented neither in virgo repo nor orion repo
-    //prime_field::init()
+    //Below unsafe function set packed 64-bit integers, it is mandatory?
+    unsafe {
+        FieldElementContext::init();
+    }
     let mut zk_v = zk_verifier::new();
-    let mut zk_p = zk_prover::new2();
+    let mut zk_p = zk_prover::new();
 
-    //println!("{:?}", zk_v);
-
-    type Prover = zk_prover;
-    type LatCir = LayeredCircuit;
-
-    let ptr_zk_p = &mut zk_p as *mut Prover;
-    let ptr_zk_v_arit_cir = &mut zk_v.aritmetic_circuit as *mut LatCir;
+    let ptr_zk_p = &mut zk_p as *mut zk_prover;
+    let ptr_zk_v_arit_cir = &mut zk_v.aritmetic_circuit as *mut LayeredCircuit;
 
     zk_p.init_total_time(0.0);
 
