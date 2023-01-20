@@ -85,8 +85,8 @@ pub fn commit_private_array(
 
     let elapsed_time = now.elapsed();
     println!("FFT Prepare time: {} ms", elapsed_time.as_millis());
-
-    let ret = prover::vpd_prover_init(log_array_length);
+    // println!("{:?}", slice_size * slice_count);
+    let ret = prover::vpd_prover_init(l_eval, log_array_length, slice_size, slice_count);
 
     let t1 = now.elapsed();
     let time_span = t1 - t0;
@@ -94,3 +94,5 @@ pub fn commit_private_array(
     println!("VPD prepare time {:?}", time_span);
     return ret;
 }
+
+pub fn commit_public_array() {}

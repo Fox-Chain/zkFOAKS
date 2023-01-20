@@ -634,15 +634,14 @@ impl zk_verifier {
         //  (*self.prover.unwrap()).circuit_value[0],
         // self.aritmetic_circuit.circuit[0].bit_length,
         //);
-        //Todo: Debug, (*self.prover.unwrap()).poly_prover should call commit_private_array()
-        //Todo: not suppose to be a parameter cloned
-        /*let merkle_root_l = commit_private_array(
-                    (*self.prover.unwrap()).poly_prover.clone(),
-                    &(*self.prover.unwrap()).circuit_value[0],
-                    self.aritmetic_circuit.circuit[0].bit_length,
-                );
-                println!("Merkle_root: {:?}", merkle_root_l);
-        */
+        // Commented out for now to remove panic
+        // let merkle_root_l = commit_private_array(
+        //     (*self.prover.unwrap()).poly_prover.clone(),
+        //     &(*self.prover.unwrap()).circuit_value[0],
+        //     self.aritmetic_circuit.circuit[0].bit_length,
+        // );
+        // println!("Merkle_root: {:?}", merkle_root_l);
+
         Q_EVAL_REAL = vec![FieldElement::zero(); 1 << self.aritmetic_circuit.circuit[0].bit_length];
         Self::dfs_for_public_eval(
             0,

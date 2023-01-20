@@ -90,16 +90,24 @@ pub fn request_init_commit(
         r_extended,
         leaf_hash,
     }: &mut FRIContext,
-    PolyCommitContext {
-        slice_size,
-        slice_count,
-        l_eval,
-        h_eval_arr,
-        ..
-    }: PolyCommitContext,
+    // PolyCommitContext {
+    //     slice_size,
+    //     slice_count,
+    //     l_eval,
+    //     h_eval_arr,
+    //     ..
+    // }: PolyCommitContext,
+    slice_size: usize,
+    slice_count: usize,
+    l_eval: &mut Vec<FieldElement>,
+    // h_eval_arr: usize,
     bit_len: usize,
     oracle_indicator: usize,
 ) -> HashDigest {
+    // println!(
+    //     "{:?}",
+    //     (1 << (bit_len + RS_CODE_RATE - LOG_SLICE_NUMBER)) * (1 << LOG_SLICE_NUMBER)
+    // );
     assert_eq!(
         slice_size * slice_count,
         (1 << (bit_len + RS_CODE_RATE - LOG_SLICE_NUMBER)) * (1 << LOG_SLICE_NUMBER)
@@ -126,10 +134,12 @@ pub fn request_init_commit(
         FieldElement::get_root_of_unity(*log_current_witness_size_per_slice).unwrap();
     if oracle_indicator == 0 {
         l_group.reserve(1 << *log_current_witness_size_per_slice);
-        l_group[0] = FieldElement::from_real(1);
+        // println!("l_group: {:?}", root_of_unity);
+        l_group.push(FieldElement::from_real(1));
+        // l_group[0] = FieldElement::from_real(1);
 
         for i in 1..(1 << *log_current_witness_size_per_slice) {
-            l_group[i] = l_group[i - 1] * root_of_unity;
+            l_group.push(l_group[i - 1] * root_of_unity);
         }
         assert_eq!(
             l_group[(1 << *log_current_witness_size_per_slice) - 1] * root_of_unity,
@@ -140,40 +150,42 @@ pub fn request_init_commit(
     witness_rs_codeword_interleaved[oracle_indicator].reserve(1 << (bit_len + RS_CODE_RATE));
 
     let log_leaf_size = LOG_SLICE_NUMBER + 1;
-    for i in 0..SLICE_NUMBER {
-        assert_eq!(
-            <usize as std::convert::TryInto<i64>>::try_into(*log_current_witness_size_per_slice)
-                .unwrap()
-                - RS_CODE_RATE as i64,
-            *witness_bit_length_per_slice
-        );
-        root_of_unity =
-            FieldElement::get_root_of_unity((*witness_bit_length_per_slice).try_into().unwrap())
-                .unwrap();
+    // for i in 0..SLICE_NUMBER {
+    //     assert_eq!(
+    //         <usize as std::convert::TryInto<i64>>::try_into(*log_current_witness_size_per_slice)
+    //             .unwrap()
+    //             - RS_CODE_RATE as i64,
+    //         *witness_bit_length_per_slice
+    //     );
+    //     root_of_unity =
+    //         FieldElement::get_root_of_unity((*witness_bit_length_per_slice).try_into().unwrap())
+    //             .unwrap();
 
-        if oracle_indicator == 0 {
-            witness_rs_codeword_before_arrange[0].0[i] = l_eval[i * slice_size..].to_vec();
-        } else {
-            witness_rs_codeword_before_arrange[1].0[i] = h_eval_arr[i * slice_size..].to_vec();
-        }
+    //     if oracle_indicator == 0 {
+    //         witness_rs_codeword_before_arrange[0].0[i] = l_eval[i * slice_size..].to_vec();
+    //     } else {
+    //         // witness_rs_codeword_before_arrange[1].0[i] = h_eval_arr[i * slice_size..].to_vec();
+    //     }
 
-        root_of_unity =
-            FieldElement::get_root_of_unity(*log_current_witness_size_per_slice).unwrap();
+    //     root_of_unity =
+    //         FieldElement::get_root_of_unity(*log_current_witness_size_per_slice).unwrap();
 
-        witness_rs_mapping[oracle_indicator].0[i].reserve(1 << *log_current_witness_size_per_slice);
+    //     witness_rs_mapping[oracle_indicator].0[i].reserve(1 << *log_current_witness_size_per_slice);
 
-        let _a = FieldElement::zero();
-        for j in 0..(1 << (*log_current_witness_size_per_slice - 1)) {
-            assert!((j << log_leaf_size | (i << 1) | 1) < (1 << (bit_len + RS_CODE_RATE)));
-            assert!((j << log_leaf_size | (i << 1) | 1) < slice_size * slice_count);
-
-            witness_rs_mapping[oracle_indicator].0[i][j] = j << log_leaf_size | (i << 1) | 0;
-            witness_rs_mapping[oracle_indicator].0[i]
-                [j + (1 << *log_current_witness_size_per_slice) / 2] =
-                j << log_leaf_size | (i << 1) | 0;
-        }
-    }
-
+    //     let _a = FieldElement::zero();
+    //     for j in 0..(1 << (*log_current_witness_size_per_slice - 1)) {
+    //         assert!((j << log_leaf_size | (i << 1) | 1) < (1 << (bit_len + RS_CODE_RATE)));
+    //         assert!((j << log_leaf_size | (i << 1) | 1) < slice_size * slice_count);
+    //         // Fix bug here
+    //         println!("Here: {:?}", j);
+    //         // witness_rs_mapping[oracle_indicator].0[i].push(j << log_leaf_size | (i << 1) | 0);
+    //         // witness_rs_mapping[oracle_indicator].0[i]
+    //         //     [j + (1 << *log_current_witness_size_per_slice) / 2] =
+    //         //     j << log_leaf_size | (i << 1) | 0;
+    //     }
+    //     println!("check 1");
+    // }
+    println!("check");
     leaf_hash[oracle_indicator].reserve(1 << (*log_current_witness_size_per_slice - 1));
     for _i in 0..(1 << (*log_current_witness_size_per_slice - 1)) {
         let _tmp_hash = HashDigest::new();
@@ -181,6 +193,19 @@ pub fn request_init_commit(
 
         for _j in 0..(1 << log_leaf_size) {}
     }
-
-    unimplemented!()
+    println!("check 2");
+    // TODO
+    // merkle_tree::merkle_tree_prover::create_tree(leaf_hash[oracle_indicator], 1 << (log_current_witness_size_per_slice - 1), witness_merkle[oracle_indicator], sizeof(__hhash_digest), true);
+    // witness_merkle_size[oracle_indicator] = 1 << (log_current_witness_size_per_slice - 1);
+    // visited_init[oracle_indicator] = new bool[1 << (log_current_witness_size_per_slice)];
+    // visited_witness[oracle_indicator] = new bool[1 << (bit_len + rs_code_rate)];
+    // memset(visited_init[oracle_indicator], false, sizeof(bool) * (1 << (log_current_witness_size_per_slice)));
+    // memset(visited_witness[oracle_indicator], false, sizeof(bool) * (1 << (bit_len + rs_code_rate)));
+    // auto t1 = std::chrono::high_resolution_clock::now();
+    // auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t1 - t0);
+    // double delta = time_span.count();
+    // __fri_timer = delta;
+    //printf("Init %lf\n", delta);
+    println!("{:?}", witness_merkle[oracle_indicator]);
+    return witness_merkle[oracle_indicator][1];
 }
