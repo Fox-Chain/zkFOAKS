@@ -22,7 +22,7 @@ use crate::circuit_fast_track::Gate;
 use crate::circuit_fast_track::Layer;
 use crate::circuit_fast_track::LayeredCircuit;
 use crate::polynomial::QuadraticPoly;
-use crate::prover::zk_prover;
+use crate::prover::ZkProver;
 
 //Todo: Debug variable
 
@@ -46,8 +46,8 @@ enum gate_types {
 }
 #[derive(Default, Debug)]
 
-pub struct zk_verifier {
-    pub prover: Option<*mut zk_prover>, // The prover
+pub struct ZkVerifier {
+    pub prover: Option<*mut ZkProver>, // The prover
     //pub prover: zk_prover, // ZY suggestion
     pub proof_size: usize,
     pub v_time: f64,
@@ -74,19 +74,19 @@ pub struct zk_verifier {
 
     pub aritmetic_circuit: LayeredCircuit, // The circuit
 
-    VPD_randomness: Vec<FieldElement>,
-    one_minus_VPD_randomness: Vec<FieldElement>,
+    vpd_randomness: Vec<FieldElement>,
+    one_minus_vpd_randomness: Vec<FieldElement>,
 }
 
-impl zk_verifier {
+impl ZkVerifier {
     pub fn new() -> Self {
         Default::default()
     }
 
-    pub fn get_prover(&mut self, prover__: *mut zk_prover) {
+    pub fn get_prover(&mut self, prover__: *mut ZkProver) {
         self.prover = Some(prover__);
     }
-
+    //ToDo!: Improve unwrap() handling, use "?" operator. Improve println!(), could use eprintln()
     pub fn read_circuit(&mut self, path: &String, meta_path: &String) {
         let circuit_file = File::open(path).unwrap();
         let circuit_reader = BufReader::new(circuit_file);
@@ -98,9 +98,9 @@ impl zk_verifier {
 
         self.aritmetic_circuit.circuit = vec![Layer::new(); d + 1];
         self.aritmetic_circuit.total_depth = d + 1;
-        //println!(
-        //    "aritmetic_circuit.circuit[0]: {:?}",
-        //    self.aritmetic_circuit.circuit[0]
+        // println!(
+        //  "aritmetic_circuit.circuit[0]: {:?}",
+        //  self.aritmetic_circuit.circuit[0]
         //);
 
         let mut max_bit_length: isize = -1;
@@ -143,13 +143,9 @@ impl zk_verifier {
 
             for j in 0..number_gates {
                 let ty: usize = next_line_splited.next().unwrap().parse().unwrap();
-                let g: isize = next_line_splited.next().unwrap().parse().unwrap();
+                let g: usize = next_line_splited.next().unwrap().parse().unwrap();
                 let u: usize = next_line_splited.next().unwrap().parse().unwrap();
                 let mut v: usize = next_line_splited.next().unwrap().parse().unwrap();
-
-                //if j % number_gates / 4 == 0 {
-                //    println!("ty:{} g:{} u:{} v:{}", ty, g, u, v,);
-                //}
 
                 if ty != 3 {
                     if ty == 5 {
@@ -161,7 +157,6 @@ impl zk_verifier {
                             v > u && v <= (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)
                         );
                     } else {
-                        //if !(u >= 0 && u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length))
                         if !(u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)) {
                             println!(
                                 "{} {} {} {} {} ",
@@ -172,11 +167,7 @@ impl zk_verifier {
                                 (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)
                             );
                         }
-                        assert!(
-                            //u >= 0 && u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)
-                            u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)
-                        );
-                        //if !(v >= 0 && v < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length))
+                        assert!(u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length));
                         if !(v < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)) {
                             println!(
                                 "{} {} {} {} {} ",
@@ -187,10 +178,7 @@ impl zk_verifier {
                                 (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)
                             );
                         }
-                        assert!(
-                            //v >= 0 && v < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)
-                            v < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)
-                        );
+                        assert!(v < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length));
                     }
                 }
                 if ty == 6 {
@@ -210,24 +198,21 @@ impl zk_verifier {
                 if ty == 13 {
                     assert!(u == v);
                 }
-                if g != previous_g + 1 {
-                    //todo: improve error handling
+                if g as isize != (previous_g + 1) {
+                    //Todo!: improve error handling
                     println!(
                         "Error, gates must be in sorted order, and full [0, 2^n - 1]. {} {} {} {}",
                         i, j, g, previous_g
                     );
-                    panic!();
+                    panic!(); //exit(0);
                 }
-                previous_g = g;
+                previous_g = g as isize;
                 if i != 1 {
-                    self.aritmetic_circuit.circuit[i].gates[g as usize] =
-                        Gate::from_params(ty, u, v);
+                    self.aritmetic_circuit.circuit[i].gates[g] = Gate::from_params(ty, u, v);
                 } else {
                     assert!(ty == 2 || ty == 3);
-                    self.aritmetic_circuit.circuit[1].gates[g as usize] =
-                        Gate::from_params(4, g as usize, 0);
-                    self.aritmetic_circuit.circuit[0].gates[g as usize] =
-                        Gate::from_params(ty, u, v);
+                    self.aritmetic_circuit.circuit[1].gates[g] = Gate::from_params(4, g, 0);
+                    self.aritmetic_circuit.circuit[0].gates[g] = Gate::from_params(ty, u, v);
                 }
 
                 //
@@ -239,10 +224,6 @@ impl zk_verifier {
                 }
                 number_gates = n_pad;
                 previous_g = n_pad as isize - 1;
-                //println!(
-                //    "aritmetic_circuit.circuit[1].gates[0]: {:?}",
-                //   self.aritmetic_circuit.circuit[1].gates[0]
-                // );
             }
 
             max_gate = previous_g;
@@ -289,9 +270,6 @@ impl zk_verifier {
             if self.aritmetic_circuit.circuit[i].bit_length as isize > max_bit_length {
                 max_bit_length = self.aritmetic_circuit.circuit[i].bit_length as isize;
             }
-
-            //can uncomment the below break sentence to break the for loop
-            //
         }
         self.aritmetic_circuit.circuit[0].is_parallel = false;
 
@@ -313,8 +291,6 @@ impl zk_verifier {
             self.aritmetic_circuit.circuit[i].log_repeat_num =
                 meta_line_splited.next().unwrap().parse().unwrap();
 
-            //println!("meta_line: {:?}", meta_line);
-
             if is_para != 0 {
                 assert!(
                     1 << self.aritmetic_circuit.circuit[i].log_repeat_num
@@ -328,11 +304,8 @@ impl zk_verifier {
             }
         }
         unsafe {
-            let x = self.prover.unwrap();
-            (*x).init_array(max_bit_length.try_into().unwrap());
+            (*self.prover.unwrap()).init_array(max_bit_length.try_into().unwrap());
         }
-
-        //println!("max_bit_length:{}", max_bit_length);
         Self::init_array(self, max_bit_length);
     }
 
@@ -659,8 +632,8 @@ impl zk_verifier {
         //);
 
         self.proof_size += 2 * mem::size_of::<HashDigest>();
-        self.VPD_randomness = r_0.clone();
-        self.one_minus_VPD_randomness = one_minus_r_0.clone();
+        self.vpd_randomness = r_0.clone();
+        self.one_minus_vpd_randomness = one_minus_r_0.clone();
 
         type PCProver = PolyCommitProver;
         let ptr_p_c_prover = &mut (*self.prover.unwrap()).poly_prover as *mut PCProver;

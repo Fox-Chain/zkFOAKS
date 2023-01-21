@@ -27,7 +27,7 @@ pub fn from_string(s: &str) -> FieldElement {
 }
 
 #[derive(Default, Debug)]
-pub struct zk_prover {
+pub struct ZkProver {
     pub aritmetic_circuit: Option<*mut LayeredCircuit>, //	c++ code: layered_circuit *C;
 
     pub poly_prover: PolyCommitProver,
@@ -62,15 +62,15 @@ pub struct zk_prover {
     beta_g_r1_shalf: Vec<FieldElement>,
     beta_u_fhalf: Vec<FieldElement>,
     beta_u_shalf: Vec<FieldElement>,
-    beta_u: Vec<FieldElement>,
+    /*beta_u: Vec<FieldElement>,
     beta_v: Vec<FieldElement>,
-    beta_g: Vec<FieldElement>,
+    beta_g: Vec<FieldElement>,*/ //Variables never used
     pub add_mult_sum: Vec<LinearPoly>,
 
     pub total_time: f64,
 }
 
-impl zk_prover {
+impl ZkProver {
     pub fn new() -> Self {
         Self {
             circuit_value: Vec::with_capacity(1000000),
@@ -306,7 +306,7 @@ impl zk_prover {
         self.one_minus_r_0 = one_minus_r_0.clone();
         self.one_minus_r_1 = one_minus_r_1.clone();
     }
-    pub fn init_total_time(&mut self, val: f64) {
+    pub fn total_time(&mut self, val: f64) {
         self.total_time = val;
     }
 

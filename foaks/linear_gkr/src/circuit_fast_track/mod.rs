@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use prime_field::FieldElement;
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 
 pub struct Gate {
     pub ty: usize,
@@ -12,7 +12,7 @@ pub struct Gate {
     pub parameter_length: usize,
 }
 
-impl Default for Gate {
+/*impl Default for Gate {
     fn default() -> Self {
         Self {
             ty: 2,
@@ -23,11 +23,13 @@ impl Default for Gate {
             parameter_length: 0,
         }
     }
-}
-
+}*/
 impl Gate {
     pub fn new() -> Self {
-        Default::default()
+        Self {
+            ty: 2,
+            ..Default::default()
+        }
     }
 
     pub fn from_params(ty: usize, u: usize, v: usize) -> Self {
