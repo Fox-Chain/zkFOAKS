@@ -22,6 +22,7 @@ use crate::circuit_fast_track::Gate;
 use crate::circuit_fast_track::Layer;
 use crate::circuit_fast_track::LayeredCircuit;
 use crate::polynomial::QuadraticPoly;
+use crate::prover::ProverContext;
 use crate::prover::ZkProver;
 
 //Todo: Debug variable
@@ -369,7 +370,7 @@ impl ZkVerifier {
 
         println!("Calc V_output(r)");
         // unsafe{
-        let mut a_0 = (*self.prover.unwrap()).V_res(
+        let mut a_0 = (*self.prover.unwrap()).v_res(
             one_minus_r_0.clone(),
             r_0.clone(),
             result,

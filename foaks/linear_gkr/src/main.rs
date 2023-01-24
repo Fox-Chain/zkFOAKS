@@ -5,7 +5,7 @@ use prime_field::FieldElementContext;
 use std::env;
 
 fn main() {
-    let args: Vec<_> = env::args().collect();
+      let args: Vec<_> = env::args().collect();
 
     //Below unsafe function set packed 64-bit integers, it is mandatory?
     unsafe {
