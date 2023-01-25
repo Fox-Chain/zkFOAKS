@@ -1,7 +1,9 @@
+use std::mem;
 use std::{time, usize};
 
 use infrastructure::{
     constants::{LOG_SLICE_NUMBER, MAX_BIT_LENGTH, MAX_FRI_DEPTH, RS_CODE_RATE, SLICE_NUMBER},
+    merkle_tree,
     my_hash::HashDigest,
 };
 use poly_commitment::poly_commitment::PolyCommitContext;
@@ -104,10 +106,6 @@ pub fn request_init_commit(
     bit_len: usize,
     oracle_indicator: usize,
 ) -> HashDigest {
-    // println!(
-    //     "{:?}",
-    //     (1 << (bit_len + RS_CODE_RATE - LOG_SLICE_NUMBER)) * (1 << LOG_SLICE_NUMBER)
-    // );
     assert_eq!(
         slice_size * slice_count,
         (1 << (bit_len + RS_CODE_RATE - LOG_SLICE_NUMBER)) * (1 << LOG_SLICE_NUMBER)
@@ -150,42 +148,64 @@ pub fn request_init_commit(
     witness_rs_codeword_interleaved[oracle_indicator].reserve(1 << (bit_len + RS_CODE_RATE));
 
     let log_leaf_size = LOG_SLICE_NUMBER + 1;
-    // for i in 0..SLICE_NUMBER {
-    //     assert_eq!(
-    //         <usize as std::convert::TryInto<i64>>::try_into(*log_current_witness_size_per_slice)
-    //             .unwrap()
-    //             - RS_CODE_RATE as i64,
-    //         *witness_bit_length_per_slice
-    //     );
-    //     root_of_unity =
-    //         FieldElement::get_root_of_unity((*witness_bit_length_per_slice).try_into().unwrap())
-    //             .unwrap();
+    for i in 0..SLICE_NUMBER {
+        assert_eq!(
+            <usize as std::convert::TryInto<i64>>::try_into(*log_current_witness_size_per_slice)
+                .unwrap()
+                - RS_CODE_RATE as i64,
+            *witness_bit_length_per_slice
+        );
 
-    //     if oracle_indicator == 0 {
-    //         witness_rs_codeword_before_arrange[0].0[i] = l_eval[i * slice_size..].to_vec();
-    //     } else {
-    //         // witness_rs_codeword_before_arrange[1].0[i] = h_eval_arr[i * slice_size..].to_vec();
-    //     }
+        root_of_unity =
+            FieldElement::get_root_of_unity((*witness_bit_length_per_slice).try_into().unwrap())
+                .unwrap();
 
-    //     root_of_unity =
-    //         FieldElement::get_root_of_unity(*log_current_witness_size_per_slice).unwrap();
+        // TODO
+        // if oracle_indicator == 0 {
+        //     println!("{:?}", i);
 
-    //     witness_rs_mapping[oracle_indicator].0[i].reserve(1 << *log_current_witness_size_per_slice);
+        //     println!("{:?}", l_eval);
+        //     l_eval.reserve(i * slice_size);
+        //     witness_rs_codeword_before_arrange[0].0[i]
+        //         .reserve(1 << *log_current_witness_size_per_slice);
+        //     witness_rs_codeword_before_arrange[0].0[i] = l_eval[i * slice_size..].to_vec();
+        //     // println!("{:?}", witness_rs_codeword_before_arrange[0].0);
 
-    //     let _a = FieldElement::zero();
-    //     for j in 0..(1 << (*log_current_witness_size_per_slice - 1)) {
-    //         assert!((j << log_leaf_size | (i << 1) | 1) < (1 << (bit_len + RS_CODE_RATE)));
-    //         assert!((j << log_leaf_size | (i << 1) | 1) < slice_size * slice_count);
-    //         // Fix bug here
-    //         println!("Here: {:?}", j);
-    //         // witness_rs_mapping[oracle_indicator].0[i].push(j << log_leaf_size | (i << 1) | 0);
-    //         // witness_rs_mapping[oracle_indicator].0[i]
-    //         //     [j + (1 << *log_current_witness_size_per_slice) / 2] =
-    //         //     j << log_leaf_size | (i << 1) | 0;
-    //     }
-    //     println!("check 1");
-    // }
-    println!("check");
+        //     println!("{:?}", i);
+        // } else {
+        //     // witness_rs_codeword_before_arrange[1].0[i] = h_eval_arr[i * slice_size..].to_vec();
+        // }
+
+        root_of_unity =
+            FieldElement::get_root_of_unity(*log_current_witness_size_per_slice).unwrap();
+
+        witness_rs_mapping[oracle_indicator].0[i].reserve(1 << *log_current_witness_size_per_slice);
+        witness_rs_mapping[oracle_indicator].0[i].reserve(
+            ((1 << *log_current_witness_size_per_slice) / 2)
+                + (1 << (*log_current_witness_size_per_slice)),
+        );
+        let _a = FieldElement::zero();
+
+        for j in 0..(1 << (*log_current_witness_size_per_slice - 1)) {
+            assert!((j << log_leaf_size | (i << 1) | 1) < (1 << (bit_len + RS_CODE_RATE)));
+            assert!((j << log_leaf_size | (i << 1) | 1) < slice_size * slice_count);
+            // Fix bug here
+            // println!("Here: {:?}", j);
+            witness_rs_mapping[oracle_indicator].0[i].push(j << log_leaf_size | (i << 1) | 0);
+            // witness_rs_mapping[oracle_indicator].0[i]
+            //     [j + (1 << *log_current_witness_size_per_slice) / 2] =
+            //     j << log_leaf_size | (i << 1) | 0;
+        }
+        // println!("{:?}", 1 << (*log_current_witness_size_per_slice - 1));
+        // println!("{:?}", witness_rs_mapping);
+
+        for j in 0..(1 << (*log_current_witness_size_per_slice - 1)) {
+            witness_rs_mapping[oracle_indicator].0[i].push(j << log_leaf_size | (i << 1) | 0);
+        }
+
+        // println!("{:?}", witness_rs_mapping[0].0[i]);
+    }
+
     leaf_hash[oracle_indicator].reserve(1 << (*log_current_witness_size_per_slice - 1));
     for _i in 0..(1 << (*log_current_witness_size_per_slice - 1)) {
         let _tmp_hash = HashDigest::new();
@@ -193,7 +213,7 @@ pub fn request_init_commit(
 
         for _j in 0..(1 << log_leaf_size) {}
     }
-    println!("check 2");
+
     // TODO
     // merkle_tree::merkle_tree_prover::create_tree(leaf_hash[oracle_indicator], 1 << (log_current_witness_size_per_slice - 1), witness_merkle[oracle_indicator], sizeof(__hhash_digest), true);
     // witness_merkle_size[oracle_indicator] = 1 << (log_current_witness_size_per_slice - 1);
@@ -204,8 +224,19 @@ pub fn request_init_commit(
     // auto t1 = std::chrono::high_resolution_clock::now();
     // auto time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t1 - t0);
     // double delta = time_span.count();
-    // __fri_timer = delta;
+    // fri_timer = delta;
     //printf("Init %lf\n", delta);
-    println!("{:?}", witness_merkle[oracle_indicator]);
+
+    unsafe {
+        merkle_tree::create_tree(
+            leaf_hash[oracle_indicator].clone(),
+            1 << (*log_current_witness_size_per_slice - 1),
+            &mut witness_merkle[oracle_indicator],
+            Some(mem::size_of::<HashDigest>()),
+            Some(true),
+        );
+    };
+
+    // println!("{:?}", witness_merkle[oracle_indicator]);
     return witness_merkle[oracle_indicator][1];
 }
