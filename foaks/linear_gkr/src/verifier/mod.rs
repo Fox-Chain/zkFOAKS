@@ -25,12 +25,7 @@ use crate::polynomial::QuadraticPoly;
 use crate::prover::ProverContext;
 use crate::prover::ZkProver;
 
-//Todo: Debug variable
-
-static mut Q_EVAL_REAL: Vec<FieldElement> = Vec::new();
-static mut q_eval_verifier: Vec<FieldElement> = Vec::new();
-static mut q_ratio: Vec<FieldElement> = Vec::new();
-enum gate_types {
+/*enum gate_types {
     add = 0,
     mult = 1,
     dummy = 2,
@@ -44,7 +39,15 @@ enum gate_types {
     relay = 10,
     custom_linear_comb = 14,
     input = 3,
+}*/
+
+#[derive(Default, Debug)]
+pub struct VerifierContext {
+    pub q_eval_real: Vec<FieldElement>,
+    pub q_eval_verifier: Vec<FieldElement>,
+    pub q_ratio: Vec<FieldElement>,
 }
+
 #[derive(Default, Debug)]
 
 pub struct ZkVerifier {
@@ -77,6 +80,8 @@ pub struct ZkVerifier {
 
     vpd_randomness: Vec<FieldElement>,
     one_minus_vpd_randomness: Vec<FieldElement>,
+
+    pub ctx: VerifierContext,
 }
 
 impl ZkVerifier {
@@ -335,7 +340,7 @@ impl ZkVerifier {
 
     //Decided to implemente the verify() function from orion repo
 
-    pub unsafe fn verify_orion(&mut self, output_path: &String) -> bool {
+    pub unsafe fn verify(&mut self, output_path: &String) -> bool {
         self.proof_size = 0;
         //there is a way to compress binlinear pairing element
         let mut verification_time: f64 = 0.0;
@@ -348,12 +353,9 @@ impl ZkVerifier {
         //Below function is not implemented neither in virgo repo nor orion repo
         //self.prover.unwrap().proof_init();
 
-        // unsafe {
-        let zkp = self.prover.unwrap();
-        let result = (*zkp).evaluate();
-        // }
-        let mut alpha = FieldElement::from_real(1);
-        let mut beta = FieldElement::from_real(0);
+        let result = (*self.prover.unwrap()).evaluate();
+        let mut alpha = FieldElement::real_one();
+        let mut beta = FieldElement::zero();
         //	random_oracle oracle; // Orion just declare the variable but dont use it later
         let capacity =
             self.aritmetic_circuit.circuit[self.aritmetic_circuit.total_depth - 1].bit_length;
@@ -363,13 +365,12 @@ impl ZkVerifier {
         let mut one_minus_r_1 = vec![FieldElement::zero(); capacity];
 
         for i in 0..capacity {
-            one_minus_r_0.push(FieldElement::from_real(1) - r_0[i]);
-            one_minus_r_1.push(FieldElement::from_real(1) - r_1[i]);
+            one_minus_r_0.push(FieldElement::real_one() - r_0[i]);
+            one_minus_r_1.push(FieldElement::real_one() - r_1[i]);
         }
         let t_a = time::Instant::now();
 
         println!("Calc V_output(r)");
-        // unsafe{
         let mut a_0 = (*self.prover.unwrap()).v_res(
             one_minus_r_0.clone(),
             r_0.clone(),
@@ -616,8 +617,10 @@ impl ZkVerifier {
         );
         println!("Merkle_root: {:?}", merkle_root_l);
 
-        Q_EVAL_REAL = vec![FieldElement::zero(); 1 << self.aritmetic_circuit.circuit[0].bit_length];
+        self.ctx.q_eval_real =
+            vec![FieldElement::zero(); 1 << self.aritmetic_circuit.circuit[0].bit_length];
         Self::dfs_for_public_eval(
+            self,
             0,
             FieldElement::real_one(),
             r_0.clone(),
@@ -626,7 +629,7 @@ impl ZkVerifier {
             0,
         );
         //let merkle_root_h = (*self.prover.unwrap()).poly_prover.commit_public_array(
-        //   Q_EVAL_REAL,
+        //   self.ctx.q_eval_real,
         //   self.aritmetic_circuit.circuit[0].bit_length,
         //    alpha_beta_sum,
         //     all_sum,
@@ -642,10 +645,10 @@ impl ZkVerifier {
         self.poly_verifier.pc_prover = Some(ptr_p_c_prover);
 
         let _public_array = Self::public_array_prepare(
+            self,
             r_0.clone(),
             one_minus_r_0,
             self.aritmetic_circuit.circuit[0].bit_length,
-            Q_EVAL_REAL.clone(),
         );
         //prime_field::field_element *public_array = public_array_prepare_generic(q_eval_real, C.circuit[0].bit_length);
 
@@ -706,17 +709,18 @@ impl ZkVerifier {
         Ok(())
     }
 
-    pub unsafe fn public_array_prepare(
+    pub fn public_array_prepare(
+        &mut self,
         r: Vec<FieldElement>,
         one_minus_r: Vec<FieldElement>,
         log_length: usize,
-        q_eval_real: Vec<FieldElement>,
     ) -> Vec<FieldElement> {
-        q_eval_verifier = vec![FieldElement::zero(); 1 << (log_length - LOG_SLICE_NUMBER)];
-        q_ratio = vec![FieldElement::zero(); 1 << LOG_SLICE_NUMBER];
+        self.ctx.q_eval_verifier = vec![FieldElement::zero(); 1 << (log_length - LOG_SLICE_NUMBER)];
+        self.ctx.q_ratio = vec![FieldElement::zero(); 1 << LOG_SLICE_NUMBER];
         //Todo: Debug aritmetic pointes
         let mov_pos = log_length - LOG_SLICE_NUMBER;
         Self::dfs_ratio(
+            self,
             0,
             FieldElement::real_one(),
             r.clone(),
@@ -725,6 +729,7 @@ impl ZkVerifier {
             0,
         );
         Self::dfs_coef(
+            self,
             0,
             FieldElement::real_one(),
             r.clone(),
@@ -739,14 +744,18 @@ impl ZkVerifier {
         let coef_slice_size = 1 << (log_length - LOG_SLICE_NUMBER);
         for i in 0..(1 << LOG_SLICE_NUMBER) {
             for j in 0..coef_slice_size {
-                q_coef_arr[i * coef_slice_size + j] = q_coef_verifier[j] * q_ratio[i];
-                assert!(q_eval_real[i * coef_slice_size + j] == q_ratio[i] * q_eval_verifier[j]);
+                q_coef_arr[i * coef_slice_size + j] = q_coef_verifier[j] * self.ctx.q_ratio[i];
+                assert!(
+                    self.ctx.q_eval_real[i * coef_slice_size + j]
+                        == self.ctx.q_ratio[i] * self.ctx.q_eval_verifier[j]
+                );
             }
         }
         q_coef_arr
     }
 
-    pub unsafe fn dfs_coef(
+    pub fn dfs_coef(
+        &mut self,
         dep: usize,
         val: FieldElement,
         r: Vec<FieldElement>,
@@ -755,9 +764,10 @@ impl ZkVerifier {
         r_len: usize,
     ) {
         if dep == r_len {
-            q_eval_verifier[pos] = val;
+            self.ctx.q_eval_verifier[pos] = val;
         } else {
             Self::dfs_coef(
+                self,
                 dep + 1,
                 val * one_minus_r[r_len - 1 - dep],
                 r.clone(),
@@ -766,6 +776,7 @@ impl ZkVerifier {
                 r_len,
             );
             Self::dfs_coef(
+                self,
                 dep + 1,
                 val * r[r_len - 1 - dep],
                 r,
@@ -777,7 +788,8 @@ impl ZkVerifier {
     }
 
     //Todo: Debug aritmetic pointes
-    pub unsafe fn dfs_ratio(
+    pub fn dfs_ratio(
+        &mut self,
         dep: usize,
         val: FieldElement,
         r: Vec<FieldElement>,
@@ -786,9 +798,10 @@ impl ZkVerifier {
         pos: usize,
     ) {
         if dep == LOG_SLICE_NUMBER {
-            q_ratio[pos] = val;
+            self.ctx.q_ratio[pos] = val;
         } else {
             Self::dfs_ratio(
+                self,
                 dep + 1,
                 val * one_minus_r[mov_pos + LOG_SLICE_NUMBER - 1 - dep],
                 r.clone(),
@@ -797,6 +810,7 @@ impl ZkVerifier {
                 pos << 1,
             );
             Self::dfs_ratio(
+                self,
                 dep + 1,
                 val * r[mov_pos + LOG_SLICE_NUMBER - 1 - dep],
                 r,
@@ -806,7 +820,8 @@ impl ZkVerifier {
             );
         }
     }
-    pub unsafe fn dfs_for_public_eval(
+    pub fn dfs_for_public_eval(
+        &mut self,
         dep: usize,
         val: FieldElement,
         r_0: Vec<FieldElement>,
@@ -815,9 +830,10 @@ impl ZkVerifier {
         pos: usize,
     ) {
         if dep == r_0_len {
-            Q_EVAL_REAL[pos] = val;
+            self.ctx.q_eval_real[pos] = val;
         } else {
             Self::dfs_for_public_eval(
+                self,
                 dep + 1,
                 val * one_minus_r_0[r_0_len - 1 - dep],
                 r_0.clone(),
@@ -826,6 +842,7 @@ impl ZkVerifier {
                 pos << 1,
             );
             Self::dfs_for_public_eval(
+                self,
                 dep + 1,
                 val * r_0[r_0_len - 1 - dep],
                 r_0,

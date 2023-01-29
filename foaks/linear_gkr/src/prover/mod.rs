@@ -31,7 +31,7 @@ pub struct ProverContext {
 #[derive(Default, Debug)]
 pub struct ZkProver {
     pub aritmetic_circuit: Option<*mut LayeredCircuit>, //	c++ code: layered_circuit *C;
-
+    //    pub aritmetic_circuit: Option<*mut LayeredCircuit>, //	c++ code: layered_circuit *C;
     pub poly_prover: PolyCommitProver,
     /** @name Basic
     	* Basic information and variables about the arithmetic circuit*/
@@ -137,26 +137,24 @@ impl ZkProver {
 
     pub unsafe fn evaluate(&mut self) -> Vec<FieldElement> {
         //let mut depth: usize;
-        //unsafe {
         let t0 = time::Instant::now();
 
+        // Below code was commented in the original repo, here we need it
         self.circuit_value.push(vec![
             FieldElement::zero();
             1 << (*self.aritmetic_circuit.unwrap()).circuit[0]
                 .bit_length
         ]);
-        let halt = 1 << (*self.aritmetic_circuit.unwrap()).circuit[0].bit_length;
-        for i in 0..halt {
+        for i in 0..(1 << (*self.aritmetic_circuit.unwrap()).circuit[0].bit_length) {
             let g = i;
             //todo: Could delete below variable, never used
-            let _u = (*self.aritmetic_circuit.unwrap()).circuit[0].gates[g].u;
+            //let u = (*self.aritmetic_circuit.unwrap()).circuit[0].gates[g].u;
             let ty = (*self.aritmetic_circuit.unwrap()).circuit[0].gates[g].ty;
             assert!(ty == 3 || ty == 2);
         }
         assert!((*self.aritmetic_circuit.unwrap()).total_depth < 1000000);
-        let depth = (*self.aritmetic_circuit.unwrap()).total_depth;
 
-        for i in 1..depth {
+        for i in 1..((*self.aritmetic_circuit.unwrap()).total_depth) {
             self.circuit_value.push(vec![
                 FieldElement::zero();
                 1 << (*self.aritmetic_circuit.unwrap()).circuit[i]
@@ -183,8 +181,8 @@ impl ZkProver {
                 } else if ty == 2 {
                     self.circuit_value[i][g] = FieldElement::from_real(0);
                 } else if ty == 3 {
-                    // It is suppose to be input gate, it just read the 'u' input, what about 'v' input
-                    self.circuit_value[i][g] = FieldElement::from_real(u.try_into().unwrap());
+                    // It suppose to be input gate, it just read the 'u' input, what about 'v' input
+                    self.circuit_value[i][g] = FieldElement::from_real(u);
                 } else if ty == 4 {
                     self.circuit_value[i][g] = self.circuit_value[i - 1][u];
                 } else if ty == 5 {
@@ -247,16 +245,12 @@ impl ZkProver {
         }
 
         let time_span = t0.elapsed();
-
         println!(
             "total evaluation time: {:?} seconds",
             time_span.as_secs_f64()
         );
-
-        let _depth = (*self.aritmetic_circuit.unwrap()).total_depth;
-        //}
-        self.circuit_value.pop().unwrap()
-        //prletln!("total evaluation time: ");
+        //self.circuit_value.pop().unwrap()
+        self.circuit_value[(*self.aritmetic_circuit.unwrap()).total_depth - 1].clone()
     }
 
     pub fn get_witness(&mut self, inputs: Vec<FieldElement>, _n: u32) {
