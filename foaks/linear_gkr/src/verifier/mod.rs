@@ -51,7 +51,7 @@ pub struct VerifierContext {
 #[derive(Default, Debug)]
 
 pub struct ZkVerifier {
-    pub prover: Option<*mut ZkProver>, // The prover
+    //pub prover: ZkProver // The prover
     //pub prover: zk_prover, // ZY suggestion
     pub proof_size: usize,
     pub v_time: f64,
@@ -88,12 +88,8 @@ impl ZkVerifier {
     pub fn new() -> Self {
         Default::default()
     }
-
-    pub fn get_prover(&mut self, prover__: *mut ZkProver) {
-        self.prover = Some(prover__);
-    }
     //ToDo!: Improve unwrap() handling, use "?" operator. Improve println!(), could use eprintln()
-    pub fn read_circuit(&mut self, path: &String, meta_path: &String) {
+    pub fn read_circuit(&mut self, path: &String, meta_path: &String) -> isize {
         let circuit_file = File::open(path).unwrap();
         let circuit_reader = BufReader::new(circuit_file);
 
@@ -309,10 +305,9 @@ impl ZkVerifier {
                 self.aritmetic_circuit.circuit[i].is_parallel = false;
             }
         }
-        unsafe {
-            (*self.prover.unwrap()).init_array(max_bit_length.try_into().unwrap());
-        }
+
         Self::init_array(self, max_bit_length);
+        max_bit_length
     }
 
     pub fn init_array(&mut self, max_bit_length: isize) {
@@ -340,7 +335,11 @@ impl ZkVerifier {
 
     //Decided to implemente the verify() function from orion repo
 
-    pub unsafe fn verify(&mut self, output_path: &String) -> bool {
+    pub fn verify(&mut self, output_path: &String, bit_length: isize) -> bool {
+        // initialize the prover
+        let mut zk_prover = ZkProver::new();
+        zk_prover.init_array(bit_length.try_into().unwrap(), &self.aritmetic_circuit);
+
         self.proof_size = 0;
         //there is a way to compress binlinear pairing element
         let mut verification_time: f64 = 0.0;
@@ -353,7 +352,7 @@ impl ZkVerifier {
         //Below function is not implemented neither in virgo repo nor orion repo
         //self.prover.unwrap().proof_init();
 
-        let result = (*self.prover.unwrap()).evaluate();
+        let result = zk_prover.evaluate();
         let mut alpha = FieldElement::real_one();
         let mut beta = FieldElement::zero();
         //	random_oracle oracle; // Orion just declare the variable but dont use it later
@@ -371,7 +370,7 @@ impl ZkVerifier {
         let t_a = time::Instant::now();
 
         println!("Calc V_output(r)");
-        let mut a_0 = (*self.prover.unwrap()).v_res(
+        let mut a_0 = zk_prover.v_res(
             one_minus_r_0.clone(),
             r_0.clone(),
             result,
@@ -388,7 +387,7 @@ impl ZkVerifier {
         for i in (1..=(self.aritmetic_circuit.total_depth - 1)).rev() {
             let _rho = FieldElement::new_random();
 
-            (*self.prover.unwrap()).sumcheck_init(
+            zk_prover.sumcheck_init(
                 i,
                 self.aritmetic_circuit.circuit[i].bit_length,
                 self.aritmetic_circuit.circuit[i - 1].bit_length,
@@ -401,7 +400,7 @@ impl ZkVerifier {
                 &one_minus_r_1,
             );
 
-            (*self.prover.unwrap()).sumcheck_phase1_init();
+            zk_prover.sumcheck_phase1_init();
 
             let mut previous_random = FieldElement::from_real(0);
             //next level random
@@ -435,7 +434,7 @@ impl ZkVerifier {
             }
 
             for j in 0..(self.aritmetic_circuit.circuit[i - 1].bit_length) {
-                let poly = (*self.prover.unwrap()).sumcheck_phase1_update(previous_random, j);
+                let poly = zk_prover.sumcheck_phase1_update(previous_random, j);
 
                 self.proof_size += mem::size_of::<QuadraticPoly>();
                 previous_random = r_u[j];
@@ -459,17 +458,13 @@ impl ZkVerifier {
             }
             //	std::cerr << "Bound v start" << std::endl;
 
-            (*self.prover.unwrap()).sumcheck_phase2_init(
-                previous_random,
-                r_u.clone(),
-                one_minus_r_u.clone(),
-            );
+            zk_prover.sumcheck_phase2_init(previous_random, r_u.clone(), one_minus_r_u.clone());
             let mut previous_random = FieldElement::zero();
             for j in 0..self.aritmetic_circuit.circuit[i - 1].bit_length {
                 if i == 1 {
                     r_v[j] = FieldElement::zero();
                 }
-                let poly = (*self.prover.unwrap()).sumcheck_phase2_update(previous_random, j);
+                let poly = zk_prover.sumcheck_phase2_update(previous_random, j);
                 self.proof_size += mem::size_of::<QuadraticPoly>();
                 //poly.c = poly.c; ???
 
@@ -477,7 +472,7 @@ impl ZkVerifier {
 
                 if poly.eval(&FieldElement::zero())
                     + poly.eval(&FieldElement::real_one())
-                    + direct_relay_value * (*self.prover.unwrap()).v_u
+                    + direct_relay_value * zk_prover.v_u
                     != alpha_beta_sum
                 {
                     //todo: Improve error handling
@@ -492,13 +487,12 @@ impl ZkVerifier {
                     //i, j
                     //);
                 }
-                alpha_beta_sum =
-                    poly.eval(&r_v[j]) + direct_relay_value * (*self.prover.unwrap()).v_u;
+                alpha_beta_sum = poly.eval(&r_v[j]) + direct_relay_value * zk_prover.v_u;
             }
             //Add one more round for maskR
             //quadratic_poly poly p->sumcheck_finalroundR(previous_random, C.current[i - 1].bit_length);
 
-            let final_claims = (*self.prover.unwrap()).sumcheck_finalize(previous_random);
+            let final_claims = zk_prover.sumcheck_finalize(previous_random);
 
             let v_u = final_claims.0;
             let v_v = final_claims.1;
@@ -597,7 +591,7 @@ impl ZkVerifier {
             one_minus_r_1 = one_minus_r_v;
         }
 
-        println!("GKR Prove Time: {}", (*self.prover.unwrap()).total_time);
+        println!("GKR Prove Time: {}", zk_prover.total_time);
         let _all_sum = vec![FieldElement::zero(); SLICE_NUMBER];
         println!(
             "GKR witness size: {}",
@@ -605,14 +599,14 @@ impl ZkVerifier {
         );
 
         //Todo!: Implement this function in "poly_commitment" module
-        //let merkle_root_l = (*self.prover.unwrap()).poly_prover.commit_private_array(
-        //  (*self.prover.unwrap()).circuit_value[0],
+        //let merkle_root_l = zk_p.poly_prover.commit_private_array(
+        //  zk_p.circuit_value[0],
         // self.aritmetic_circuit.circuit[0].bit_length,
         //);
         // Commented out for now to remove panic
         let merkle_root_l = commit_private_array(
-            (*self.prover.unwrap()).poly_prover.clone(),
-            &(*self.prover.unwrap()).circuit_value[0],
+            zk_prover.poly_prover.clone(),
+            &zk_prover.circuit_value[0],
             self.aritmetic_circuit.circuit[0].bit_length,
         );
         println!("Merkle_root: {:?}", merkle_root_l);
@@ -628,7 +622,7 @@ impl ZkVerifier {
             self.aritmetic_circuit.circuit[0].bit_length,
             0,
         );
-        //let merkle_root_h = (*self.prover.unwrap()).poly_prover.commit_public_array(
+        //let merkle_root_h = zk_p.poly_prover.commit_public_array(
         //   self.ctx.q_eval_real,
         //   self.aritmetic_circuit.circuit[0].bit_length,
         //    alpha_beta_sum,
@@ -640,7 +634,7 @@ impl ZkVerifier {
         self.one_minus_vpd_randomness = one_minus_r_0.clone();
 
         type PCProver = PolyCommitProver;
-        let ptr_p_c_prover = &mut (*self.prover.unwrap()).poly_prover as *mut PCProver;
+        let ptr_p_c_prover = &mut zk_prover.poly_prover as *mut PCProver;
 
         self.poly_verifier.pc_prover = Some(ptr_p_c_prover);
 
@@ -660,17 +654,17 @@ impl ZkVerifier {
         //public_array,
         //verification_time,
         //self.proof_size,
-        //(*self.prover.unwrap()).total_time,
+        //zk_p.total_time,
         //merkle_root_l,
         //merkle_root_h,
         //);
-        (*self.prover.unwrap()).total_time += (*self.prover.unwrap()).poly_prover.total_time_pc_p;
+        zk_prover.total_time += zk_prover.poly_prover.total_time_pc_p;
         if !(input_0_verify) {
             println!("Verification fail, input vpd");
             return false;
         } else {
             println!("Verification pass");
-            println!("Prove Time: {}", (*self.prover.unwrap()).total_time);
+            println!("Prove Time: {}", zk_prover.total_time);
             println!("Verification rdl time: {}", verification_rdl_time);
             //verification rdl time is the non-parallel part of the circuit. In all of our experiments and most applications, it can be calculated in O(log n) or O(log^2 n) time. We didn't implement the fast method due to the deadline.
             println!(
@@ -682,7 +676,7 @@ impl ZkVerifier {
 
             let _res = Self::write_file(
                 output_path,
-                (*self.prover.unwrap()).total_time,
+                zk_prover.total_time,
                 verification_time,
                 predicates_calc_time,
                 verification_rdl_time,

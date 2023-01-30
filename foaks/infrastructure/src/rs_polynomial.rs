@@ -62,7 +62,7 @@ impl ScratchPad {
     }
 }
 
-struct UnsafeSendSyncRawPtr<T>(*mut T);
+pub struct UnsafeSendSyncRawPtr<T>(pub *mut T);
 unsafe impl<T> Sync for UnsafeSendSyncRawPtr<T> {}
 unsafe impl<T> Send for UnsafeSendSyncRawPtr<T> {}
 
