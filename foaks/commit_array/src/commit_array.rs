@@ -2,7 +2,7 @@ use std::time;
 
 use poly_commitment::poly_commitment::PolyCommitProver;
 use prime_field::FieldElement;
-use vpd::prover;
+use vpd::{fri, prover};
 
 use infrastructure::constants::*;
 use infrastructure::my_hash::HashDigest;
@@ -95,4 +95,25 @@ pub fn commit_private_array(
     return ret;
 }
 
-pub fn commit_public_array() {}
+pub fn commit_public_array(
+    mut poly_commit_prover: PolyCommitProver,
+    public_array: Vec<FieldElement>,
+    r_0_len: usize,
+    target_sum: FieldElement,
+    all_sum: Vec<FieldElement>,
+) {
+    // fri::virtual_oracle_witness = new prime_field::field_element[slice_size * slice_count];
+    // fri::virtual_oracle_witness_mapping = new int[slice_size * slice_count];
+    // q_eval_len = l_eval_len;
+    // q_eval = new prime_field::field_element[q_eval_len];
+
+    let now = time::Instant::now();
+    let t0 = now.elapsed();
+    println!("{:?}", poly_commit_prover.ctx.pre_prepare_executed);
+
+    assert!(poly_commit_prover.ctx.pre_prepare_executed);
+
+    // let ret = fri::request_init_commit(_, slice_size, slice_count, l_eval, bit_len, 1);
+
+    // return ret;
+}

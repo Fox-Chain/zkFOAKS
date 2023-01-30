@@ -1,5 +1,6 @@
 //#![feature(core_intrinsics)]
 use commit_array::commit_array::commit_private_array;
+use commit_array::commit_array::commit_public_array;
 use infrastructure::constants::LOG_SLICE_NUMBER;
 use infrastructure::constants::SLICE_NUMBER;
 use infrastructure::my_hash::HashDigest;
@@ -596,24 +597,18 @@ impl ZkVerifier {
         }
 
         println!("GKR Prove Time: {}", (*self.prover.unwrap()).total_time);
-        let _all_sum = vec![FieldElement::zero(); SLICE_NUMBER];
+        let all_sum = vec![FieldElement::zero(); SLICE_NUMBER];
         println!(
             "GKR witness size: {}",
             1 << self.aritmetic_circuit.circuit[0].bit_length
         );
 
-        //Todo!: Implement this function in "poly_commitment" module
-        //let merkle_root_l = (*self.prover.unwrap()).poly_prover.commit_private_array(
-        //  (*self.prover.unwrap()).circuit_value[0],
-        // self.aritmetic_circuit.circuit[0].bit_length,
-        //);
-        // Commented out for now to remove panic
         let merkle_root_l = commit_private_array(
             (*self.prover.unwrap()).poly_prover.clone(),
             &(*self.prover.unwrap()).circuit_value[0],
             self.aritmetic_circuit.circuit[0].bit_length,
         );
-        println!("Merkle_root: {:?}", merkle_root_l);
+        // println!("Merkle_root: {:?}", merkle_root_l);
 
         Q_EVAL_REAL = vec![FieldElement::zero(); 1 << self.aritmetic_circuit.circuit[0].bit_length];
         Self::dfs_for_public_eval(
@@ -624,12 +619,21 @@ impl ZkVerifier {
             self.aritmetic_circuit.circuit[0].bit_length,
             0,
         );
-        //let merkle_root_h = (*self.prover.unwrap()).poly_prover.commit_public_array(
-        //   Q_EVAL_REAL,
-        //   self.aritmetic_circuit.circuit[0].bit_length,
-        //    alpha_beta_sum,
+
+        // let merkle_root_h = (*self.prover.unwrap()).poly_prover.commit_public_array(
+        //     Q_EVAL_REAL,
+        //     self.aritmetic_circuit.circuit[0].bit_length,
+        //     alpha_beta_sum,
         //     all_sum,
-        //);
+        // );
+
+        let merkle_root_h = commit_public_array(
+            (*self.prover.unwrap()).poly_prover.clone(),
+            Q_EVAL_REAL.clone(),
+            self.aritmetic_circuit.circuit[0].bit_length,
+            alpha_beta_sum,
+            all_sum,
+        );
 
         self.proof_size += 2 * mem::size_of::<HashDigest>();
         self.vpd_randomness = r_0.clone();
