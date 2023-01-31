@@ -608,7 +608,9 @@ impl ZkVerifier {
             &(*self.prover.unwrap()).circuit_value[0],
             self.aritmetic_circuit.circuit[0].bit_length,
         );
-        // println!("Merkle_root: {:?}", merkle_root_l);
+
+        // Add this line to remove warning
+        println!("Merkle_root: {:?}", merkle_root_l);
 
         Q_EVAL_REAL = vec![FieldElement::zero(); 1 << self.aritmetic_circuit.circuit[0].bit_length];
         Self::dfs_for_public_eval(
@@ -634,6 +636,7 @@ impl ZkVerifier {
             alpha_beta_sum,
             all_sum,
         );
+        println!("{:?}", merkle_root_h);
 
         self.proof_size += 2 * mem::size_of::<HashDigest>();
         self.vpd_randomness = r_0.clone();

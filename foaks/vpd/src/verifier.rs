@@ -185,9 +185,8 @@ impl FRIContext {
     pub fn commit_phrase_step(&mut self, r: FieldElement) -> HashDigest {
         let nxt_witness_size = (1 << self.log_current_witness_size_per_slice) / 2;
         if self.cpd.rs_codeword[self.current_step_no].is_empty() {
-            let slide_number: i32 = SLICE_NUMBER as i32;
             self.cpd.rs_codeword[self.current_step_no] =
-                vec![FieldElement::default(); nxt_witness_size * (1 << slide_number)];
+                vec![FieldElement::default(); nxt_witness_size * (1 << SLICE_NUMBER)];
         }
 
         let mut previous_witness: Vec<FieldElement> = vec![];
@@ -231,12 +230,10 @@ impl FRIContext {
         }
 
         // we assume poly_commit::slice_count is (1 << SLICE_NUMBER) here
-        let slide_number: i32 = SLICE_NUMBER as i32;
-
         let mut tmp: Vec<FieldElement> =
-            vec![FieldElement::new_random(); nxt_witness_size * (1 << slide_number)];
+            vec![FieldElement::new_random(); nxt_witness_size * (1 << SLICE_NUMBER)];
         self.cpd.rs_codeword_mapping[self.current_step_no] =
-            vec![0; nxt_witness_size * (1 << slide_number)];
+            vec![0; nxt_witness_size * (1 << SLICE_NUMBER)];
 
         for i in 0..nxt_witness_size / 2 {
             for j in 0..SLICE_NUMBER {
@@ -264,7 +261,7 @@ impl FRIContext {
         self.cpd.rs_codeword[self.current_step_no] = tmp;
 
         self.visited[self.current_step_no] =
-            vec![false; nxt_witness_size * (1 << slide_number) * 4];
+            vec![false; nxt_witness_size * (1 << SLICE_NUMBER) * 4];
 
         let mut htmp: HashDigest = HashDigest::default();
         let mut hash_val: Vec<HashDigest> = vec![HashDigest::default(); nxt_witness_size / 2];

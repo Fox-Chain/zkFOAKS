@@ -86,7 +86,7 @@ pub fn commit_private_array(
     let elapsed_time = now.elapsed();
     println!("FFT Prepare time: {} ms", elapsed_time.as_millis());
 
-    let ret = prover::vpd_prover_init(l_eval, log_array_length, slice_size, slice_count);
+    let ret = prover::vpd_prover_init();
 
     let t1 = now.elapsed();
     let time_span = t1 - t0;
@@ -102,18 +102,25 @@ pub fn commit_public_array(
     target_sum: FieldElement,
     all_sum: Vec<FieldElement>,
 ) {
+    let now = time::Instant::now();
+    // let t0 = now.elapsed();
+
+    // TODO: this assert should be true
+    // assert!(poly_commit_prover.ctx.pre_prepare_executed);
+
+    // TODO: fri::virtual_oracle_witness
     // fri::virtual_oracle_witness = new prime_field::field_element[slice_size * slice_count];
     // fri::virtual_oracle_witness_mapping = new int[slice_size * slice_count];
     // q_eval_len = l_eval_len;
     // q_eval = new prime_field::field_element[q_eval_len];
 
-    let now = time::Instant::now();
-    let t0 = now.elapsed();
-    println!("{:?}", poly_commit_prover.ctx.pre_prepare_executed);
+    // skip some code
+    // let t0 = now.elapsed();
+    // let ret = fri::request_init_commit(r_0_len, 1);
+    // let t1 = now.elapsed();
+    // time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t1 - t0);
+    // total_time += time_span.count();
 
-    assert!(poly_commit_prover.ctx.pre_prepare_executed);
-
-    // let ret = fri::request_init_commit(_, slice_size, slice_count, l_eval, bit_len, 1);
-
+    // printf("PostGKR prepare time 1 %lf\n", time_span.count());
     // return ret;
 }
