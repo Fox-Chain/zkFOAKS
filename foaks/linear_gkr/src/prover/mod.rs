@@ -328,7 +328,7 @@ impl ZkProver {
         //let intermediates0 = unsafe { &mut *(*ptr_raw).cast::<Vec<FieldElement>>() };
         //let intermediates1 = unsafe { &mut *(*ptr_raw).cast::<Vec<FieldElement>>() };
 
-        //(0..(1 << self.length_g)).into_par_iter().for_each(|i| {
+        //intermediates0.par_iter_mut().for_each(|element| {
         for i in 0..(1 << self.length_g) {
             let u = self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].u;
             let v = self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].v;
@@ -340,6 +340,7 @@ impl ZkProver {
                         * self.beta_g_r0_shalf[i >> first_half]
                         + self.beta_g_r1_fhalf[i & mask_fhalf]
                             * self.beta_g_r1_shalf[i >> first_half];
+                    //intermediates0[i] = self.circuit_value[self.sumcheck_layer_id - 1][v] * tmp;
                     intermediates0[i] = self.circuit_value[self.sumcheck_layer_id - 1][v] * tmp;
                     intermediates1[i] = tmp;
                 }
@@ -445,7 +446,7 @@ impl ZkProver {
                         self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty
                     )
                 }
-            };
+            }
         }
 
         for i in 0..1 << self.length_g {
@@ -650,44 +651,44 @@ impl ZkProver {
 
         //todo
         //#pragma omp parallel for
-        {
-            for i in 0..(self.total_uv >> 1) {
-                //prime_field::field_element zero_value, one_value; //never used
-                let g_zero = i << 1;
-                let g_one = i << 1 | 1;
-                if current_bit == 0 {
-                    self.ctx.v_mult_add_new[i].b = self.v_mult_add0[g_zero].b;
-                    self.ctx.v_mult_add_new[i].a =
-                        self.v_mult_add0[g_one].b - self.ctx.v_mult_add_new[i].b;
 
-                    self.ctx.add_v_array_new[i].b = self.add_v_array[g_zero].b;
-                    self.ctx.add_v_array_new[i].a =
-                        self.add_v_array[g_one].b - self.ctx.add_v_array_new[i].b;
+        for i in 0..(self.total_uv >> 1) {
+            //prime_field::field_element zero_value, one_value; //never used
+            let g_zero = i << 1;
+            let g_one = i << 1 | 1;
+            if current_bit == 0 {
+                self.ctx.v_mult_add_new[i].b = self.v_mult_add0[g_zero].b;
+                self.ctx.v_mult_add_new[i].a =
+                    self.v_mult_add0[g_one].b - self.ctx.v_mult_add_new[i].b;
 
-                    self.ctx.add_mult_sum_new[i].b = self.add_mult_sum[g_zero].b;
-                    self.ctx.add_mult_sum_new[i].a =
-                        self.add_mult_sum[g_one].b - self.ctx.add_mult_sum_new[i].b;
-                } else {
-                    self.ctx.v_mult_add_new[i].b =
-                        self.v_mult_add0[g_zero].a * previous_random + self.v_mult_add0[g_zero].b;
-                    self.ctx.v_mult_add_new[i].a = self.v_mult_add0[g_one].a * previous_random
-                        + self.v_mult_add0[g_one].b
-                        - self.ctx.v_mult_add_new[i].b;
+                self.ctx.add_v_array_new[i].b = self.add_v_array[g_zero].b;
+                self.ctx.add_v_array_new[i].a =
+                    self.add_v_array[g_one].b - self.ctx.add_v_array_new[i].b;
 
-                    self.ctx.add_v_array_new[i].b =
-                        self.add_v_array[g_zero].a * previous_random + self.add_v_array[g_zero].b;
-                    self.ctx.add_v_array_new[i].a = self.add_v_array[g_one].a * previous_random
-                        + self.add_v_array[g_one].b
-                        - self.ctx.add_v_array_new[i].b;
+                self.ctx.add_mult_sum_new[i].b = self.add_mult_sum[g_zero].b;
+                self.ctx.add_mult_sum_new[i].a =
+                    self.add_mult_sum[g_one].b - self.ctx.add_mult_sum_new[i].b;
+            } else {
+                self.ctx.v_mult_add_new[i].b =
+                    self.v_mult_add0[g_zero].a * previous_random + self.v_mult_add0[g_zero].b;
+                self.ctx.v_mult_add_new[i].a = self.v_mult_add0[g_one].a * previous_random
+                    + self.v_mult_add0[g_one].b
+                    - self.ctx.v_mult_add_new[i].b;
 
-                    self.ctx.add_mult_sum_new[i].b =
-                        self.add_mult_sum[g_zero].a * previous_random + self.add_mult_sum[g_zero].b;
-                    self.ctx.add_mult_sum_new[i].a = self.add_mult_sum[g_one].a * previous_random
-                        + self.add_mult_sum[g_one].b
-                        - self.ctx.add_mult_sum_new[i].b;
-                }
+                self.ctx.add_v_array_new[i].b =
+                    self.add_v_array[g_zero].a * previous_random + self.add_v_array[g_zero].b;
+                self.ctx.add_v_array_new[i].a = self.add_v_array[g_one].a * previous_random
+                    + self.add_v_array[g_one].b
+                    - self.ctx.add_v_array_new[i].b;
+
+                self.ctx.add_mult_sum_new[i].b =
+                    self.add_mult_sum[g_zero].a * previous_random + self.add_mult_sum[g_zero].b;
+                self.ctx.add_mult_sum_new[i].a = self.add_mult_sum[g_one].a * previous_random
+                    + self.add_mult_sum[g_one].b
+                    - self.ctx.add_mult_sum_new[i].b;
             }
         }
+
         swap(&mut self.v_mult_add0, &mut self.ctx.v_mult_add_new);
         swap(&mut self.add_v_array, &mut self.ctx.add_v_array_new);
         swap(&mut self.add_mult_sum, &mut self.ctx.add_mult_sum_new);
