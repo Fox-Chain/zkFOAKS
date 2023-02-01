@@ -1,5 +1,6 @@
 //#![feature(core_intrinsics)]
 use commit_array::commit_array::commit_private_array;
+use commit_array::commit_array::commit_public_array;
 use infrastructure::constants::LOG_SLICE_NUMBER;
 use infrastructure::constants::SLICE_NUMBER;
 use infrastructure::my_hash::HashDigest;
@@ -942,24 +943,24 @@ impl ZkVerifier {
             one_minus_r_1 = one_minus_r_v;
         }
 
-        println!("GKR Prove Time: {}", zk_prover.total_time);
-        let _all_sum = vec![FieldElement::zero(); SLICE_NUMBER];
+        println!("GKR Prove Time: {}", (*self.prover.unwrap()).total_time);
+        let all_sum = vec![FieldElement::zero(); SLICE_NUMBER];
         println!(
             "GKR witness size: {}",
             1 << self.aritmetic_circuit.circuit[0].bit_length
         );
+        // println!("before:{:?}", (*self.prover.unwrap()).poly_prover);
 
-        //Todo!: Implement this function in "poly_commitment" module
-        //let merkle_root_l = zk_p.poly_prover.commit_private_array(
-        //  zk_p.circuit_value[0],
-        // self.aritmetic_circuit.circuit[0].bit_length,
-        //);
-        // Commented out for now to remove panic
+        // Should pass in the pointer to poly prover instead of a clone, because we need to change the data in the poly_prover database
         let merkle_root_l = commit_private_array(
             zk_prover.poly_prover.clone(),
             &zk_prover.circuit_value[0],
             self.aritmetic_circuit.circuit[0].bit_length,
         );
+        // Data don't change after the function
+        // println!("after: {:?}", (*self.prover.unwrap()).poly_prover);
+
+        // Add this line to remove warning
         println!("Merkle_root: {:?}", merkle_root_l);
 
         self.ctx.q_eval_real =
@@ -973,12 +974,16 @@ impl ZkVerifier {
             self.aritmetic_circuit.circuit[0].bit_length,
             0,
         );
-        //let merkle_root_h = zk_p.poly_prover.commit_public_array(
-        //   self.ctx.q_eval_real,
-        //   self.aritmetic_circuit.circuit[0].bit_length,
-        //    alpha_beta_sum,
-        //     all_sum,
-        //);
+
+        // Should pass in the pointer to poly prover instead of a clone
+        let merkle_root_h = commit_public_array(
+            (*self.prover.unwrap()).poly_prover.clone(),
+            Q_EVAL_REAL.clone(),
+            self.aritmetic_circuit.circuit[0].bit_length,
+            alpha_beta_sum,
+            all_sum,
+        );
+        println!("{:?}", merkle_root_h);
 
         self.proof_size += 2 * mem::size_of::<HashDigest>();
         self.vpd_randomness = r_0.clone();

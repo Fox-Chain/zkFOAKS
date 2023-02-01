@@ -92,17 +92,13 @@ pub fn request_init_commit(
         r_extended,
         leaf_hash,
     }: &mut FRIContext,
-    // PolyCommitContext {
-    //     slice_size,
-    //     slice_count,
-    //     l_eval,
-    //     h_eval_arr,
-    //     ..
-    // }: PolyCommitContext,
-    slice_size: usize,
-    slice_count: usize,
-    l_eval: &mut Vec<FieldElement>,
-    // h_eval_arr: usize,
+    PolyCommitContext {
+        slice_size,
+        slice_count,
+        l_eval,
+        h_eval_arr,
+        ..
+    }: PolyCommitContext,
     bit_len: usize,
     oracle_indicator: usize,
 ) -> HashDigest {
@@ -214,8 +210,16 @@ pub fn request_init_commit(
         for _j in 0..(1 << log_leaf_size) {}
     }
 
+    unsafe {
+        merkle_tree::create_tree(
+            leaf_hash[oracle_indicator].clone(),
+            1 << (*log_current_witness_size_per_slice - 1),
+            &mut witness_merkle[oracle_indicator],
+            Some(mem::size_of::<HashDigest>()),
+            Some(true),
+        );
+    };
     // TODO
-    // merkle_tree::merkle_tree_prover::create_tree(leaf_hash[oracle_indicator], 1 << (log_current_witness_size_per_slice - 1), witness_merkle[oracle_indicator], sizeof(__hhash_digest), true);
     // witness_merkle_size[oracle_indicator] = 1 << (log_current_witness_size_per_slice - 1);
     // visited_init[oracle_indicator] = new bool[1 << (log_current_witness_size_per_slice)];
     // visited_witness[oracle_indicator] = new bool[1 << (bit_len + rs_code_rate)];
@@ -226,17 +230,6 @@ pub fn request_init_commit(
     // double delta = time_span.count();
     // fri_timer = delta;
     //printf("Init %lf\n", delta);
-
-    unsafe {
-        merkle_tree::create_tree(
-            leaf_hash[oracle_indicator].clone(),
-            1 << (*log_current_witness_size_per_slice - 1),
-            &mut witness_merkle[oracle_indicator],
-            Some(mem::size_of::<HashDigest>()),
-            Some(true),
-        );
-    };
-
     // println!("{:?}", witness_merkle[oracle_indicator]);
     return witness_merkle[oracle_indicator][1];
 }

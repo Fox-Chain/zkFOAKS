@@ -1,14 +1,15 @@
 use std::time;
 
-use poly_commitment::poly_commitment::PolyCommitProver;
+use poly_commitment::poly_commitment::{PolyCommitContext, PolyCommitProver};
 use prime_field::FieldElement;
-use vpd::prover;
+use vpd::{fri, prover};
 
 use infrastructure::constants::*;
 use infrastructure::my_hash::HashDigest;
 use infrastructure::rs_polynomial::{self, fast_fourier_transform, inverse_fast_fourier_transform};
 use infrastructure::utility;
 
+// This work for now but the poly_commit_prover should be a pointer instead of a clone, need to figure out how to change poly_commit_prover in memory not the clone
 pub fn commit_private_array(
     mut poly_commit_prover: PolyCommitProver,
     private_array: &[FieldElement],
@@ -55,9 +56,8 @@ pub fn commit_private_array(
         }
 
         if all_zero {
-            // println!("bug here");
             for j in 0..slice_size {
-                // l_eval[i * slice_size + j] = zero;
+                l_eval.push(zero);
             }
         } else {
             inverse_fast_fourier_transform(
@@ -86,7 +86,7 @@ pub fn commit_private_array(
     let elapsed_time = now.elapsed();
     println!("FFT Prepare time: {} ms", elapsed_time.as_millis());
 
-    let ret = prover::vpd_prover_init(l_eval, log_array_length, slice_size, slice_count);
+    let ret = prover::vpd_prover_init(poly_commit_prover.ctx, log_array_length);
 
     let t1 = now.elapsed();
     let time_span = t1 - t0;
@@ -95,4 +95,37 @@ pub fn commit_private_array(
     return ret;
 }
 
-pub fn commit_public_array() {}
+pub fn commit_public_array(
+    mut poly_commit_prover: PolyCommitProver,
+    public_array: Vec<FieldElement>,
+    r_0_len: usize,
+    target_sum: FieldElement,
+    all_sum: Vec<FieldElement>,
+) -> HashDigest {
+    let now = time::Instant::now();
+    // let t0 = now.elapsed();
+
+    // TODO: this assert should be true
+    // assert!(poly_commit_prover.ctx.pre_prepare_executed);
+
+    // TODO: fri::virtual_oracle_witness
+    // fri::virtual_oracle_witness = new prime_field::field_element[slice_size * slice_count];
+    // fri::virtual_oracle_witness_mapping = new int[slice_size * slice_count];
+    // q_eval_len = l_eval_len;
+    // q_eval = new prime_field::field_element[q_eval_len];
+
+    // skip some code
+    let t0 = now.elapsed();
+    let ret = fri::request_init_commit(
+        &mut fri::FRIContext::default(),
+        poly_commit_prover.ctx,
+        r_0_len,
+        1,
+    );
+    // let t1 = now.elapsed();
+    // time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t1 - t0);
+    // total_time += time_span.count();
+
+    // printf("PostGKR prepare time 1 %lf\n", time_span.count());
+    return ret;
+}
