@@ -602,12 +602,16 @@ impl ZkVerifier {
             "GKR witness size: {}",
             1 << self.aritmetic_circuit.circuit[0].bit_length
         );
+        // println!("before:{:?}", (*self.prover.unwrap()).poly_prover);
 
+        // Should pass in the pointer to poly prover instead of a clone, because we need to change the data in the poly_prover database
         let merkle_root_l = commit_private_array(
             (*self.prover.unwrap()).poly_prover.clone(),
             &(*self.prover.unwrap()).circuit_value[0],
             self.aritmetic_circuit.circuit[0].bit_length,
         );
+        // Data don't change after the function
+        // println!("after: {:?}", (*self.prover.unwrap()).poly_prover);
 
         // Add this line to remove warning
         println!("Merkle_root: {:?}", merkle_root_l);
@@ -622,13 +626,7 @@ impl ZkVerifier {
             0,
         );
 
-        // let merkle_root_h = (*self.prover.unwrap()).poly_prover.commit_public_array(
-        //     Q_EVAL_REAL,
-        //     self.aritmetic_circuit.circuit[0].bit_length,
-        //     alpha_beta_sum,
-        //     all_sum,
-        // );
-
+        // Should pass in the pointer to poly prover instead of a clone
         let merkle_root_h = commit_public_array(
             (*self.prover.unwrap()).poly_prover.clone(),
             Q_EVAL_REAL.clone(),
