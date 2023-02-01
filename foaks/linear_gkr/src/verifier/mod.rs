@@ -27,22 +27,6 @@ use crate::polynomial::QuintuplePoly;
 use crate::prover::ProverContext;
 use crate::prover::ZkProver;
 
-/*enum gate_types {
-    add = 0,
-    mult = 1,
-    dummy = 2,
-    sum = 5,
-    exp_sum = 12,
-    direct_relay = 4,
-    not_gate = 6,
-    minus = 7,
-    xor_gate = 8,
-    bit_test = 13,
-    relay = 10,
-    custom_linear_comb = 14,
-    input = 3,
-}*/
-
 #[derive(Default, Debug)]
 pub struct VerifierContext {
     pub q_eval_real: Vec<FieldElement>,
@@ -91,7 +75,7 @@ impl ZkVerifier {
         Default::default()
     }
     //ToDo!: Improve unwrap() handling, use "?" operator. Improve println!(), could use eprintln()
-    pub fn read_circuit(&mut self, path: &String, meta_path: &String) -> isize {
+    pub fn read_circuit(&mut self, path: &String, meta_path: &String) -> Option<usize> {
         let circuit_file = File::open(path).unwrap();
         let circuit_reader = BufReader::new(circuit_file);
 
@@ -107,7 +91,7 @@ impl ZkVerifier {
         //  self.aritmetic_circuit.circuit[0]
         //);
 
-        let mut max_bit_length: isize = -1;
+        let mut max_bit_length: Option<usize> = None;
         let mut n_pad: usize;
         for i in 1..=d {
             let pad_requirement: usize;
@@ -142,8 +126,8 @@ impl ZkVerifier {
                     self.aritmetic_circuit.circuit[1].gates = vec![Gate::new(); n_pad];
                 }
             }
-            let mut max_gate = -1;
-            let mut previous_g: isize = -1;
+            let mut max_gate: Option<usize> = None;
+            let mut previous_g: Option<usize> = None;
 
             for j in 0..number_gates {
                 let ty: usize = next_line_splited.next().unwrap().parse().unwrap();
@@ -153,10 +137,7 @@ impl ZkVerifier {
 
                 if ty != 3 {
                     if ty == 5 {
-                        assert!(
-                            //u >= 0 && u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)
-                            u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)
-                        );
+                        assert!(u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length));
                         assert!(
                             v > u && v <= (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)
                         );
@@ -202,15 +183,33 @@ impl ZkVerifier {
                 if ty == 13 {
                     assert!(u == v);
                 }
-                if g as isize != (previous_g + 1) {
-                    //Todo!: improve error handling
-                    println!(
-                        "Error, gates must be in sorted order, and full [0, 2^n - 1]. {} {} {} {}",
-                        i, j, g, previous_g
-                    );
-                    panic!(); //exit(0);
+                match previous_g {
+                    Some(v) => {
+                        if v + 1 != g {
+                            println!(
+                            "Error, gates must be in sorted order, and full [0, 2^n - 1]. {} {} {} {}",
+                            i,
+                            j,
+                            g,
+                            previous_g.unwrap()
+                        );
+                            panic!()
+                        }
+                    }
+                    None => {
+                        if g != 0 {
+                            println!(
+                            "Error, gates must be in sorted order, and full [0, 2^n - 1]. {} {} {} {}",
+                            i,
+                            j,
+                            g,
+                            previous_g.unwrap()
+                        );
+                            panic!()
+                        }
+                    }
                 }
-                previous_g = g as isize;
+                previous_g = Some(g);
                 if i != 1 {
                     self.aritmetic_circuit.circuit[i].gates[g] = Gate::from_params(ty, u, v);
                 } else {
@@ -218,8 +217,6 @@ impl ZkVerifier {
                     self.aritmetic_circuit.circuit[1].gates[g] = Gate::from_params(4, g, 0);
                     self.aritmetic_circuit.circuit[0].gates[g] = Gate::from_params(ty, u, v);
                 }
-
-                //
             }
             if i == 1 {
                 for g in number_gates..n_pad {
@@ -227,36 +224,45 @@ impl ZkVerifier {
                     self.aritmetic_circuit.circuit[0].gates[g] = Gate::from_params(3, 0, 0);
                 }
                 number_gates = n_pad;
-                previous_g = n_pad as isize - 1;
+                previous_g = Some(n_pad - 1);
             }
 
             max_gate = previous_g;
             let mut cnt = 0;
-            while max_gate > 0 {
+            while max_gate > Some(0) {
                 cnt += 1;
-                max_gate >>= 1;
+                match max_gate.as_mut() {
+                    Some(v) => *v >>= 1,
+                    None => {}
+                }
             }
-            max_gate = 1;
+            max_gate = Some(1);
             while cnt > 0 {
-                max_gate <<= 1;
+                match max_gate.as_mut() {
+                    Some(v) => *v <<= 1,
+                    None => {}
+                }
                 cnt -= 1;
             }
             let mut mx_gate = max_gate;
-            while mx_gate > 0 {
+            while mx_gate > Some(0) {
                 cnt += 1;
-                mx_gate >>= 1;
+                match mx_gate.as_mut() {
+                    Some(v) => *v >>= 1,
+                    None => {}
+                }
             }
             if number_gates == 1 {
                 //add a dummy gate to avoid ill-defined layer.
                 if i != 1 {
-                    self.aritmetic_circuit.circuit[i].gates[max_gate as usize] =
+                    self.aritmetic_circuit.circuit[i].gates[max_gate.unwrap()] =
                         Gate::from_params(2, 0, 0);
                     self.aritmetic_circuit.circuit[i].bit_length = cnt;
                 } else {
-                    self.aritmetic_circuit.circuit[0].gates[max_gate as usize] =
+                    self.aritmetic_circuit.circuit[0].gates[max_gate.unwrap()] =
                         Gate::from_params(2, 0, 0);
                     self.aritmetic_circuit.circuit[0].bit_length = cnt;
-                    self.aritmetic_circuit.circuit[1].gates[max_gate as usize] =
+                    self.aritmetic_circuit.circuit[1].gates[max_gate.unwrap()] =
                         Gate::from_params(4, 1, 0);
                     self.aritmetic_circuit.circuit[1].bit_length = cnt;
                 }
@@ -271,8 +277,13 @@ impl ZkVerifier {
                 "layer {}, bit_length {}",
                 i, self.aritmetic_circuit.circuit[i].bit_length
             );
-            if self.aritmetic_circuit.circuit[i].bit_length as isize > max_bit_length {
-                max_bit_length = self.aritmetic_circuit.circuit[i].bit_length as isize;
+            match max_bit_length.as_mut() {
+                Some(v) => {
+                    if self.aritmetic_circuit.circuit[i].bit_length > *v {
+                        *v = self.aritmetic_circuit.circuit[i].bit_length
+                    }
+                }
+                None => max_bit_length = Some(self.aritmetic_circuit.circuit[i].bit_length),
             }
         }
         self.aritmetic_circuit.circuit[0].is_parallel = false;
@@ -308,11 +319,11 @@ impl ZkVerifier {
             }
         }
 
-        Self::init_array(self, max_bit_length);
+        Self::init_array(self, max_bit_length.unwrap());
         max_bit_length
     }
 
-    pub fn init_array(&mut self, max_bit_length: isize) {
+    pub fn init_array(&mut self, max_bit_length: usize) {
         let first_half_len = max_bit_length / 2;
         let second_half_len = max_bit_length - first_half_len;
 
@@ -337,10 +348,10 @@ impl ZkVerifier {
 
     //Decided to implemente the verify() function from orion repo
 
-    pub fn verify(&mut self, output_path: &String, bit_length: isize) -> bool {
+    pub fn verify(&mut self, output_path: &String, bit_length: usize) -> bool {
         // initialize the prover
         let mut zk_prover = ZkProver::new();
-        zk_prover.init_array(bit_length.try_into().unwrap(), &self.aritmetic_circuit);
+        zk_prover.init_array(bit_length, &self.aritmetic_circuit);
 
         self.proof_size = 0;
         //there is a way to compress binlinear pairing element
@@ -375,7 +386,7 @@ impl ZkVerifier {
         let mut a_0 = zk_prover.v_res(
             one_minus_r_0.clone(),
             r_0.clone(),
-            result,
+            result.clone(),
             capacity,
             1 << capacity,
         );
@@ -394,12 +405,12 @@ impl ZkVerifier {
                 self.aritmetic_circuit.circuit[i].bit_length,
                 self.aritmetic_circuit.circuit[i - 1].bit_length,
                 self.aritmetic_circuit.circuit[i - 1].bit_length,
-                alpha,
-                beta,
+                alpha.clone(),
+                beta.clone(),
                 r_0.clone(),
                 r_1.clone(),
-                &one_minus_r_0,
-                &one_minus_r_1,
+                one_minus_r_0.clone(),
+                one_minus_r_1.clone(),
             );
 
             zk_prover.sumcheck_phase1_init();
@@ -531,7 +542,6 @@ impl ZkVerifier {
             let predicates_calc_span = predicates_calc.elapsed();
             //println!("predicates_calc_span: {:?}", predicates_calc_span);
             if self.aritmetic_circuit.circuit[i].is_parallel == false {
-                // todo
                 verification_rdl_time += predicates_calc_span.as_secs_f64();
             }
             verification_time += predicates_calc_span.as_secs_f64();
@@ -633,10 +643,12 @@ impl ZkVerifier {
         self.vpd_randomness = r_0.clone();
         self.one_minus_vpd_randomness = one_minus_r_0.clone();
 
-        type PCProver = PolyCommitProver;
-        let ptr_p_c_prover = &mut zk_prover.poly_prover as *mut PCProver;
+        //type PCProver = PolyCommitProver;
+        //let ptr_p_c_prover = &mut zk_prover.poly_prover as *mut PCProver;
+        //self.poly_verifier.pc_prover = ptr_p_c_prover;
+        //Todo! Debug reference-borrowing
 
-        self.poly_verifier.pc_prover = Some(ptr_p_c_prover);
+        self.poly_verifier.pc_prover = zk_prover.poly_prover;
 
         let _public_array = Self::public_array_prepare(
             self,
@@ -647,7 +659,6 @@ impl ZkVerifier {
         //prime_field::field_element *public_array = public_array_prepare_generic(q_eval_real, C.circuit[0].bit_length);
 
         let input_0_verify = true;
-        //Below function is not implemented neither in virgo repo nor orion repo
         //let input_0_verify = self.poly_verifier.verify_poly_commitment(
         //  all_sum,
         //self.aritmetic_circuit.circuit[0].bit_length,
@@ -658,7 +669,10 @@ impl ZkVerifier {
         //merkle_root_l,
         //merkle_root_h,
         //);
-        zk_prover.total_time += zk_prover.poly_prover.total_time_pc_p;
+
+        //Todo! Debug time
+
+        zk_prover.total_time += self.poly_verifier.pc_prover.total_time_pc_p;
         if !(input_0_verify) {
             println!("Verification fail, input vpd");
             return false;
@@ -687,7 +701,7 @@ impl ZkVerifier {
     }
 
     // Decided to implement verify from Virgo to check the proof_size
-    pub fn virgo_verify(&mut self, output_path: &String, bit_length: isize) -> bool {
+    pub fn virgo_verify(&mut self, output_path: &String, bit_length: usize) -> bool {
         // initialize the prover
         let mut zk_prover = ZkProver::new();
         zk_prover.init_array(bit_length.try_into().unwrap(), &self.aritmetic_circuit);
@@ -744,12 +758,12 @@ impl ZkVerifier {
                 self.aritmetic_circuit.circuit[i].bit_length,
                 self.aritmetic_circuit.circuit[i - 1].bit_length,
                 self.aritmetic_circuit.circuit[i - 1].bit_length,
-                alpha,
-                beta,
+                alpha.clone(),
+                beta.clone(),
                 r_0.clone(),
                 r_1.clone(),
-                &one_minus_r_0,
-                &one_minus_r_1,
+                one_minus_r_0.clone(),
+                one_minus_r_1.clone(),
             );
 
             zk_prover.sumcheck_phase1_init();
@@ -989,10 +1003,12 @@ impl ZkVerifier {
         self.vpd_randomness = r_0.clone();
         self.one_minus_vpd_randomness = one_minus_r_0.clone();
 
-        type PCProver = PolyCommitProver;
-        let ptr_p_c_prover = &mut zk_prover.poly_prover as *mut PCProver;
+        //type PCProver = PolyCommitProver;
+        //let ptr_p_c_prover = &mut zk_prover.poly_prover as *mut PCProver;
 
-        self.poly_verifier.pc_prover = Some(ptr_p_c_prover);
+        //Todo! Debug
+
+        self.poly_verifier.pc_prover = zk_prover.poly_prover;
 
         let _public_array = Self::public_array_prepare(
             self,
@@ -1014,7 +1030,9 @@ impl ZkVerifier {
         //merkle_root_l,
         //merkle_root_h,
         //);
-        zk_prover.total_time += zk_prover.poly_prover.total_time_pc_p;
+
+        //Todo! Debug
+        zk_prover.total_time += self.poly_verifier.pc_prover.total_time_pc_p;
         if !(input_0_verify) {
             println!("Verification fail, input vpd");
             return false;

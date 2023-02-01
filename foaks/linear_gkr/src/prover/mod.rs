@@ -248,7 +248,7 @@ impl ZkProver {
         // Do we really need this line of code?
         //self.circuit_value[0] =
         // Vec::with_capacity(1 << self.aritmetic_circuit.circuit[0].bit_length);
-        self.circuit_value[0] = inputs;
+        self.circuit_value[0] = inputs.clone();
         // todo()
         //self.circuit_value[0] = inputs[..n].to_vec();
     }
@@ -263,8 +263,8 @@ impl ZkProver {
         beta: FieldElement,
         r_0: Vec<FieldElement>,
         r_1: Vec<FieldElement>,
-        one_minus_r_0: &Vec<FieldElement>,
-        one_minus_r_1: &Vec<FieldElement>,
+        one_minus_r_0: Vec<FieldElement>,
+        one_minus_r_1: Vec<FieldElement>,
     ) {
         self.r_0 = r_0;
         self.r_1 = r_1;
@@ -274,8 +274,8 @@ impl ZkProver {
         self.length_g = length_g;
         self.length_u = length_u;
         self.length_v = length_v;
-        self.one_minus_r_0 = one_minus_r_0.clone();
-        self.one_minus_r_1 = one_minus_r_1.clone();
+        self.one_minus_r_0 = one_minus_r_0;
+        self.one_minus_r_1 = one_minus_r_1;
     }
     pub fn total_time(&mut self, val: f64) {
         self.total_time = val;

@@ -162,7 +162,7 @@ impl PolyCommitProver {
 }
 #[derive(Default, Debug)]
 pub struct PolyCommitVerifier {
-    pub pc_prover: Option<*mut PolyCommitProver>,
+    pub pc_prover: PolyCommitProver,
     //ctx: PolyCommitContext,
 }
 pub fn commit_phrase_step(r: FieldElement) -> HashDigest {
