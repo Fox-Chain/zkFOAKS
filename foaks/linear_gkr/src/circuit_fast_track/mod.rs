@@ -65,7 +65,7 @@ impl Layer {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct LayeredCircuit {
     pub circuit: Vec<Layer>,
     pub total_depth: usize,

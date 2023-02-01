@@ -1,19 +1,14 @@
 use crate::circuit_fast_track::LayeredCircuit;
 use crate::polynomial::{LinearPoly, QuadraticPoly};
-
+use infrastructure::rs_polynomial::UnsafeSendSyncRawPtr;
 use poly_commitment::poly_commitment::PolyCommitProver;
-use prime_field::{FieldElement, VecFieldElement};
+use prime_field::FieldElement;
+//use rayon::iter::IntoParallelIterator;
+use rayon::prelude::*;
 
+use std::borrow::Cow;
 use std::mem::swap;
 use std::time::{self, SystemTime};
-
-static mut INV_2: FieldElement = FieldElement::zero();
-static mut v_mult_add_new: Vec<LinearPoly> = Vec::new();
-static mut add_v_array_new: Vec<LinearPoly> = Vec::new();
-static mut add_mult_sum_new: Vec<LinearPoly> = Vec::new();
-static mut gate_meet: [bool; 15] = [false; 15];
-static mut rets_prev: Vec<QuadraticPoly> = Vec::new();
-static mut rets_cur: Vec<QuadraticPoly> = Vec::new();
 
 pub fn from_string(s: &str) -> FieldElement {
     let mut ret = FieldElement::from_real(0);
@@ -26,10 +21,19 @@ pub fn from_string(s: &str) -> FieldElement {
     ret
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
+pub struct ProverContext {
+    pub inv_2: FieldElement,
+    pub v_mult_add_new: Vec<LinearPoly>,
+    pub add_v_array_new: Vec<LinearPoly>,
+    pub add_mult_sum_new: Vec<LinearPoly>,
+    pub gate_meet: Vec<bool>,
+    pub rets_prev: Vec<QuadraticPoly>,
+    pub rets_cur: Vec<QuadraticPoly>,
+}
+#[derive(Default, Debug, Clone)]
 pub struct ZkProver {
-    pub aritmetic_circuit: Option<*mut LayeredCircuit>, //	c++ code: layered_circuit *C;
-
+    pub aritmetic_circuit: LayeredCircuit,
     pub poly_prover: PolyCommitProver,
     /** @name Basic
     	* Basic information and variables about the arithmetic circuit*/
@@ -68,6 +72,8 @@ pub struct ZkProver {
     pub add_mult_sum: Vec<LinearPoly>,
 
     pub total_time: f64,
+
+    pub ctx: ProverContext,
 }
 
 impl ZkProver {
@@ -78,23 +84,18 @@ impl ZkProver {
         }
     }
 
-    pub fn init_array(&mut self, max_bit_length: usize) {
+    pub fn init_array(&mut self, max_bit_length: usize, aritmetic_circuit: &LayeredCircuit) {
+        self.total_time = 0.0;
+
         let half_length = (max_bit_length >> 1) + 1;
 
-        unsafe {
-            //gate_meet size: 15 or 14
-            gate_meet = [false; 15];
-            v_mult_add_new = vec![LinearPoly::zero(); 1 << max_bit_length];
-            add_v_array_new = vec![LinearPoly::zero(); 1 << max_bit_length];
-            add_mult_sum_new = vec![LinearPoly::zero(); 1 << max_bit_length];
-            rets_prev = vec![QuadraticPoly::zero(); 1 << max_bit_length];
-            rets_cur = vec![QuadraticPoly::zero(); 1 << max_bit_length];
-        }
+        self.ctx.gate_meet = vec![false; 15];
+        self.ctx.v_mult_add_new = vec![LinearPoly::zero(); 1 << max_bit_length];
+        self.ctx.add_v_array_new = vec![LinearPoly::zero(); 1 << max_bit_length];
+        self.ctx.add_mult_sum_new = vec![LinearPoly::zero(); 1 << max_bit_length];
+        self.ctx.rets_prev = vec![QuadraticPoly::zero(); 1 << max_bit_length];
+        self.ctx.rets_cur = vec![QuadraticPoly::zero(); 1 << max_bit_length];
 
-        Self::init_zkprover(self, max_bit_length, half_length);
-    }
-
-    pub fn init_zkprover(&mut self, max_bit_length: usize, half_length: usize) {
         self.beta_g_r0_fhalf = vec![FieldElement::zero(); 1 << half_length];
         self.beta_g_r0_shalf = vec![FieldElement::zero(); 1 << half_length];
         self.beta_g_r1_fhalf = vec![FieldElement::zero(); 1 << half_length];
@@ -104,16 +105,17 @@ impl ZkProver {
         self.add_mult_sum = vec![LinearPoly::zero(); 1 << max_bit_length];
         self.v_mult_add0 = vec![LinearPoly::zero(); 1 << max_bit_length];
         self.add_v_array = vec![LinearPoly::zero(); 1 << max_bit_length];
+
+        self.get_circuit(aritmetic_circuit);
     }
 
-    pub fn get_circuit(&mut self, from_verifier: *mut LayeredCircuit) {
-        self.aritmetic_circuit = Some(from_verifier);
-        unsafe {
-            INV_2 = FieldElement::from_real(2);
-        }
+    pub fn get_circuit(&mut self, from_verifier: &LayeredCircuit) {
+        self.aritmetic_circuit = from_verifier.clone();
+
+        self.ctx.inv_2 = FieldElement::from_real(2);
     }
 
-    pub fn V_res(
+    pub fn v_res(
         &mut self,
         one_minus_r_0: Vec<FieldElement>,
         r_0: Vec<FieldElement>,
@@ -139,60 +141,48 @@ impl ZkProver {
         res
     }
 
-    pub unsafe fn evaluate(&mut self) -> Vec<FieldElement> {
+    pub fn evaluate(&mut self) -> Vec<FieldElement> {
         //let mut depth: usize;
-        //unsafe {
         let t0 = time::Instant::now();
 
+        // Below code was commented in the original repo, here we need it
         self.circuit_value.push(vec![
             FieldElement::zero();
-            1 << (*self.aritmetic_circuit.unwrap()).circuit[0]
-                .bit_length
+            1 << self.aritmetic_circuit.circuit[0].bit_length
         ]);
-        let halt = 1 << (*self.aritmetic_circuit.unwrap()).circuit[0].bit_length;
-        for i in 0..halt {
+        for i in 0..(1 << self.aritmetic_circuit.circuit[0].bit_length) {
             let g = i;
             //todo: Could delete below variable, never used
-            let _u = (*self.aritmetic_circuit.unwrap()).circuit[0].gates[g].u;
-            let ty = (*self.aritmetic_circuit.unwrap()).circuit[0].gates[g].ty;
+            //let u = self.aritmetic_circuit.circuit[0].gates[g].u;
+            let ty = self.aritmetic_circuit.circuit[0].gates[g].ty;
             assert!(ty == 3 || ty == 2);
         }
-        assert!((*self.aritmetic_circuit.unwrap()).total_depth < 1000000);
-        let depth = (*self.aritmetic_circuit.unwrap()).total_depth;
+        assert!(self.aritmetic_circuit.total_depth < 1000000);
 
-        for i in 1..depth {
+        for i in 1..(self.aritmetic_circuit.total_depth) {
             self.circuit_value.push(vec![
                 FieldElement::zero();
-                1 << (*self.aritmetic_circuit.unwrap()).circuit[i]
-                    .bit_length
+                1 << self.aritmetic_circuit.circuit[i].bit_length
             ]);
-            for j in 0..(*self.aritmetic_circuit.unwrap()).circuit[i].bit_length {
+            for j in 0..self.aritmetic_circuit.circuit[i].bit_length {
                 let g = j;
-                let ty: usize = (*self.aritmetic_circuit.unwrap()).circuit[i].gates[g].ty;
-                let u = (*self.aritmetic_circuit.unwrap()).circuit[i].gates[g].u;
-                let v = (*self.aritmetic_circuit.unwrap()).circuit[i].gates[g].v;
+                let ty: usize = self.aritmetic_circuit.circuit[i].gates[g].ty;
+                let u = self.aritmetic_circuit.circuit[i].gates[g].u;
+                let v = self.aritmetic_circuit.circuit[i].gates[g].v;
 
                 if ty == 0 {
                     self.circuit_value[i][g] =
                         self.circuit_value[i - 1][u] + self.circuit_value[i - 1][v];
                 } else if ty == 1 {
-                    assert!(
-                        u >= 0
-                            && u < (1
-                                << (*self.aritmetic_circuit.unwrap()).circuit[i - 1].bit_length),
-                    );
-                    assert!(
-                        v >= 0
-                            && v < (1
-                                << (*self.aritmetic_circuit.unwrap()).circuit[i - 1].bit_length),
-                    );
+                    assert!(u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length),);
+                    assert!(v < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length),);
                     self.circuit_value[i][g] =
                         self.circuit_value[i - 1][u] * self.circuit_value[i - 1][v];
                 } else if ty == 2 {
                     self.circuit_value[i][g] = FieldElement::from_real(0);
                 } else if ty == 3 {
-                    // It is suppose to be input gate, it just read the 'u' input, what about 'v' input
-                    self.circuit_value[i][g] = FieldElement::from_real(u.try_into().unwrap());
+                    // It suppose to be input gate, it just read the 'u' input, what about 'v' input
+                    self.circuit_value[i][g] = FieldElement::from_real(u);
                 } else if ty == 4 {
                     self.circuit_value[i][g] = self.circuit_value[i - 1][u];
                 } else if ty == 5 {
@@ -212,16 +202,8 @@ impl ZkProver {
                     let y = self.circuit_value[i - 1][v];
                     self.circuit_value[i][g] = x + y - FieldElement::from_real(2) * x * y;
                 } else if ty == 9 {
-                    assert!(
-                        u >= 0
-                            && u < (1
-                                << (*self.aritmetic_circuit.unwrap()).circuit[i - 1].bit_length)
-                    );
-                    assert!(
-                        v >= 0
-                            && v < (1
-                                << (*self.aritmetic_circuit.unwrap()).circuit[i - 1].bit_length)
-                    );
+                    assert!(u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length));
+                    assert!(v < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length));
                     let x = self.circuit_value[i - 1][u];
                     let y = self.circuit_value[i - 1][v];
                     self.circuit_value[i][g] = y - x * y;
@@ -236,21 +218,14 @@ impl ZkProver {
                     }
                 } else if ty == 13 {
                     assert!(u == v);
-                    assert!(
-                        u >= 0
-                            && u < (1
-                                << (*self.aritmetic_circuit.unwrap()).circuit[i - 1].bit_length),
-                    );
+                    assert!(u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length),);
                     self.circuit_value[i][g] = self.circuit_value[i - 1][u]
                         * (FieldElement::from_real(1) - self.circuit_value[i - 1][v]);
                 } else if ty == 14 {
                     self.circuit_value[i][g] = FieldElement::from_real(0);
-                    for k in
-                        0..(*self.aritmetic_circuit.unwrap()).circuit[i].gates[g].parameter_length
-                    {
-                        let weight =
-                            (*self.aritmetic_circuit.unwrap()).circuit[i].gates[g].weight[k];
-                        let idx = (*self.aritmetic_circuit.unwrap()).circuit[i].gates[g].src[k];
+                    for k in 0..self.aritmetic_circuit.circuit[i].gates[g].parameter_length {
+                        let weight = self.aritmetic_circuit.circuit[i].gates[g].weight[k];
+                        let idx = self.aritmetic_circuit.circuit[i].gates[g].src[k];
                         self.circuit_value[i][g] =
                             self.circuit_value[i][g] + self.circuit_value[i - 1][idx] * weight;
                     }
@@ -261,22 +236,18 @@ impl ZkProver {
         }
 
         let time_span = t0.elapsed();
-
         println!(
             "total evaluation time: {:?} seconds",
             time_span.as_secs_f64()
         );
-
-        let _depth = (*self.aritmetic_circuit.unwrap()).total_depth;
-        //}
-        self.circuit_value.pop().unwrap()
-        //prletln!("total evaluation time: ");
+        //self.circuit_value.pop().unwrap()
+        self.circuit_value[self.aritmetic_circuit.total_depth - 1].clone()
     }
 
     pub fn get_witness(&mut self, inputs: Vec<FieldElement>, _n: u32) {
         // Do we really need this line of code?
         //self.circuit_value[0] =
-        // Vec::with_capacity(1 << (*self.aritmetic_circuit.unwrap()).circuit[0].bit_length);
+        // Vec::with_capacity(1 << self.aritmetic_circuit.circuit[0].bit_length);
         self.circuit_value[0] = inputs;
         // todo()
         //self.circuit_value[0] = inputs[..n].to_vec();
@@ -310,10 +281,9 @@ impl ZkProver {
         self.total_time = val;
     }
 
-    pub unsafe fn sumcheck_phase1_init(&mut self) {
+    pub fn sumcheck_phase1_init(&mut self) {
         let t0 = time::Instant::now();
-        self.total_uv =
-            1 << (*self.aritmetic_circuit.unwrap()).circuit[self.sumcheck_layer_id - 1].bit_length;
+        self.total_uv = 1 << self.aritmetic_circuit.circuit[self.sumcheck_layer_id - 1].bit_length;
         let zero = FieldElement::zero();
         for i in 0..self.total_uv {
             //todo! linear_poly != FieldElement
@@ -345,23 +315,32 @@ impl ZkProver {
         }
 
         let mask_fhalf = (1 << first_half) - 1;
+
         let mut intermediates0 = vec![FieldElement::zero(); 1 << self.length_g];
+        //let mut ptr_lock = &vec![FieldElement::zero(); 1 << self.length_g];
+
+        //let ptr_raw = UnsafeSendSyncRawPtr(&mut ptr_lock as *const _ as *mut Vec<FieldElement>);
+
         let mut intermediates1 = vec![FieldElement::zero(); 1 << self.length_g];
 
         //todo
         //	#pragma omp parallel for
+        //let intermediates0 = unsafe { &mut *(*ptr_raw).cast::<Vec<FieldElement>>() };
+        //let intermediates1 = unsafe { &mut *(*ptr_raw).cast::<Vec<FieldElement>>() };
 
-        for i in 0..1 << self.length_g {
-            let u = (*self.aritmetic_circuit.unwrap()).circuit[self.sumcheck_layer_id].gates[i].u;
-            let v = (*self.aritmetic_circuit.unwrap()).circuit[self.sumcheck_layer_id].gates[i].v;
+        //intermediates0.par_iter_mut().for_each(|element| {
+        for i in 0..(1 << self.length_g) {
+            let u = self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].u;
+            let v = self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].v;
 
-            match (*self.aritmetic_circuit.unwrap()).circuit[self.sumcheck_layer_id].gates[i].ty {
+            match self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty {
                 0 => {
                     //add gate
                     let tmp = self.beta_g_r0_fhalf[i & mask_fhalf]
                         * self.beta_g_r0_shalf[i >> first_half]
                         + self.beta_g_r1_fhalf[i & mask_fhalf]
                             * self.beta_g_r1_shalf[i >> first_half];
+                    //intermediates0[i] = self.circuit_value[self.sumcheck_layer_id - 1][v] * tmp;
                     intermediates0[i] = self.circuit_value[self.sumcheck_layer_id - 1][v] * tmp;
                     intermediates1[i] = tmp;
                 }
@@ -421,9 +400,9 @@ impl ZkProver {
                         * self.beta_g_r0_shalf[i >> first_half]
                         + self.beta_g_r1_fhalf[i & mask_fhalf]
                             * self.beta_g_r1_shalf[i >> first_half];
-                    let tmp_V = tmp * self.circuit_value[self.sumcheck_layer_id - 1][v];
-                    let _tmp_2V = tmp_V + tmp_V;
-                    intermediates0[i] = tmp_V;
+                    let tmp_v = tmp * self.circuit_value[self.sumcheck_layer_id - 1][v];
+                    //let _tmp_2_v = tmp_v + tmp_v; // Never used
+                    intermediates0[i] = tmp_v;
                     intermediates1[i] = tmp;
                 }
                 13 => {
@@ -432,8 +411,8 @@ impl ZkProver {
                         * self.beta_g_r0_shalf[i >> first_half]
                         + self.beta_g_r1_fhalf[i & mask_fhalf]
                             * self.beta_g_r1_shalf[i >> first_half];
-                    let tmp_V = tmp * self.circuit_value[self.sumcheck_layer_id - 1][v];
-                    intermediates0[i] = tmp_V;
+                    let tmp_v = tmp * self.circuit_value[self.sumcheck_layer_id - 1][v];
+                    intermediates0[i] = tmp_v;
                     intermediates1[i] = tmp;
                 }
                 9 => {
@@ -442,8 +421,8 @@ impl ZkProver {
                         * self.beta_g_r0_shalf[i >> first_half]
                         + self.beta_g_r1_fhalf[i & mask_fhalf]
                             * self.beta_g_r1_shalf[i >> first_half];
-                    let tmpV = tmp * self.circuit_value[self.sumcheck_layer_id - 1][v];
-                    intermediates1[i] = tmpV;
+                    let tmp_v = tmp * self.circuit_value[self.sumcheck_layer_id - 1][v];
+                    intermediates1[i] = tmp_v;
                 }
                 10 => {
                     //relay gate
@@ -464,29 +443,26 @@ impl ZkProver {
                 _ => {
                     println!(
                         "Warning Unknown gate {}",
-                        (*self.aritmetic_circuit.unwrap()).circuit[self.sumcheck_layer_id].gates[i]
-                            .ty
+                        self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty
                     )
                 }
             }
         }
-        for i in 0..1 << self.length_g {
-            let u = (*self.aritmetic_circuit.unwrap()).circuit[self.sumcheck_layer_id].gates[i].u;
-            let v = (*self.aritmetic_circuit.unwrap()).circuit[self.sumcheck_layer_id].gates[i].v;
 
-            match (*self.aritmetic_circuit.unwrap()).circuit[self.sumcheck_layer_id].gates[i].ty {
+        for i in 0..1 << self.length_g {
+            let u = self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].u;
+            let v = self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].v;
+
+            match self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty {
                 0 => {
                     //add gate
-                    if !gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
-                        [self.sumcheck_layer_id]
-                        .gates[i]
-                        .ty]
+                    if !self.ctx.gate_meet
+                        [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty]
                     {
                         //prletf("first meet %d gate\n", C -> circuit[self.sumcheck_layer_id].gates[i].ty);
-                        gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
-                            [self.sumcheck_layer_id]
-                            .gates[i]
-                            .ty] = true;
+                        self.ctx.gate_meet
+                            [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty] =
+                            true;
                     }
                     self.add_v_array[u].b = self.add_v_array[u].b + intermediates0[i];
                     self.add_mult_sum[u].b = self.add_mult_sum[u].b + intermediates1[i];
@@ -494,31 +470,25 @@ impl ZkProver {
                 2 => {}
                 1 => {
                     //mult gate
-                    if !gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
-                        [self.sumcheck_layer_id]
-                        .gates[i]
-                        .ty]
+                    if !self.ctx.gate_meet
+                        [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty]
                     {
                         //prletf("first meet %d gate\n", C -> circuit[self.sumcheck_layer_id].gates[i].ty);
-                        gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
-                            [self.sumcheck_layer_id]
-                            .gates[i]
-                            .ty] = true;
+                        self.ctx.gate_meet
+                            [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty] =
+                            true;
                     }
                     self.add_mult_sum[u].b = (self.add_mult_sum[u].b + intermediates0[i]);
                 }
                 5 => {
                     //sum gate
-                    if !gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
-                        [self.sumcheck_layer_id]
-                        .gates[i]
-                        .ty]
+                    if !self.ctx.gate_meet
+                        [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty]
                     {
                         //prletf("first meet %d gate\n", C -> circuit[self.sumcheck_layer_id].gates[i].ty);
-                        gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
-                            [self.sumcheck_layer_id]
-                            .gates[i]
-                            .ty] = true;
+                        self.ctx.gate_meet
+                            [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty] =
+                            true;
                     }
                     for j in u..v {
                         self.add_mult_sum[j].b = self.add_mult_sum[j].b + intermediates1[i];
@@ -528,16 +498,13 @@ impl ZkProver {
                 12 =>
                 //exp sum gate
                 {
-                    if !gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
-                        [self.sumcheck_layer_id]
-                        .gates[i]
-                        .ty]
+                    if !self.ctx.gate_meet
+                        [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty]
                     {
                         //prletf("first meet %d gate\n", C -> circuit[self.sumcheck_layer_id].gates[i].ty);
-                        gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
-                            [self.sumcheck_layer_id]
-                            .gates[i]
-                            .ty] = true;
+                        self.ctx.gate_meet
+                            [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty] =
+                            true;
                     }
                     let mut tmp = intermediates1[i];
                     for j in u..v {
@@ -546,29 +513,22 @@ impl ZkProver {
                     }
                 }
                 14 => {
-                    if !gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
-                        [self.sumcheck_layer_id]
-                        .gates[i]
-                        .ty]
+                    if !self.ctx.gate_meet
+                        [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty]
                     {
                         //prletf("first meet %d gate\n", C -> circuit[self.sumcheck_layer_id].gates[i].ty);
-                        gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
-                            [self.sumcheck_layer_id]
-                            .gates[i]
-                            .ty] = true;
+                        self.ctx.gate_meet
+                            [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty] =
+                            true;
                     }
                     let tmp = intermediates1[i];
-                    for j in 0..(*self.aritmetic_circuit.unwrap()).circuit[self.sumcheck_layer_id]
-                        .gates[i]
+                    for j in 0..self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i]
                         .parameter_length
                     {
-                        let src = (*self.aritmetic_circuit.unwrap()).circuit
-                            [self.sumcheck_layer_id]
-                            .gates[i]
-                            .src[j];
-                        let weight = (*self.aritmetic_circuit.unwrap()).circuit
-                            [self.sumcheck_layer_id]
-                            .gates[i]
+                        let src =
+                            self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].src[j];
+                        let weight = self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates
+                            [i]
                             .weight[j];
                         self.add_mult_sum[src].b = self.add_mult_sum[src].b + weight * tmp;
                     }
@@ -576,32 +536,26 @@ impl ZkProver {
                 4 =>
                 //direct relay gate
                 {
-                    if !gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
-                        [self.sumcheck_layer_id]
-                        .gates[i]
-                        .ty]
+                    if !self.ctx.gate_meet
+                        [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty]
                     {
                         //prletf("first meet %d gate\n", C -> circuit[self.sumcheck_layer_id].gates[i].ty);
-                        gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
-                            [self.sumcheck_layer_id]
-                            .gates[i]
-                            .ty] = true;
+                        self.ctx.gate_meet
+                            [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty] =
+                            true;
                     }
                     self.add_mult_sum[u].b = self.add_mult_sum[u].b + intermediates1[i];
                 }
                 6 =>
                 //NOT gate
                 {
-                    if !gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
-                        [self.sumcheck_layer_id]
-                        .gates[i]
-                        .ty]
+                    if !self.ctx.gate_meet
+                        [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty]
                     {
                         //prletf("first meet %d gate\n", C -> circuit[self.sumcheck_layer_id].gates[i].ty);
-                        gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
-                            [self.sumcheck_layer_id]
-                            .gates[i]
-                            .ty] = true;
+                        self.ctx.gate_meet
+                            [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty] =
+                            true;
                     }
                     self.add_mult_sum[u].b = self.add_mult_sum[u].b - intermediates1[i];
                     self.add_v_array[u].b = self.add_v_array[u].b + intermediates1[i];
@@ -609,16 +563,13 @@ impl ZkProver {
                 7 =>
                 //minus gate
                 {
-                    if !gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
-                        [self.sumcheck_layer_id]
-                        .gates[i]
-                        .ty]
+                    if !self.ctx.gate_meet
+                        [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty]
                     {
                         //prletf("first meet %d gate\n", C -> circuit[self.sumcheck_layer_id].gates[i].ty);
-                        gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
-                            [self.sumcheck_layer_id]
-                            .gates[i]
-                            .ty] = true;
+                        self.ctx.gate_meet
+                            [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty] =
+                            true;
                     }
                     self.add_v_array[u].b = self.add_v_array[u].b - (intermediates0[i]);
                     self.add_mult_sum[u].b = self.add_mult_sum[u].b + intermediates1[i];
@@ -626,16 +577,13 @@ impl ZkProver {
                 8 =>
                 //XOR gate
                 {
-                    if !gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
-                        [self.sumcheck_layer_id]
-                        .gates[i]
-                        .ty]
+                    if !self.ctx.gate_meet
+                        [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty]
                     {
                         //prletf("first meet %d gate\n", C -> circuit[self.sumcheck_layer_id].gates[i].ty);
-                        gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
-                            [self.sumcheck_layer_id]
-                            .gates[i]
-                            .ty] = true;
+                        self.ctx.gate_meet
+                            [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty] =
+                            true;
                     }
                     self.add_v_array[u].b = self.add_v_array[u].b + intermediates0[i];
                     self.add_mult_sum[u].b = self.add_mult_sum[u].b + intermediates1[i]
@@ -645,16 +593,13 @@ impl ZkProver {
                 13 =>
                 //bit-test gate
                 {
-                    if !gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
-                        [self.sumcheck_layer_id]
-                        .gates[i]
-                        .ty]
+                    if !self.ctx.gate_meet
+                        [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty]
                     {
                         //prletf("first meet %d gate\n", C -> circuit[self.sumcheck_layer_id].gates[i].ty);
-                        gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
-                            [self.sumcheck_layer_id]
-                            .gates[i]
-                            .ty] = true;
+                        self.ctx.gate_meet
+                            [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty] =
+                            true;
                     }
                     self.add_mult_sum[u].b =
                         self.add_mult_sum[u].b - intermediates0[i] + intermediates1[i];
@@ -662,16 +607,13 @@ impl ZkProver {
                 9 =>
                 //NAAB gate
                 {
-                    if !gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
-                        [self.sumcheck_layer_id]
-                        .gates[i]
-                        .ty]
+                    if !self.ctx.gate_meet
+                        [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty]
                     {
                         //prletf("first meet %d gate\n", C -> circuit[self.sumcheck_layer_id].gates[i].ty);
-                        gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
-                            [self.sumcheck_layer_id]
-                            .gates[i]
-                            .ty] = true;
+                        self.ctx.gate_meet
+                            [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty] =
+                            true;
                     }
                     self.add_v_array[u].b = self.add_v_array[u].b + intermediates1[i];
                     self.add_mult_sum[u].b = self.add_mult_sum[u].b - intermediates1[i];
@@ -679,22 +621,19 @@ impl ZkProver {
                 10 =>
                 //relay gate
                 {
-                    if !gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
-                        [self.sumcheck_layer_id]
-                        .gates[i]
-                        .ty]
+                    if !self.ctx.gate_meet
+                        [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty]
                     {
                         //prletf("first meet %d gate\n", C -> circuit[self.sumcheck_layer_id].gates[i].ty);
-                        gate_meet[(*self.aritmetic_circuit.unwrap()).circuit
-                            [self.sumcheck_layer_id]
-                            .gates[i]
-                            .ty] = true;
+                        self.ctx.gate_meet
+                            [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty] =
+                            true;
                     }
                     self.add_mult_sum[u].b = self.add_mult_sum[u].b + intermediates0[i];
                 }
                 _ => println!(
                     "Warning Unknown gate {}",
-                    (*self.aritmetic_circuit.unwrap()).circuit[self.sumcheck_layer_id].gates[i].ty
+                    self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty
                 ),
             }
         }
@@ -702,7 +641,7 @@ impl ZkProver {
         self.total_time += time_span.as_secs_f64();
     }
 
-    pub unsafe fn sumcheck_phase1_update(
+    pub fn sumcheck_phase1_update(
         &mut self,
         previous_random: FieldElement,
         current_bit: usize,
@@ -718,47 +657,52 @@ impl ZkProver {
             let g_zero = i << 1;
             let g_one = i << 1 | 1;
             if current_bit == 0 {
-                v_mult_add_new[i].b = self.v_mult_add0[g_zero].b;
-                v_mult_add_new[i].a = self.v_mult_add0[g_one].b - v_mult_add_new[i].b;
+                self.ctx.v_mult_add_new[i].b = self.v_mult_add0[g_zero].b;
+                self.ctx.v_mult_add_new[i].a =
+                    self.v_mult_add0[g_one].b - self.ctx.v_mult_add_new[i].b;
 
-                add_v_array_new[i].b = self.add_v_array[g_zero].b;
-                add_v_array_new[i].a = self.add_v_array[g_one].b - add_v_array_new[i].b;
+                self.ctx.add_v_array_new[i].b = self.add_v_array[g_zero].b;
+                self.ctx.add_v_array_new[i].a =
+                    self.add_v_array[g_one].b - self.ctx.add_v_array_new[i].b;
 
-                add_mult_sum_new[i].b = self.add_mult_sum[g_zero].b;
-                add_mult_sum_new[i].a = self.add_mult_sum[g_one].b - add_mult_sum_new[i].b;
+                self.ctx.add_mult_sum_new[i].b = self.add_mult_sum[g_zero].b;
+                self.ctx.add_mult_sum_new[i].a =
+                    self.add_mult_sum[g_one].b - self.ctx.add_mult_sum_new[i].b;
             } else {
-                v_mult_add_new[i].b =
+                self.ctx.v_mult_add_new[i].b =
                     self.v_mult_add0[g_zero].a * previous_random + self.v_mult_add0[g_zero].b;
-                v_mult_add_new[i].a = self.v_mult_add0[g_one].a * previous_random
+                self.ctx.v_mult_add_new[i].a = self.v_mult_add0[g_one].a * previous_random
                     + self.v_mult_add0[g_one].b
-                    - v_mult_add_new[i].b;
+                    - self.ctx.v_mult_add_new[i].b;
 
-                add_v_array_new[i].b =
+                self.ctx.add_v_array_new[i].b =
                     self.add_v_array[g_zero].a * previous_random + self.add_v_array[g_zero].b;
-                add_v_array_new[i].a = self.add_v_array[g_one].a * previous_random
+                self.ctx.add_v_array_new[i].a = self.add_v_array[g_one].a * previous_random
                     + self.add_v_array[g_one].b
-                    - add_v_array_new[i].b;
+                    - self.ctx.add_v_array_new[i].b;
 
-                add_mult_sum_new[i].b =
+                self.ctx.add_mult_sum_new[i].b =
                     self.add_mult_sum[g_zero].a * previous_random + self.add_mult_sum[g_zero].b;
-                add_mult_sum_new[i].a = self.add_mult_sum[g_one].a * previous_random
+                self.ctx.add_mult_sum_new[i].a = self.add_mult_sum[g_one].a * previous_random
                     + self.add_mult_sum[g_one].b
-                    - add_mult_sum_new[i].b;
+                    - self.ctx.add_mult_sum_new[i].b;
             }
         }
-        swap(&mut self.v_mult_add0, &mut v_mult_add_new);
-        swap(&mut self.add_v_array, &mut add_v_array_new);
-        swap(&mut self.add_mult_sum, &mut add_mult_sum_new);
+
+        swap(&mut self.v_mult_add0, &mut self.ctx.v_mult_add_new);
+        swap(&mut self.add_v_array, &mut self.ctx.add_v_array_new);
+        swap(&mut self.add_mult_sum, &mut self.ctx.add_mult_sum_new);
 
         //parallel addition tree
         //todo
         //#pragma omp parallel for
         for i in 0..(self.total_uv >> 1) {
-            rets_prev[i].a = self.add_mult_sum[i].a * self.v_mult_add0[i].a;
-            rets_prev[i].b = self.add_mult_sum[i].a * self.v_mult_add0[i].b
+            self.ctx.rets_prev[i].a = self.add_mult_sum[i].a * self.v_mult_add0[i].a;
+            self.ctx.rets_prev[i].b = self.add_mult_sum[i].a * self.v_mult_add0[i].b
                 + self.add_mult_sum[i].b * self.v_mult_add0[i].a
                 + self.add_v_array[i].a;
-            rets_prev[i].c = self.add_mult_sum[i].b * self.v_mult_add0[i].b + self.add_v_array[i].b;
+            self.ctx.rets_prev[i].c =
+                self.add_mult_sum[i].b * self.v_mult_add0[i].b + self.add_v_array[i].b;
         }
 
         let tot = self.total_uv >> 1;
@@ -767,14 +711,14 @@ impl ZkProver {
             //todo
             //#pragma omp parallel for
             for j in 0..(tot >> iter) {
-                rets_cur[j] = rets_prev[j * 2] + rets_prev[j * 2 + 1];
+                self.ctx.rets_cur[j] = self.ctx.rets_prev[j * 2] + self.ctx.rets_prev[j * 2 + 1];
             }
             //todo
             //#pragma omp barrier
-            swap(&mut rets_prev, &mut rets_cur);
+            swap(&mut self.ctx.rets_prev, &mut self.ctx.rets_cur);
             iter += 1;
         }
-        ret = rets_prev[0];
+        ret = self.ctx.rets_prev[0];
 
         self.total_uv >>= 1;
 
@@ -784,7 +728,7 @@ impl ZkProver {
         ret
     }
 
-    pub unsafe fn sumcheck_phase2_init(
+    pub fn sumcheck_phase2_init(
         &mut self,
         previous_random: FieldElement,
         r_u: Vec<FieldElement>,
@@ -817,10 +761,8 @@ impl ZkProver {
         let first_g_half = self.length_g >> 1;
         let mask_g_fhalf = (1 << (self.length_g >> 1)) - 1;
 
-        self.total_uv =
-            1 << (*self.aritmetic_circuit.unwrap()).circuit[self.sumcheck_layer_id - 1].bit_length;
-        let total_g =
-            1 << (*self.aritmetic_circuit.unwrap()).circuit[self.sumcheck_layer_id].bit_length;
+        self.total_uv = 1 << self.aritmetic_circuit.circuit[self.sumcheck_layer_id - 1].bit_length;
+        let total_g = 1 << self.aritmetic_circuit.circuit[self.sumcheck_layer_id].bit_length;
         let zero = FieldElement::zero();
 
         for i in 0..self.total_uv {
@@ -841,9 +783,9 @@ impl ZkProver {
         //todo
         //#pragma omp parallel for
         for i in 0..total_g {
-            let ty = (*self.aritmetic_circuit.unwrap()).circuit[self.sumcheck_layer_id].gates[i].ty;
-            let u = (*self.aritmetic_circuit.unwrap()).circuit[self.sumcheck_layer_id].gates[i].u;
-            let _v = (*self.aritmetic_circuit.unwrap()).circuit[self.sumcheck_layer_id].gates[i].v;
+            let ty = self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty;
+            let u = self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].u;
+            let _v = self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].v;
             match ty {
                 1 =>
                 //mult gate
@@ -985,9 +927,9 @@ impl ZkProver {
         }
 
         for i in 0..total_g {
-            let ty = (*self.aritmetic_circuit.unwrap()).circuit[self.sumcheck_layer_id].gates[i].ty;
-            let u = (*self.aritmetic_circuit.unwrap()).circuit[self.sumcheck_layer_id].gates[i].u;
-            let v = (*self.aritmetic_circuit.unwrap()).circuit[self.sumcheck_layer_id].gates[i].v;
+            let ty = self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty;
+            let u = self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].u;
+            let v = self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].v;
             match ty {
                 1 =>
                 //mult gate
@@ -1028,19 +970,15 @@ impl ZkProver {
                 {
                     let tmp_g_vu = intermediates0[i];
 
-                    for j in 0..(*self.aritmetic_circuit.unwrap()).circuit[self.sumcheck_layer_id]
-                        .gates[i]
+                    for j in 0..self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i]
                         .parameter_length
                     {
-                        let src = (*self.aritmetic_circuit.unwrap()).circuit
-                            [self.sumcheck_layer_id]
-                            .gates[i]
-                            .src[j];
+                        let src =
+                            self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].src[j];
                         let tmp_u = self.beta_u_fhalf[src & mask_fhalf]
                             * self.beta_u_shalf[src >> first_half];
-                        let weight = (*self.aritmetic_circuit.unwrap()).circuit
-                            [self.sumcheck_layer_id]
-                            .gates[i]
+                        let weight = self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates
+                            [i]
                             .weight[j];
                         self.add_v_array[0].b = self.add_v_array[0].b + tmp_g_vu * tmp_u * weight;
                     }
@@ -1085,7 +1023,7 @@ impl ZkProver {
         }
     }
 
-    pub unsafe fn sumcheck_phase2_update(
+    pub fn sumcheck_phase2_update(
         &mut self,
         previous_random: FieldElement,
         current_bit: usize,
@@ -1101,32 +1039,35 @@ impl ZkProver {
             let g_one = i << 1 | 1;
 
             if current_bit == 0 {
-                v_mult_add_new[i].b = self.v_mult_add0[g_zero].b;
-                v_mult_add_new[i].a = self.v_mult_add0[g_one].b - v_mult_add_new[i].b;
+                self.ctx.v_mult_add_new[i].b = self.v_mult_add0[g_zero].b;
+                self.ctx.v_mult_add_new[i].a =
+                    self.v_mult_add0[g_one].b - self.ctx.v_mult_add_new[i].b;
 
-                add_v_array_new[i].b = self.add_v_array[g_zero].b;
-                add_v_array_new[i].a = self.add_v_array[g_one].b - add_v_array_new[i].b;
+                self.ctx.add_v_array_new[i].b = self.add_v_array[g_zero].b;
+                self.ctx.add_v_array_new[i].a =
+                    self.add_v_array[g_one].b - self.ctx.add_v_array_new[i].b;
 
-                add_mult_sum_new[i].b = self.add_mult_sum[g_zero].b;
-                add_mult_sum_new[i].a = self.add_mult_sum[g_one].b - add_mult_sum_new[i].b;
+                self.ctx.add_mult_sum_new[i].b = self.add_mult_sum[g_zero].b;
+                self.ctx.add_mult_sum_new[i].a =
+                    self.add_mult_sum[g_one].b - self.ctx.add_mult_sum_new[i].b;
             } else {
-                v_mult_add_new[i].b =
+                self.ctx.v_mult_add_new[i].b =
                     self.v_mult_add0[g_zero].a * previous_random + self.v_mult_add0[g_zero].b;
-                v_mult_add_new[i].a = self.v_mult_add0[g_one].a * previous_random
+                self.ctx.v_mult_add_new[i].a = self.v_mult_add0[g_one].a * previous_random
                     + self.v_mult_add0[g_one].b
-                    - v_mult_add_new[i].b;
+                    - self.ctx.v_mult_add_new[i].b;
 
-                add_v_array_new[i].b =
+                self.ctx.add_v_array_new[i].b =
                     self.add_v_array[g_zero].a * previous_random + self.add_v_array[g_zero].b;
-                add_v_array_new[i].a = self.add_v_array[g_one].a * previous_random
+                self.ctx.add_v_array_new[i].a = self.add_v_array[g_one].a * previous_random
                     + self.add_v_array[g_one].b
-                    - add_v_array_new[i].b;
+                    - self.ctx.add_v_array_new[i].b;
 
-                add_mult_sum_new[i].b =
+                self.ctx.add_mult_sum_new[i].b =
                     self.add_mult_sum[g_zero].a * previous_random + self.add_mult_sum[g_zero].b;
-                add_mult_sum_new[i].a = self.add_mult_sum[g_one].a * previous_random
+                self.ctx.add_mult_sum_new[i].a = self.add_mult_sum[g_one].a * previous_random
                     + self.add_mult_sum[g_one].b
-                    - add_mult_sum_new[i].b;
+                    - self.ctx.add_mult_sum_new[i].b;
             }
             ret.a = ret.a + self.add_mult_sum[i].a * self.v_mult_add0[i].a;
             ret.b = ret.b
@@ -1135,19 +1076,20 @@ impl ZkProver {
                 + self.add_v_array[i].a;
             ret.c = ret.c + self.add_mult_sum[i].b * self.v_mult_add0[i].b + self.add_v_array[i].b;
         }
-        swap(&mut self.v_mult_add0, &mut v_mult_add_new);
-        swap(&mut self.add_v_array, &mut add_v_array_new);
-        swap(&mut self.add_mult_sum, &mut add_mult_sum_new);
+        swap(&mut self.v_mult_add0, &mut self.ctx.v_mult_add_new);
+        swap(&mut self.add_v_array, &mut self.ctx.add_v_array_new);
+        swap(&mut self.add_mult_sum, &mut self.ctx.add_mult_sum_new);
 
         //parallel addition tree
         //todo
         //#pragma omp parallel for
         for i in 0..(self.total_uv >> 1) {
-            rets_prev[i].a = self.add_mult_sum[i].a * self.v_mult_add0[i].a;
-            rets_prev[i].b = self.add_mult_sum[i].a * self.v_mult_add0[i].b
+            self.ctx.rets_prev[i].a = self.add_mult_sum[i].a * self.v_mult_add0[i].a;
+            self.ctx.rets_prev[i].b = self.add_mult_sum[i].a * self.v_mult_add0[i].b
                 + self.add_mult_sum[i].b * self.v_mult_add0[i].a
                 + self.add_v_array[i].a;
-            rets_prev[i].c = self.add_mult_sum[i].b * self.v_mult_add0[i].b + self.add_v_array[i].b;
+            self.ctx.rets_prev[i].c =
+                self.add_mult_sum[i].b * self.v_mult_add0[i].b + self.add_v_array[i].b;
         }
 
         let tot = self.total_uv >> 1;
@@ -1156,14 +1098,14 @@ impl ZkProver {
             //todo
             //#pragma omp parallel for
             for j in 0..(tot >> iter) {
-                rets_cur[j] = rets_prev[j * 2] + rets_prev[j * 2 + 1];
+                self.ctx.rets_cur[j] = self.ctx.rets_prev[j * 2] + self.ctx.rets_prev[j * 2 + 1];
             }
             //todo
             //#pragma omp barrier
-            swap(&mut rets_prev, &mut rets_cur);
+            swap(&mut self.ctx.rets_prev, &mut self.ctx.rets_cur);
             iter += 1;
         }
-        ret = rets_prev[0];
+        ret = self.ctx.rets_prev[0];
 
         self.total_uv >>= 1;
 
