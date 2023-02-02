@@ -1,5 +1,10 @@
 use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
-use std::{char::MAX, thread::current};
+use std::{
+    char::MAX,
+    fs::File,
+    io::{BufRead, BufReader, Error},
+    thread::current,
+};
 
 use infrastructure::{
     constants::{LOG_SLICE_NUMBER, RS_CODE_RATE, SLICE_NUMBER},
@@ -335,5 +340,31 @@ impl FRIContext {
             randomness,
             mx_depth: ptr,
         }
+    }
+
+    pub fn verify_poly_commitment(
+        &mut self,
+        all_sum: Vec<FieldElement>,
+        log_length: usize,
+        public_array: Vec<FieldElement>,
+        v_time: &f64,
+        proof_size: &usize,
+        p_time: &f64,
+        merkle_tree_l: HashDigest,
+        merkle_tree_h: HashDigest,
+    ) -> Result<(), Error> {
+        let dif = log_length - LOG_SLICE_NUMBER;
+        let mut command = String::from("./fft_gkr ");
+        command = command + &dif.to_string() + " log_fftgkr.txt";
+        //Todo!     system(command);
+        let result_file = File::open("log_fftgkr.txt")?;
+        let result_reader = BufReader::new(result_file);
+        let mut lines_iter = result_reader.lines().map(|l| l.unwrap());
+        let next_line = lines_iter.next().unwrap();
+        let mut next_line_splited = next_line.split_whitespace();
+        let v_time_fft: f64 = next_line_splited.next().unwrap().parse().unwrap();
+        let p_time_fft: f64 = next_line_splited.next().unwrap().parse().unwrap();
+        let proof_size_fft: usize = next_line_splited.next().unwrap().parse().unwrap();
+        Ok(())
     }
 }

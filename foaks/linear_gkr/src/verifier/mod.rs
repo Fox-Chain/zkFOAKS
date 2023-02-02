@@ -6,6 +6,7 @@ use infrastructure::constants::SLICE_NUMBER;
 use infrastructure::my_hash::HashDigest;
 use poly_commitment::poly_commitment::PolyCommitProver;
 use poly_commitment::poly_commitment::PolyCommitVerifier;
+use std::fs;
 // use std::borrow::Borrow;
 // use std::clone;
 use std::fs::File;
@@ -688,7 +689,7 @@ impl ZkVerifier {
             self.v_time = verification_time - verification_rdl_time;
             println!("Proof size(bytes): {} ", self.proof_size);
 
-            let _res = Self::write_file(
+            Self::write_file(
                 output_path,
                 zk_prover.total_time,
                 verification_time,
@@ -701,7 +702,7 @@ impl ZkVerifier {
     }
 
     // Decided to implement verify from Virgo to check the proof_size
-    pub fn virgo_verify(&mut self, output_path: &String, bit_length: usize) -> bool {
+    /*pub fn virgo_verify(&mut self, output_path: &String, bit_length: usize) -> bool {
         // initialize the prover
         let mut zk_prover = ZkProver::new();
         zk_prover.init_array(bit_length.try_into().unwrap(), &self.aritmetic_circuit);
@@ -1058,7 +1059,7 @@ impl ZkVerifier {
             );
         }
         true
-    }
+    }*/
 
     pub fn write_file(
         output_path: &String,
@@ -1068,7 +1069,14 @@ impl ZkVerifier {
         verification_rdl_time: f64,
         proof_size: usize,
     ) -> Result<(), Error> {
-        let mut result_file = File::create(output_path)?;
+        //fs::create_dir("/some/dir")?;
+
+        //let mut result_file = File::create(output_path)?;
+        let full_path = std::path::Path::new(output_path);
+        let prefix = full_path.parent().unwrap();
+        fs::create_dir_all(prefix).unwrap();
+        let mut result_file = File::create(full_path)?;
+
         writeln!(
             result_file,
             "{} {} {} {} {}",
