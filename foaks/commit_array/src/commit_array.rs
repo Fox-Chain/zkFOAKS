@@ -14,7 +14,7 @@ pub fn commit_private_array(
     mut poly_commit_prover: PolyCommitProver,
     private_array: &[FieldElement],
     log_array_length: usize,
-) -> HashDigest {
+) -> (HashDigest, PolyCommitProver) {
     poly_commit_prover.total_time_pc_p = 0.;
     let now = time::Instant::now();
 
@@ -86,13 +86,13 @@ pub fn commit_private_array(
     let elapsed_time = now.elapsed();
     println!("FFT Prepare time: {} ms", elapsed_time.as_millis());
 
-    let ret = prover::vpd_prover_init(poly_commit_prover.ctx, log_array_length);
+    let ret = prover::vpd_prover_init(poly_commit_prover.ctx.clone(), log_array_length);
 
     let t1 = now.elapsed();
     let time_span = t1 - t0;
     poly_commit_prover.total_time_pc_p += time_span.as_secs_f64();
     println!("VPD prepare time {:?}", time_span);
-    return ret;
+    return (ret, poly_commit_prover.clone());
 }
 
 pub fn commit_public_array(
@@ -103,9 +103,8 @@ pub fn commit_public_array(
     all_sum: Vec<FieldElement>,
 ) -> HashDigest {
     let now = time::Instant::now();
-    // let t0 = now.elapsed();
+    let t0 = now.elapsed();
 
-    // TODO: this assert should be true
     assert!(poly_commit_prover.ctx.pre_prepare_executed);
 
     // TODO: fri::virtual_oracle_witness
