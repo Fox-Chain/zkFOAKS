@@ -106,7 +106,7 @@ pub fn commit_public_array(
     // let t0 = now.elapsed();
 
     // TODO: this assert should be true
-    // assert!(poly_commit_prover.ctx.pre_prepare_executed);
+    assert!(poly_commit_prover.ctx.pre_prepare_executed);
 
     // TODO: fri::virtual_oracle_witness
     // fri::virtual_oracle_witness = new prime_field::field_element[slice_size * slice_count];

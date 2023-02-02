@@ -95,7 +95,7 @@ pub fn request_init_commit(
     PolyCommitContext {
         slice_size,
         slice_count,
-        l_eval,
+        mut l_eval,
         h_eval_arr,
         ..
     }: PolyCommitContext,
@@ -157,20 +157,20 @@ pub fn request_init_commit(
                 .unwrap();
 
         // TODO
-        // if oracle_indicator == 0 {
-        //     println!("{:?}", i);
+        if oracle_indicator == 0 {
+            // println!("{:?}", i);
 
-        //     println!("{:?}", l_eval);
-        //     l_eval.reserve(i * slice_size);
-        //     witness_rs_codeword_before_arrange[0].0[i]
-        //         .reserve(1 << *log_current_witness_size_per_slice);
-        //     witness_rs_codeword_before_arrange[0].0[i] = l_eval[i * slice_size..].to_vec();
-        //     // println!("{:?}", witness_rs_codeword_before_arrange[0].0);
+            // println!("{:?}", l_eval);
+            l_eval.reserve(i * slice_size);
+            witness_rs_codeword_before_arrange[0].0[i]
+                .reserve(1 << *log_current_witness_size_per_slice);
+            witness_rs_codeword_before_arrange[0].0[i] = l_eval[i * slice_size..].to_vec();
+            // println!("{:?}", witness_rs_codeword_before_arrange[0].0);
 
-        //     println!("{:?}", i);
-        // } else {
-        //     // witness_rs_codeword_before_arrange[1].0[i] = h_eval_arr[i * slice_size..].to_vec();
-        // }
+            // println!("{:?}", i);
+        } else {
+            witness_rs_codeword_before_arrange[1].0[i] = h_eval_arr[i * slice_size..].to_vec();
+        }
 
         root_of_unity =
             FieldElement::get_root_of_unity(*log_current_witness_size_per_slice).unwrap();

@@ -943,7 +943,7 @@ impl ZkVerifier {
             one_minus_r_1 = one_minus_r_v;
         }
 
-        println!("GKR Prove Time: {}", (*self.prover.unwrap()).total_time);
+        println!("GKR Prove Time: {}", zk_prover.poly_prover.total_time_pc_p);
         let all_sum = vec![FieldElement::zero(); SLICE_NUMBER];
         println!(
             "GKR witness size: {}",
@@ -977,13 +977,13 @@ impl ZkVerifier {
 
         // Should pass in the pointer to poly prover instead of a clone
         let merkle_root_h = commit_public_array(
-            (*self.prover.unwrap()).poly_prover.clone(),
-            Q_EVAL_REAL.clone(),
+            zk_prover.poly_prover.clone(),
+            self.ctx.q_eval_real.clone(),
             self.aritmetic_circuit.circuit[0].bit_length,
             alpha_beta_sum,
             all_sum,
         );
-        println!("{:?}", merkle_root_h);
+        println!("merkle_root_h: {:?}", merkle_root_h);
 
         self.proof_size += 2 * mem::size_of::<HashDigest>();
         self.vpd_randomness = r_0.clone();
