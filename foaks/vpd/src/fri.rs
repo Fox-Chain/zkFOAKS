@@ -166,11 +166,13 @@ pub fn request_init_commit(
                 .reserve(1 << *log_current_witness_size_per_slice);
             witness_rs_codeword_before_arrange[0].0[i] = l_eval[i * slice_size..].to_vec();
             // println!("{:?}", witness_rs_codeword_before_arrange[0].0);
-
-            // println!("{:?}", i);
-        } else {
-            witness_rs_codeword_before_arrange[1].0[i] = h_eval_arr[i * slice_size..].to_vec();
         }
+        // else {
+        //     // commit_public_array error here
+        //     witness_rs_codeword_before_arrange[1].0[i]
+        //         .reserve(1 << *log_current_witness_size_per_slice);
+        //     witness_rs_codeword_before_arrange[1].0[i] = h_eval_arr[i * slice_size..].to_vec();
+        // }
 
         root_of_unity =
             FieldElement::get_root_of_unity(*log_current_witness_size_per_slice).unwrap();
