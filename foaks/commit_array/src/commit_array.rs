@@ -1,7 +1,12 @@
-use std::time;
+use std::fs::File;
+use std::io::{BufRead, BufReader, Error};
+use std::time::{self, Duration, Instant};
 
-use poly_commitment::poly_commitment::{PolyCommitContext, PolyCommitProver};
+use poly_commitment::poly_commitment::{
+    LdtCommitment, PolyCommitContext, PolyCommitProver, PolyCommitVerifier,
+};
 use prime_field::FieldElement;
+use vpd::fri::FRIContext;
 use vpd::{fri, prover};
 
 use infrastructure::constants::*;
@@ -127,4 +132,96 @@ pub fn commit_public_array(
 
     // printf("PostGKR prepare time 1 %lf\n", time_span.count());
     return ret;
+}
+
+pub fn commit_phase(log_length: usize) -> LdtCommitment {
+    // let log_current_witness_size_per_slice_cp = self.log_current_witness_size_per_slice;
+    // assumming we already have the initial commit
+    let mut codeword_size = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+    // repeat until the codeword is constant
+    let mut ret: Vec<HashDigest> = Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+    let mut randomness: Vec<FieldElement> =
+        Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+
+    let mut ptr = 0;
+
+    let frycontext = &mut FRIContext::default();
+
+    while codeword_size > 1 << RS_CODE_RATE {
+        assert!(ptr < log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+        randomness[ptr] = FieldElement::new_random();
+        ret[ptr] = frycontext.commit_phase_step(randomness[ptr]);
+        codeword_size /= 2;
+        ptr += 1;
+    }
+
+    LdtCommitment {
+        commitment_hash: ret,
+        final_rs_code: frycontext.commit_phase_final(),
+        randomness,
+        mx_depth: ptr,
+    }
+}
+
+pub fn verify_poly_commitment(
+    //mut poly_commit_verifier: PolyCommitVerifier,
+    all_sum: Vec<FieldElement>,
+    log_length: usize,
+    public_array: Vec<FieldElement>,
+    v_time: &mut f64,
+    proof_size: &mut usize,
+    p_time: &mut f64,
+    merkle_tree_l: HashDigest,
+    merkle_tree_h: HashDigest,
+) -> Result<(), Error> {
+    let dif = log_length - LOG_SLICE_NUMBER;
+    let mut command = String::from("./fft_gkr ");
+    command = command + &dif.to_string() + " log_fftgkr.txt";
+    //Todo!     system(command);
+    let result_file = File::open("log_fftgkr.txt")?;
+    let result_reader = BufReader::new(result_file);
+    let mut lines_iter = result_reader.lines().map(|l| l.unwrap());
+    let next_line = lines_iter.next().unwrap();
+    let mut next_line_splited = next_line.split_whitespace();
+    let v_time_fft: f64 = next_line_splited.next().unwrap().parse().unwrap();
+    let p_time_fft: f64 = next_line_splited.next().unwrap().parse().unwrap();
+    let proof_size_fft: usize = next_line_splited.next().unwrap().parse().unwrap();
+
+    *v_time += v_time_fft;
+    *p_time += p_time_fft;
+    *proof_size += proof_size_fft;
+
+    let com = commit_phase(log_length);
+    let coef_slice_size = (1 << (log_length - LOG_SLICE_NUMBER));
+
+    for rep in 0..33 {
+        let slice_count = 1 << LOG_SLICE_NUMBER;
+        let slice_size = (1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER));
+        let mut t0: Instant;
+        let time_span: Duration;
+        let inv_2 = FieldElement::inverse(FieldElement::from_real(2));
+        let pre_alpha_1: (FieldElement, (HashDigest, usize));
+        let alpha_l: (Vec<(FieldElement, FieldElement)>, Vec<HashDigest>);
+        let alpha_h: (Vec<(FieldElement, FieldElement)>, Vec<HashDigest>);
+        let alpha: (Vec<(FieldElement, FieldElement)>, Vec<HashDigest>);
+        let beta_l: (Vec<(FieldElement, FieldElement)>, Vec<HashDigest>);
+        let beta_h: (Vec<(FieldElement, FieldElement)>, Vec<HashDigest>);
+        let beta: (Vec<(FieldElement, FieldElement)>, Vec<HashDigest>);
+        let s0: FieldElement;
+        let s1: FieldElement;
+        let pre_y: FieldElement;
+        let root_of_unity: FieldElement;
+        let y: FieldElement;
+        let equ_beta: bool;
+        assert!(log_length - LOG_SLICE_NUMBER > 0);
+        let pow: usize;
+
+        for i in 0..(log_length - LOG_SLICE_NUMBER) {
+            t0 = Instant::now();
+            if i == 0 {
+            } else {
+            }
+        }
+    }
+    Ok(())
 }

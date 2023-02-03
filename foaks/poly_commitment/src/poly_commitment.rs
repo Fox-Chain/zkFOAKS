@@ -1,3 +1,5 @@
+use std::fs::File;
+use std::io::{BufRead, BufReader, Error};
 use std::time;
 
 use prime_field::FieldElement;
@@ -159,12 +161,76 @@ impl PolyCommitProver {
         // q_eval_len = l_eval_len;
         // q_eval = new prime_field::field_element[q_eval_len];
     }
+
+    /*pub fn commit_phase(&mut self, log_length: usize) -> LdtCommitment {
+        // let log_current_witness_size_per_slice_cp = self.log_current_witness_size_per_slice;
+        // assumming we already have the initial commit
+        let mut codeword_size = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+        // repeat until the codeword is constant
+        let mut ret: Vec<HashDigest> =
+            Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+        let mut randomness: Vec<FieldElement> =
+            Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+
+        let mut ptr = 0;
+        while codeword_size > 1 << RS_CODE_RATE {
+            assert!(ptr < log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+            randomness[ptr] = FieldElement::new_random();
+            ret[ptr] = commit_phrase_step(randomness[ptr]);
+            codeword_size /= 2;
+            ptr += 1;
+            //    fri::log_current_witness_size_per_slice = log_current_witness_size_per_slice_cp;
+        }
+
+        LdtCommitment {
+            commitment_hash: ret,
+            final_rs_code: commit_phase_final(),
+            randomness,
+            mx_depth: ptr,
+        }
+    }*/
 }
 #[derive(Default, Debug)]
 pub struct PolyCommitVerifier {
     pub pc_prover: PolyCommitProver,
     //ctx: PolyCommitContext,
 }
+
+impl PolyCommitVerifier {
+    pub fn verify_poly_commitment(
+        &mut self,
+        all_sum: Vec<FieldElement>,
+        log_length: usize,
+        public_array: Vec<FieldElement>,
+        v_time: &mut f64,
+        proof_size: &mut usize,
+        p_time: &mut f64,
+        merkle_tree_l: HashDigest,
+        merkle_tree_h: HashDigest,
+    ) -> Result<(), Error> {
+        let dif = log_length - LOG_SLICE_NUMBER;
+        let mut command = String::from("./fft_gkr ");
+        command = command + &dif.to_string() + " log_fftgkr.txt";
+        //Todo!     system(command);
+        let result_file = File::open("log_fftgkr.txt")?;
+        let result_reader = BufReader::new(result_file);
+        let mut lines_iter = result_reader.lines().map(|l| l.unwrap());
+        let next_line = lines_iter.next().unwrap();
+        let mut next_line_splited = next_line.split_whitespace();
+        let v_time_fft: f64 = next_line_splited.next().unwrap().parse().unwrap();
+        let p_time_fft: f64 = next_line_splited.next().unwrap().parse().unwrap();
+        let proof_size_fft: usize = next_line_splited.next().unwrap().parse().unwrap();
+
+        *v_time += v_time_fft;
+        *p_time += p_time_fft;
+        *proof_size += proof_size_fft;
+
+        //let com = self.pc_prover.
+
+        Ok(())
+    }
+}
+
 pub fn commit_phrase_step(r: FieldElement) -> HashDigest {
     HashDigest::new()
 }

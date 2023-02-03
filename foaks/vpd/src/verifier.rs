@@ -11,7 +11,7 @@ use infrastructure::{
     my_hash::{self, HashDigest},
 };
 
-use poly_commitment::poly_commitment::LdtCommitment;
+use poly_commitment::poly_commitment::{LdtCommitment, PolyCommitVerifier};
 use prime_field::FieldElement;
 
 use crate::fri::FRIContext;
@@ -59,6 +59,32 @@ pub fn verify_merkle(
     hash_digest == new_hash && merkle_path.last() == Some(&value_hash)
 }
 
+/*pub fn commit_phase(&mut self, log_length: usize) -> LdtCommitment {
+    // let log_current_witness_size_per_slice_cp = self.log_current_witness_size_per_slice;
+    // assumming we already have the initial commit
+    let mut codeword_size = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+    // repeat until the codeword is constant
+    let mut ret: Vec<HashDigest> = Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+    let mut randomness: Vec<FieldElement> =
+        Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+
+    let mut ptr = 0;
+    while codeword_size > 1 << RS_CODE_RATE {
+        assert!(ptr < log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+        randomness[ptr] = FieldElement::new_random();
+        ret[ptr] = self.commit_phrase_step(randomness[ptr]);
+        codeword_size /= 2;
+        ptr += 1;
+        //    fri::log_current_witness_size_per_slice = log_current_witness_size_per_slice_cp;
+    }
+
+    LdtCommitment {
+        commitment_hash: ret,
+        final_rs_code: self.commit_phase_final(),
+        randomness,
+        mx_depth: ptr,
+    }
+}*/
 impl FRIContext {
     /// Request two values w^{pow0} and w^{pow1}, with merkle tree proof, where w is the root of unity and w^{pow0} and w^{pow1} are quad residue. Repeat ldt_repeat_num times, storing all result in vector.
     pub fn request_init_value_with_merkle(
@@ -187,7 +213,7 @@ impl FRIContext {
     }
 
     /// Given fold parameter r, return the root of the merkle tree of next level.
-    pub fn commit_phrase_step(&mut self, r: FieldElement) -> HashDigest {
+    pub fn commit_phase_step(&mut self, r: FieldElement) -> HashDigest {
         let nxt_witness_size = (1 << self.log_current_witness_size_per_slice) / 2;
         if self.cpd.rs_codeword[self.current_step_no].is_empty() {
             let slide_number: i32 = SLICE_NUMBER as i32;
@@ -329,7 +355,7 @@ impl FRIContext {
         while codeword_size > 1 << RS_CODE_RATE {
             assert!(ptr < log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
             randomness[ptr] = FieldElement::new_random();
-            ret[ptr] = self.commit_phrase_step(randomness[ptr]);
+            ret[ptr] = self.commit_phase_step(randomness[ptr]);
             codeword_size /= 2;
             ptr += 1;
         }
@@ -347,9 +373,9 @@ impl FRIContext {
         all_sum: Vec<FieldElement>,
         log_length: usize,
         public_array: Vec<FieldElement>,
-        v_time: &f64,
-        proof_size: &usize,
-        p_time: &f64,
+        v_time: &mut f64,
+        proof_size: &mut usize,
+        p_time: &mut f64,
         merkle_tree_l: HashDigest,
         merkle_tree_h: HashDigest,
     ) -> Result<(), Error> {
@@ -365,6 +391,13 @@ impl FRIContext {
         let v_time_fft: f64 = next_line_splited.next().unwrap().parse().unwrap();
         let p_time_fft: f64 = next_line_splited.next().unwrap().parse().unwrap();
         let proof_size_fft: usize = next_line_splited.next().unwrap().parse().unwrap();
+
+        *v_time += v_time_fft;
+        *p_time += p_time_fft;
+        *proof_size += proof_size_fft;
+
+        //let com = self.
+
         Ok(())
     }
 }

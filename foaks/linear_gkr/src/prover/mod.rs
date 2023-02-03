@@ -328,7 +328,7 @@ impl ZkProver {
         //let intermediates0 = unsafe { &mut *(*ptr_raw).cast::<Vec<FieldElement>>() };
         //let intermediates1 = unsafe { &mut *(*ptr_raw).cast::<Vec<FieldElement>>() };
 
-        //intermediates0.par_iter_mut().for_each(|element| {
+        //intermediates0._iter_mut().for_each(|element| {
         for i in 0..(1 << self.length_g) {
             let u = self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].u;
             let v = self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].v;
