@@ -96,7 +96,7 @@ pub fn request_init_commit(
         slice_size,
         slice_count,
         mut l_eval,
-        h_eval_arr,
+        mut h_eval_arr,
         ..
     }: PolyCommitContext,
     bit_len: usize,
@@ -167,8 +167,9 @@ pub fn request_init_commit(
             witness_rs_codeword_before_arrange[0].0[i] = l_eval[i * slice_size..].to_vec();
             // println!("{:?}", witness_rs_codeword_before_arrange[0].0);
         }
-        // else {
+        //  else {
         //     // commit_public_array error here
+        //     h_eval_arr.reserve(i * slice_size);
         //     witness_rs_codeword_before_arrange[1].0[i]
         //         .reserve(1 << *log_current_witness_size_per_slice);
         //     witness_rs_codeword_before_arrange[1].0[i] = h_eval_arr[i * slice_size..].to_vec();
