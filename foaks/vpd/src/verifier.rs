@@ -20,7 +20,7 @@ pub fn verify_merkle(
     hash_digest: HashDigest,
     merkle_path: Vec<HashDigest>,
     len: usize,
-    pow: i32,
+    pow: i128,
     values: Vec<(FieldElement, FieldElement)>,
 ) -> bool {
     // We need to make sure the len is always smaller than the size of merklePath.
@@ -33,7 +33,7 @@ pub fn verify_merkle(
     let mut new_hash = HashDigest::new();
 
     for i in 0..(len - 1) {
-        if (pow & i as i32).is_positive() {
+        if (pow & i as i128).is_positive() {
             let data: [HashDigest; 2] = [merkle_path[i], current_hash];
             new_hash = my_hash::my_hash(data);
         } else {
@@ -91,7 +91,7 @@ impl FRIContext {
         &mut self,
         pow_0: usize,
         pow_1: usize,
-        // new_size: &i64,
+        new_size: &mut usize,
         oracle_indicator: usize,
     ) -> (Vec<(FieldElement, FieldElement)>, Vec<HashDigest>) {
         // we swap pow_0 and pow_1 when pow_0 > pow_1
@@ -106,7 +106,7 @@ impl FRIContext {
         let mut value: Vec<(FieldElement, FieldElement)> = vec![];
         let log_leaf_size = LOG_SLICE_NUMBER + 1;
 
-        let mut new_size = 0;
+        *new_size = 0;
         for i in 0..SLICE_NUMBER {
             let element_1 = self.witness_rs_codeword_interleaved[oracle_indicator]
                 [pow_0 << log_leaf_size | i << 1 | 0];
@@ -122,7 +122,7 @@ impl FRIContext {
             if !self.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 1] {
                 self.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 1] = true;
             }
-            new_size += std::mem::size_of::<FieldElement>();
+            *new_size += std::mem::size_of::<FieldElement>();
         }
 
         let depth = self.log_current_witness_size_per_slice - 1;
@@ -136,7 +136,7 @@ impl FRIContext {
 
         for i in 0..depth {
             if !self.visited_init[oracle_indicator][pos ^ 1] {
-                new_size += std::mem::size_of::<HashDigest>();
+                *new_size += std::mem::size_of::<HashDigest>();
             }
             self.visited_init[oracle_indicator][pos] = true;
             self.visited_init[oracle_indicator][pos ^ 1] = true;
@@ -163,9 +163,9 @@ impl FRIContext {
         &mut self,
         lvl: usize,
         pow: usize,
-        new_size: i64,
+        new_size: &mut usize,
     ) -> (Vec<(FieldElement, FieldElement)>, Vec<HashDigest>) {
-        let mut new_size = 0;
+        *new_size = 0;
         let mut pow_0 = 0;
 
         let mut value_vec: Vec<(FieldElement, FieldElement)> = vec![];
@@ -188,7 +188,7 @@ impl FRIContext {
 
         // this can be compressed into one by random linear combination
         if !visited_element {
-            new_size += std::mem::size_of::<FieldElement>();
+            *new_size += std::mem::size_of::<FieldElement>();
         }
 
         let mut com_hhash: Vec<HashDigest> = vec![];
@@ -200,7 +200,7 @@ impl FRIContext {
 
         while pow_0 != 1 {
             if !self.visited[lvl][pow_0 ^ 1] {
-                new_size += std::mem::size_of::<HashDigest>();
+                *new_size += std::mem::size_of::<HashDigest>();
                 self.visited[lvl][pow_0 ^ 1] = true;
                 self.visited[lvl][pow_0] = true;
             }

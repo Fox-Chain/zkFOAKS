@@ -10,3 +10,4 @@ infrastructure = { path = "../infrastructure" }
 prime_field = { path = "../prime_field" }
 vpd = { path = "../vpd" }
 poly_commitment = { path = "../poly_commitment" }
+rand = "0.8.5"
