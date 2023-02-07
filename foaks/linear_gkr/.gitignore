@@ -10,5 +10,5 @@ mat_256_circuit.txt
 mat_256_meta.txt
 lanczos2_112_N=16_circuit.txt
 lanczos2_112_N=16_meta.txt
-LOG
+/LOG
 log_fftgkr.txt
