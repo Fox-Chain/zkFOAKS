@@ -33,29 +33,27 @@ pub fn commit_private_array(
     let slice_real_ele_cnt = slice_size >> RS_CODE_RATE;
     poly_commit_prover.ctx.slice_real_ele_cnt = slice_real_ele_cnt;
     // prepare polynomial division/decomposition
-			// things are going to be sliced
-			// get evaluations
+    // things are going to be sliced
+    // get evaluations
     let l_eval_len = slice_count * slice_size;
-    poly_commit_prover.ctx.l_eval_len = l_eval_len;  
-    
-    poly_commit_prover.ctx.l_eval = vec![FieldElement::zero();l_eval_len];
-    
+    poly_commit_prover.ctx.l_eval_len = l_eval_len;
+
+    poly_commit_prover.ctx.l_eval = vec![FieldElement::zero(); l_eval_len];
+
     let mut tmp = Vec::<FieldElement>::with_capacity(poly_commit_prover.ctx.slice_real_ele_cnt);
 
     let fft_t0 = time::Instant::now();
 
-    
-
-    let order =  slice_size *  slice_count;
+    let order = slice_size * slice_count;
 
     let mut scratch_pad = rs_polynomial::ScratchPad::from_order(order);
 
-    for i in 0.. slice_count {
+    for i in 0..slice_count {
         let mut all_zero = true;
         let zero = FieldElement::zero();
 
-        for j in 0.. slice_real_ele_cnt {
-            if private_array[i *  slice_real_ele_cnt + j] == zero {
+        for j in 0..slice_real_ele_cnt {
+            if private_array[i * slice_real_ele_cnt + j] == zero {
                 continue;
             }
             all_zero = false;
@@ -63,7 +61,7 @@ pub fn commit_private_array(
         }
 
         if all_zero {
-            for j in 0.. slice_size {
+            for j in 0..slice_size {
                 poly_commit_prover.ctx.l_eval.push(zero);
             }
         } else {
@@ -107,8 +105,7 @@ pub fn commit_public_array(
     target_sum: FieldElement,
     all_sum: Vec<FieldElement>,
 ) -> (HashDigest, PolyCommitProver) {
-    let now = time::Instant::now();
-    let t0 = now.elapsed();
+    let mut t0 = time::Instant::now();
 
     assert!(poly_commit_prover.ctx.pre_prepare_executed);
 
@@ -116,15 +113,18 @@ pub fn commit_public_array(
     // fri::virtual_oracle_witness = new prime_field::field_element[slice_size * slice_count];
     // fri::virtual_oracle_witness_mapping = new int[slice_size * slice_count];
     poly_commit_prover.ctx.q_eval_len = poly_commit_prover.ctx.l_eval_len;
-    let q_eval = &mut poly_commit_prover.ctx.l_eval;
-    q_eval.reserve(poly_commit_prover.ctx.q_eval_len);
+
+    poly_commit_prover
+        .ctx
+        .q_eval
+        .reserve(poly_commit_prover.ctx.q_eval_len);
 
     let mut tmp = Vec::<FieldElement>::with_capacity(poly_commit_prover.ctx.slice_size);
 
-    let fft_time = Duration::new(0, 0);
+    let mut fft_time = Duration::new(0, 0);
     let re_mapping_time = 0;
 
-    let fft_t0 = now.elapsed();
+    let fft_t0 = time::Instant::now();
 
     let order = poly_commit_prover.ctx.slice_size * poly_commit_prover.ctx.slice_count;
 
@@ -158,10 +158,9 @@ pub fn commit_public_array(
         )
     }
 
-    let fft_t1 = now.elapsed();
-    fft_time += fft_t1 - fft_t0;
+    fft_time = fft_t0.elapsed();
 
-    let sum = FieldElement::zero();
+    let mut sum = FieldElement::zero();
     assert!(
         poly_commit_prover.ctx.slice_count * poly_commit_prover.ctx.slice_real_ele_cnt
             == (1 << r_0_len)
@@ -169,13 +168,15 @@ pub fn commit_public_array(
 
     for i in 0..poly_commit_prover.ctx.slice_count * poly_commit_prover.ctx.slice_real_ele_cnt {
         assert!((i << RS_CODE_RATE) < poly_commit_prover.ctx.q_eval_len);
-        sum = sum + q_eval[i << RS_CODE_RATE] * poly_commit_prover.ctx.l_eval[i << RS_CODE_RATE];
+        sum = sum
+            + poly_commit_prover.ctx.q_eval[i << RS_CODE_RATE]
+                * poly_commit_prover.ctx.l_eval[i << RS_CODE_RATE];
     }
     assert!(sum == target_sum);
+
     //do fft for q_eval
     //experiment
     //poly mul first
-
     poly_commit_prover
         .ctx
         .lq_eval
@@ -203,19 +204,37 @@ pub fn commit_public_array(
 
     let log_leaf_size = LOG_SLICE_NUMBER + 1;
 
-    // skip some code
-    let t0 = now.elapsed();
+    for i in 0..poly_commit_prover.ctx.slice_count {
+        assert!(2 * poly_commit_prover.ctx.slice_real_ele_cnt <= poly_commit_prover.ctx.slice_size);
+        let all_zero = true;
+        let zero = FieldElement::zero();
+        // todo pragma
+    }
+    std::mem::take(&mut tmp);
+    std::mem::take(&mut poly_commit_prover.ctx.lq_eval);
+    std::mem::take(&mut poly_commit_prover.ctx.h_coef);
+    std::mem::take(&mut poly_commit_prover.ctx.lq_coef);
+    std::mem::take(&mut poly_commit_prover.ctx.h_eval);
+
+    let mut time_span = t0.elapsed();
+
+    poly_commit_prover.total_time_pc_p += time_span.as_secs_f64();
+
+    println!("PostGKR FFT time: {:?}", fft_time);
+    println!("PostGKR remap time: {:?}", re_mapping_time);
+    println!("PostGKR prepare time 0: {:?}", time_span.as_secs_f64());
+
+    t0 = time::Instant::now();
     let ret = fri::request_init_commit(
         &mut fri::FRIContext::default(),
         poly_commit_prover.ctx.clone(),
         r_0_len,
         1,
     );
-    // let t1 = now.elapsed();
-    // time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t1 - t0);
-    // total_time += time_span.count();
+    time_span = t0.elapsed();
+    poly_commit_prover.total_time_pc_p += time_span.as_secs_f64();
 
-    // printf("PostGKR prepare time 1 %lf\n", time_span.count());
+    println!("PostGKR prepare time 1: {:?}", time_span);
     return (ret, poly_commit_prover);
 }
 
