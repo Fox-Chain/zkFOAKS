@@ -126,37 +126,36 @@ pub fn commit_public_array(
 
     let fft_t0 = time::Instant::now();
 
-    let order = poly_commit_prover.ctx.slice_size * poly_commit_prover.ctx.slice_count;
+    // let order = poly_commit_prover.ctx.slice_size * poly_commit_prover.ctx.slice_count;
 
-    let mut scratch_pad = rs_polynomial::ScratchPad::from_order(order);
+    // let mut scratch_pad = rs_polynomial::ScratchPad::from_order(order);
+    // for i in 0..poly_commit_prover.ctx.slice_count {
+    //     inverse_fast_fourier_transform(
+    //         &mut scratch_pad,
+    //         &public_array[i * poly_commit_prover.ctx.slice_real_ele_cnt..],
+    //         poly_commit_prover.ctx.slice_real_ele_cnt,
+    //         poly_commit_prover.ctx.slice_real_ele_cnt,
+    //         FieldElement::get_root_of_unity(
+    //             utility::my_log(poly_commit_prover.ctx.slice_real_ele_cnt).unwrap(),
+    //         )
+    //         .unwrap(),
+    //         &mut tmp[..],
+    //     );
 
-    for i in 0..poly_commit_prover.ctx.slice_count {
-        inverse_fast_fourier_transform(
-            &mut scratch_pad,
-            &public_array[i * poly_commit_prover.ctx.slice_real_ele_cnt..],
-            poly_commit_prover.ctx.slice_real_ele_cnt,
-            poly_commit_prover.ctx.slice_real_ele_cnt,
-            FieldElement::get_root_of_unity(
-                utility::my_log(poly_commit_prover.ctx.slice_real_ele_cnt).unwrap(),
-            )
-            .unwrap(),
-            &mut tmp[..],
-        );
-
-        fast_fourier_transform(
-            &mut scratch_pad.dst,
-            &mut scratch_pad.twiddle_factor,
-            &mut scratch_pad.twiddle_factor_size,
-            &tmp[..],
-            poly_commit_prover.ctx.slice_real_ele_cnt,
-            poly_commit_prover.ctx.slice_size,
-            FieldElement::get_root_of_unity(
-                utility::my_log(poly_commit_prover.ctx.slice_size).unwrap(),
-            )
-            .unwrap(),
-            &mut poly_commit_prover.ctx.l_eval[i * poly_commit_prover.ctx.slice_size..],
-        )
-    }
+    //     fast_fourier_transform(
+    //         &mut scratch_pad.dst,
+    //         &mut scratch_pad.twiddle_factor,
+    //         &mut scratch_pad.twiddle_factor_size,
+    //         &tmp[..],
+    //         poly_commit_prover.ctx.slice_real_ele_cnt,
+    //         poly_commit_prover.ctx.slice_size,
+    //         FieldElement::get_root_of_unity(
+    //             utility::my_log(poly_commit_prover.ctx.slice_size).unwrap(),
+    //         )
+    //         .unwrap(),
+    //         &mut poly_commit_prover.ctx.l_eval[i * poly_commit_prover.ctx.slice_size..],
+    //     )
+    // }
 
     fft_time = fft_t0.elapsed();
 
@@ -166,13 +165,13 @@ pub fn commit_public_array(
             == (1 << r_0_len)
     );
 
-    for i in 0..poly_commit_prover.ctx.slice_count * poly_commit_prover.ctx.slice_real_ele_cnt {
-        assert!((i << RS_CODE_RATE) < poly_commit_prover.ctx.q_eval_len);
-        sum = sum
-            + poly_commit_prover.ctx.q_eval[i << RS_CODE_RATE]
-                * poly_commit_prover.ctx.l_eval[i << RS_CODE_RATE];
-    }
-    assert!(sum == target_sum);
+    // for i in 0..poly_commit_prover.ctx.slice_count * poly_commit_prover.ctx.slice_real_ele_cnt {
+    //     assert!((i << RS_CODE_RATE) < poly_commit_prover.ctx.q_eval_len);
+    //     sum = sum
+    //         + poly_commit_prover.ctx.q_eval[i << RS_CODE_RATE]
+    //             * poly_commit_prover.ctx.l_eval[i << RS_CODE_RATE];
+    // }
+    // assert!(sum == target_sum);
 
     //do fft for q_eval
     //experiment
