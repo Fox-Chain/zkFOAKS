@@ -1,4 +1,7 @@
+//use core::cmp::PartialOrd;
+
 #[derive(Debug)]
+
 pub enum Log2Error {
     NotPowerOfTwo,
 }
@@ -12,7 +15,7 @@ pub fn my_log(x: usize) -> Result<usize, Log2Error> {
     Err(Log2Error::NotPowerOfTwo)
 }
 
-pub fn min(x: i32, y: i32) -> i32 {
+pub fn min<T: PartialOrd>(x: T, y: T) -> T {
     if x > y {
         y
     } else {
@@ -20,7 +23,7 @@ pub fn min(x: i32, y: i32) -> i32 {
     }
 }
 
-pub fn max(x: i32, y: i32) -> i32 {
+pub fn max<T: PartialOrd>(x: T, y: T) -> T {
     if x > y {
         x
     } else {

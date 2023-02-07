@@ -45,7 +45,7 @@ pub unsafe fn encode(
     }
     let R: i64 = (alpha * (n as f64)) as i64;
     for j in 0..(R as usize) {
-        scratch[1][dep][j] = FieldElement::from_real(0u64);
+        scratch[1][dep][j] = FieldElement::from_real(0usize);
     }
     for i in 0..(n as usize) {
         let ref val = src[i];
@@ -66,7 +66,7 @@ pub unsafe fn encode(
     // R consumed
     let R = D[dep].R;
     for i in 0..(R as usize) {
-        scratch[0][dep][(n + L + R) as usize] = FieldElement::from_real(0u64);
+        scratch[0][dep][(n + L + R) as usize] = FieldElement::from_real(0usize);
     }
     for i in 0..(L as usize) {
         let ref val = src[i];
