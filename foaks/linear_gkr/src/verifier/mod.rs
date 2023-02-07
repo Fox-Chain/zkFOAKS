@@ -616,15 +616,15 @@ impl ZkVerifier {
         //);
         // println!("before:{:?}", zk_prover.poly_prover);
 
-        let (merkle_root_l, poly_commit_prover) = commit_private_array(
+        let (merkle_root_l, poly_commit_prover_l) = commit_private_array(
             zk_prover.poly_prover,
             &zk_prover.circuit_value[0],
             self.aritmetic_circuit.circuit[0].bit_length,
         );
-        zk_prover.poly_prover = poly_commit_prover;
+        zk_prover.poly_prover = poly_commit_prover_l;
         // println!("after: {:?}", zk_prover.poly_prover);
 
-        println!("Merkle_root: {:?}", merkle_root_l);
+        println!("Merkle_root_l: {:?}", merkle_root_l);
 
         self.ctx.q_eval_real =
             vec![FieldElement::zero(); 1 << self.aritmetic_circuit.circuit[0].bit_length];
@@ -644,15 +644,15 @@ impl ZkVerifier {
         //     all_sum,
         //);
 
-        // Should pass in the pointer to poly prover instead of a clone
-        let merkle_root_h = commit_public_array(
+        let (merkle_root_h, poly_commit_prover_h) = commit_public_array(
             zk_prover.poly_prover.clone(),
             self.ctx.q_eval_real.clone(),
             self.aritmetic_circuit.circuit[0].bit_length,
             alpha_beta_sum,
             all_sum,
         );
-        println!("merkle_root_h: {:?}", merkle_root_h);
+        zk_prover.poly_prover = poly_commit_prover_h;
+        println!("Merkle_root_h: {:?}", merkle_root_h);
 
         self.proof_size += 2 * mem::size_of::<HashDigest>();
         self.vpd_randomness = r_0.clone();

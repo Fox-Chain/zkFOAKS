@@ -109,7 +109,7 @@ pub fn commit_public_array(
     r_0_len: usize,
     target_sum: FieldElement,
     all_sum: Vec<FieldElement>,
-) -> HashDigest {
+) -> (HashDigest, PolyCommitProver) {
     let now = time::Instant::now();
     let t0 = now.elapsed();
 
@@ -125,7 +125,7 @@ pub fn commit_public_array(
     let t0 = now.elapsed();
     let ret = fri::request_init_commit(
         &mut fri::FRIContext::default(),
-        poly_commit_prover.ctx,
+        poly_commit_prover.ctx.clone(),
         r_0_len,
         1,
     );
@@ -134,7 +134,7 @@ pub fn commit_public_array(
     // total_time += time_span.count();
 
     // printf("PostGKR prepare time 1 %lf\n", time_span.count());
-    return ret;
+    return (ret, poly_commit_prover);
 }
 
 //Todo: debug     let frycontext = &mut FRIContext::default();
