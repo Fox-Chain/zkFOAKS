@@ -110,8 +110,10 @@ pub fn commit_public_array(
     // TODO: fri::virtual_oracle_witness
     // fri::virtual_oracle_witness = new prime_field::field_element[slice_size * slice_count];
     // fri::virtual_oracle_witness_mapping = new int[slice_size * slice_count];
-    // q_eval_len = l_eval_len;
-    // q_eval = new prime_field::field_element[q_eval_len];
+    // let q_eval_len = poly_commit_prover.ctx.l_eval_len;
+    // let q_eval = FieldElement::from_real(q_eval_len.try_into().unwrap());
+
+    let mut tmp = Vec::<FieldElement>::with_capacity(poly_commit_prover.ctx.slice_size);
 
     // skip some code
     let t0 = now.elapsed();
