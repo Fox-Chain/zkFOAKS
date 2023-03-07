@@ -11,12 +11,12 @@ use infrastructure::utility;
 pub struct LdtCommitment {
   pub commitment_hash: Vec<HashDigest>,
   pub randomness: Vec<FieldElement>,
-  // final_rs_code: FieldElement,
+  pub final_rs_code: Vec<FieldElement>,
   pub mx_depth: usize,
   // repeat_no: usize,
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct PolyCommitContext {
   pub twiddle_factor: Vec<FieldElement>,
   pub inv_twiddle_factor: Vec<FieldElement>,
@@ -46,9 +46,9 @@ pub struct PolyCommitContext {
   pub slice_real_ele_cnt: usize,
   pub pre_prepare_executed: bool,
 }
-
+#[derive(Default, Debug, Clone)]
 pub struct PolyCommitProver {
-  total_time: f64,
+  pub total_time_pc_p: f64,
   ctx: PolyCommitContext,
 }
 
@@ -58,7 +58,7 @@ impl PolyCommitProver {
     private_array: &[FieldElement],
     log_array_length: usize,
   ) -> HashDigest {
-    self.total_time = 0.;
+    self.total_time_pc_p = 0.;
 
     self.ctx.pre_prepare_executed = true;
 
@@ -129,6 +129,11 @@ impl PolyCommitProver {
 
     unimplemented!()
   }
+}
+
+#[derive(Default, Debug)]
+pub struct PolyCommitVerifier {
+  pub pc_prover: PolyCommitProver,
 }
 
 pub fn commit_phrase_step(r: FieldElement) -> HashDigest {
