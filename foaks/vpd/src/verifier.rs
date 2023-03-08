@@ -181,7 +181,7 @@ impl FRIContext {
   }
 
   /// Given fold parameter r, return the root of the merkle tree of next level.
-  pub fn commit_phrase_step(&mut self, r: FieldElement) -> HashDigest {
+  pub fn commit_phase_step(&mut self, r: FieldElement) -> HashDigest {
     let nxt_witness_size = (1 << self.log_current_witness_size_per_slice) / 2;
     if self.cpd.rs_codeword[self.current_step_no].is_empty() {
       self.cpd.rs_codeword[self.current_step_no] =
@@ -229,8 +229,11 @@ impl FRIContext {
     }
 
     // we assume poly_commit::slice_count is (1 << SLICE_NUMBER) here
+
+    // Gian: Why they assumed that??? Because of that, most of the implementation is wrong
+    // Be carefull!!!
     let mut tmp: Vec<FieldElement> =
-      vec![FieldElement::new_random(); nxt_witness_size * (1 << SLICE_NUMBER)];
+      vec![FieldElement::new_random(); nxt_witness_size * (SLICE_NUMBER)];
     self.cpd.rs_codeword_mapping[self.current_step_no] =
       vec![0; nxt_witness_size * (1 << SLICE_NUMBER)];
 
@@ -316,7 +319,7 @@ impl FRIContext {
     while codeword_size > 1 << RS_CODE_RATE {
       assert!(ptr < log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
       randomness[ptr] = FieldElement::new_random();
-      ret[ptr] = self.commit_phrase_step(randomness[ptr]);
+      ret[ptr] = self.commit_phase_step(randomness[ptr]);
       codeword_size /= 2;
       ptr += 1;
     }

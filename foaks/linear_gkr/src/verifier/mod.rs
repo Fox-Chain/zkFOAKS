@@ -1,14 +1,11 @@
 //#![feature(core_intrinsics)]
 use infrastructure::constants::LOG_SLICE_NUMBER;
 use infrastructure::constants::SLICE_NUMBER;
-use infrastructure::my_hash::HashDigest;
 use std::fs;
 use std::fs::read_to_string;
 use std::io;
 use std::process;
-use vpd::fri::FRIContext;
 // use std::borrow::Borrow;
-// use std::clone;
 
 use poly_commitment::PolyCommitVerifier;
 use prime_field::FieldElement;
@@ -63,7 +60,6 @@ pub struct ZkVerifier {
   //zk_prover *p; //!< The prover
   vpd_randomness: Vec<FieldElement>,
   one_minus_vpd_randomness: Vec<FieldElement>,
-
   pub ctx: VerifierContext,
 }
 
@@ -72,31 +68,28 @@ impl ZkVerifier {
     Default::default()
   }
   //ToDo!: Improve unwrap() handling, use "?" operator. Improve println!(), could use eprintln()
-  pub fn read_circuit(&mut self, circuit_path: &str, meta_path: &str) -> Result<usize, io::Error> {
+  pub fn read_circuit(&mut self, circuit_path: &str, meta_path: &str) -> Option<usize> {
     let d: usize;
-    let circuit_content = read_to_string(&circuit_path)?;
+    let circuit_content = read_to_string(&circuit_path).unwrap();
     let mut circuit_lines = circuit_content.lines();
     if let Some(value) = circuit_lines.next() {
       d = value.parse().unwrap_or_else(|err| {
         eprintln!("Problem parsing total number of layers from file: {}", err);
         process::exit(1)
       });
+    } else {
+      eprintln!("Empty File!!!");
+      process::exit(1);
     }
-    let circuit_file = File::open(circuit_path)?;
-    let circuit_reader = BufReader::new(circuit_file);
-    let mut lines_iter = circuit_reader.lines().map(|l| l.unwrap());
-    let d: usize = lines_iter.next().unwrap().parse().unwrap();
-
     self.aritmetic_circuit.circuit = vec![Layer::new(); d + 1];
     self.aritmetic_circuit.total_depth = d + 1;
 
     let mut max_bit_length: Option<usize> = None;
     let mut n_pad: usize;
-    for i in 1..=d {
-      let pad_requirement: usize;
 
-      let next_line = lines_iter.next().unwrap();
-      let mut next_line_splited = next_line.split_whitespace();
+    for i in 1..d + 1 {
+      let pad_requirement: usize;
+      let mut next_line_splited = circuit_lines.next().unwrap().split_whitespace();
       let mut number_gates: usize = next_line_splited.next().unwrap().parse().unwrap();
       //println!("number_gates: {}", number_gates);
       if d > 3 {
@@ -181,30 +174,21 @@ impl ZkVerifier {
         if ty == 13 {
           assert!(u == v);
         }
-        match previous_g {
-          Some(v) => {
-            if v + 1 != g {
-              println!(
-                "Error, gates must be in sorted order, and full [0, 2^n - 1]. {} {} {} {}",
-                i,
-                j,
-                g,
-                previous_g.unwrap()
-              );
-              panic!()
-            }
+        if let Some(prev_g) = previous_g {
+          if g != prev_g + 1 {
+            println!(
+              "Error, gates must be in sorted order, and full [0, 2^n - 1]. {} {} {} {}",
+              i, j, g, prev_g
+            );
+            process::exit(1)
           }
-          None => {
-            if g != 0 {
-              println!(
-                "Error, gates must be in sorted order, and full [0, 2^n - 1]. {} {} {} {}",
-                i,
-                j,
-                g,
-                previous_g.unwrap()
-              );
-              panic!()
-            }
+        } else {
+          if g != 0 {
+            println!(
+              "Error, gates must be in sorted order, and full [0, 2^n - 1]. {} {} {} -1",
+              i, j, g
+            );
+            process::exit(1)
           }
         }
         previous_g = Some(g);
@@ -231,25 +215,22 @@ impl ZkVerifier {
       let mut cnt = 0;
       while max_gate > Some(0) {
         cnt += 1;
-        match max_gate.as_mut() {
-          Some(v) => *v >>= 1,
-          None => {}
+        if let Some(val) = max_gate {
+          max_gate = Some(val >> 1);
         }
       }
       max_gate = Some(1);
       while cnt > 0 {
-        match max_gate.as_mut() {
-          Some(v) => *v <<= 1,
-          None => {}
+        if let Some(val) = max_gate {
+          max_gate = Some(val << 1);
         }
         cnt -= 1;
       }
       let mut mx_gate = max_gate;
       while mx_gate > Some(0) {
         cnt += 1;
-        match mx_gate.as_mut() {
-          Some(v) => *v >>= 1,
-          None => {}
+        if let Some(val) = mx_gate {
+          mx_gate = Some(val >> 1);
         }
       }
       if number_gates == 1 {
@@ -274,24 +255,18 @@ impl ZkVerifier {
         "layer {}, bit_length {}",
         i, self.aritmetic_circuit.circuit[i].bit_length
       );
-      match max_bit_length.as_mut() {
-        Some(v) => {
-          if self.aritmetic_circuit.circuit[i].bit_length > *v {
-            *v = self.aritmetic_circuit.circuit[i].bit_length
-          }
-        }
-        None => max_bit_length = Some(self.aritmetic_circuit.circuit[i].bit_length),
+
+      if Some(self.aritmetic_circuit.circuit[i].bit_length) > max_bit_length {
+        max_bit_length = Some(self.aritmetic_circuit.circuit[i].bit_length);
       }
     }
     self.aritmetic_circuit.circuit[0].is_parallel = false;
 
-    let meta_file = File::open(meta_path).unwrap();
-    let meta_reader = BufReader::new(meta_file);
+    let meta_content = read_to_string(&meta_path).unwrap();
+    let mut meta_lines = meta_content.lines();
 
-    let mut meta_lines_iter = meta_reader.lines().map(|l| l.unwrap());
     for i in 1..=d {
-      let meta_line = meta_lines_iter.next().unwrap();
-      let mut meta_line_splited = meta_line.split_whitespace();
+      let mut meta_line_splited = meta_lines.next().unwrap().split_whitespace();
 
       let is_para: usize = meta_line_splited.next().unwrap().parse().unwrap();
       self.aritmetic_circuit.circuit[i].block_size =
@@ -304,12 +279,10 @@ impl ZkVerifier {
         meta_line_splited.next().unwrap().parse().unwrap();
 
       if is_para != 0 {
-        assert!(
-          1 << self.aritmetic_circuit.circuit[i].log_repeat_num
-            == self.aritmetic_circuit.circuit[i].repeat_num
+        assert_eq!(
+          1 << self.aritmetic_circuit.circuit[i].log_repeat_num,
+          self.aritmetic_circuit.circuit[i].repeat_num
         );
-      }
-      if is_para != 0 {
         self.aritmetic_circuit.circuit[i].is_parallel = true;
       } else {
         self.aritmetic_circuit.circuit[i].is_parallel = false;
@@ -317,7 +290,7 @@ impl ZkVerifier {
     }
 
     Self::init_array(self, max_bit_length.unwrap());
-    Ok(max_bit_length.unwrap())
+    Some(max_bit_length.unwrap())
     //todo!();
   }
 
@@ -607,102 +580,102 @@ impl ZkVerifier {
 
     todo!();
     //From here need to change a lot
-    let mut fri_context = FRIContext::new();
-    let (merkle_root_l, scratch_pad) = commit_private_array(
-      &mut fri_context,
-      &mut zk_prover.poly_prover,
-      zk_prover.circuit_value[0].clone(),
-      self.aritmetic_circuit.circuit[0].bit_length,
-    );
+    // let mut fri_context = FRIContext::new();
+    // let (merkle_root_l, scratch_pad) = commit_private_array(
+    //   &mut fri_context,
+    //   &mut zk_prover.poly_prover,
+    //   zk_prover.circuit_value[0].clone(),
+    //   self.aritmetic_circuit.circuit[0].bit_length,
+    // );
 
-    println!("Merkle_root_l: {:?}", merkle_root_l);
+    // println!("Merkle_root_l: {:?}", merkle_root_l);
 
-    self.ctx.q_eval_real =
-      vec![FieldElement::zero(); 1 << self.aritmetic_circuit.circuit[0].bit_length];
-    Self::dfs_for_public_eval(
-      self,
-      0,
-      FieldElement::real_one(),
-      r_0.clone(),
-      one_minus_r_0.clone(),
-      self.aritmetic_circuit.circuit[0].bit_length,
-      0,
-    );
+    // self.ctx.q_eval_real =
+    //   vec![FieldElement::zero(); 1 << self.aritmetic_circuit.circuit[0].bit_length];
+    // Self::dfs_for_public_eval(
+    //   self,
+    //   0,
+    //   FieldElement::real_one(),
+    //   r_0.clone(),
+    //   one_minus_r_0.clone(),
+    //   self.aritmetic_circuit.circuit[0].bit_length,
+    //   0,
+    // );
 
-    let merkle_root_h = commit_public_array(
-      &mut fri_context,
-      &mut zk_prover.poly_prover,
-      self.ctx.q_eval_real.clone(),
-      self.aritmetic_circuit.circuit[0].bit_length,
-      alpha_beta_sum,
-      &mut all_sum,
-      scratch_pad,
-    );
+    // let merkle_root_h = commit_public_array(
+    //   &mut fri_context,
+    //   &mut zk_prover.poly_prover,
+    //   self.ctx.q_eval_real.clone(),
+    //   self.aritmetic_circuit.circuit[0].bit_length,
+    //   alpha_beta_sum,
+    //   &mut all_sum,
+    //   scratch_pad,
+    // );
 
-    println!("Merkle_root_h: {:?}", merkle_root_h);
+    // println!("Merkle_root_h: {:?}", merkle_root_h);
 
-    self.proof_size += 2 * mem::size_of::<HashDigest>();
-    self.vpd_randomness = r_0.clone();
-    self.one_minus_vpd_randomness = one_minus_r_0.clone();
+    // self.proof_size += 2 * mem::size_of::<HashDigest>();
+    // self.vpd_randomness = r_0.clone();
+    // self.one_minus_vpd_randomness = one_minus_r_0.clone();
 
-    //Todo! Debug reference-borrowing
+    // //Todo! Debug reference-borrowing
 
-    self.poly_verifier.pc_prover = zk_prover.poly_prover.clone();
+    // self.poly_verifier.pc_prover = zk_prover.poly_prover.clone();
 
-    let public_array = Self::public_array_prepare(
-      self,
-      r_0.clone(),
-      one_minus_r_0,
-      self.aritmetic_circuit.circuit[0].bit_length,
-    );
-    //prime_field::field_element *public_array = public_array_prepare_generic(q_eval_real, C.circuit[0].bit_length);
+    // let public_array = Self::public_array_prepare(
+    //   self,
+    //   r_0.clone(),
+    //   one_minus_r_0,
+    //   self.aritmetic_circuit.circuit[0].bit_length,
+    // );
+    // //prime_field::field_element *public_array = public_array_prepare_generic(q_eval_real, C.circuit[0].bit_length);
 
-    //let input_0_verify = true;
-    //let mut zk_pp = PolyCommitProver::default();
+    // //let input_0_verify = true;
+    // //let mut zk_pp = PolyCommitProver::default();
 
-    let input_0_verify = verify_poly_commitment(
-      &mut fri_context,
-      &mut zk_prover.poly_prover,
-      all_sum,
-      self.aritmetic_circuit.circuit[0].bit_length,
-      public_array,
-      &mut verification_time,
-      &mut self.proof_size,
-      &mut zk_prover.total_time,
-      merkle_root_l,
-      merkle_root_h,
-    );
+    // let input_0_verify = verify_poly_commitment(
+    //   &mut fri_context,
+    //   &mut zk_prover.poly_prover,
+    //   all_sum,
+    //   self.aritmetic_circuit.circuit[0].bit_length,
+    //   public_array,
+    //   &mut verification_time,
+    //   &mut self.proof_size,
+    //   &mut zk_prover.total_time,
+    //   merkle_root_l,
+    //   merkle_root_h,
+    // );
 
-    //Todo! Debug time
+    // //Todo! Debug time
 
-    zk_prover.total_time += self.poly_verifier.pc_prover.total_time_pc_p;
-    //let input_0_verify = input_0_verify.unwrap();
-    if !(input_0_verify.as_ref().ok() == Some(&0)) {
-      println!("Verification fail, input vpd");
-      println!("where:{:?} ", input_0_verify);
-      return false;
-    } else {
-      println!("Verification pass");
-      println!("Prove Time: {}", zk_prover.total_time);
-      println!("Verification rdl time: {}", verification_rdl_time);
-      //verification rdl time is the non-parallel part of the circuit. In all of our experiments and most applications, it can be calculated in O(log n) or O(log^2 n) time. We didn't implement the fast method due to the deadline.
-      println!(
-        "Verification Time: {}",
-        verification_time - verification_rdl_time
-      );
-      self.v_time = verification_time - verification_rdl_time;
-      println!("Proof size(bytes): {} ", self.proof_size);
+    // zk_prover.total_time += self.poly_verifier.pc_prover.total_time_pc_p;
+    // //let input_0_verify = input_0_verify.unwrap();
+    // if !(input_0_verify.as_ref().ok() == Some(&0)) {
+    //   println!("Verification fail, input vpd");
+    //   println!("where:{:?} ", input_0_verify);
+    //   return false;
+    // } else {
+    //   println!("Verification pass");
+    //   println!("Prove Time: {}", zk_prover.total_time);
+    //   println!("Verification rdl time: {}", verification_rdl_time);
+    //   //verification rdl time is the non-parallel part of the circuit. In all of our experiments and most applications, it can be calculated in O(log n) or O(log^2 n) time. We didn't implement the fast method due to the deadline.
+    //   println!(
+    //     "Verification Time: {}",
+    //     verification_time - verification_rdl_time
+    //   );
+    //   self.v_time = verification_time - verification_rdl_time;
+    //   println!("Proof size(bytes): {} ", self.proof_size);
 
-      Self::write_file(
-        output_path,
-        zk_prover.total_time,
-        verification_time,
-        predicates_calc_time,
-        verification_rdl_time,
-        self.proof_size,
-      );
-    }
-    true
+    //   Self::write_file(
+    //     output_path,
+    //     zk_prover.total_time,
+    //     verification_time,
+    //     predicates_calc_time,
+    //     verification_rdl_time,
+    //     self.proof_size,
+    //   );
+    // }
+    // true
   }
 
   pub fn write_file(
@@ -758,7 +731,6 @@ impl ZkVerifier {
       log_length - LOG_SLICE_NUMBER,
     );
     let q_coef_verifier = vec![FieldElement::zero(); 1 << (log_length - LOG_SLICE_NUMBER)];
-    //Below function is not implemented neither in virgo repo nor orion repo
     //    inverse_fast_fourier_transform(q_eval_verifier, (1 << (log_length - log_slice_number)), (1 << (log_length - log_slice_number)), prime_field::get_root_of_unity(log_length - log_slice_number), q_coef_verifier);
     let mut q_coef_arr = vec![FieldElement::zero(); 1 << log_length];
     let coef_slice_size = 1 << (log_length - LOG_SLICE_NUMBER);
