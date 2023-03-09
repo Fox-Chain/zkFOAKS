@@ -320,9 +320,9 @@ impl ZkVerifier {
   //Decided to implemente the verify() function from orion repo
 
   pub fn verify(&mut self, output_path: &String, bit_length: usize) -> bool {
-    // initialize the prover
+    // Initialize the prover,
+    // the original repo initialize the prover in the main fn()
     let mut zk_prover = ZkProver::new();
-    //println!("zk {:?}", zk_prover.circuit_value[0]);
     zk_prover.init_array(bit_length, &self.aritmetic_circuit);
 
     self.proof_size = 0;

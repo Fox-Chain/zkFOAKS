@@ -84,8 +84,6 @@ impl ZkProver {
   }
 
   pub fn init_array(&mut self, max_bit_length: usize, aritmetic_circuit: &LayeredCircuit) {
-    self.total_time = 0.0;
-
     let half_length = (max_bit_length >> 1) + 1;
 
     self.ctx.gate_meet = vec![false; 15];
@@ -105,6 +103,8 @@ impl ZkProver {
     self.v_mult_add0 = vec![LinearPoly::zero(); 1 << max_bit_length];
     self.add_v_array = vec![LinearPoly::zero(); 1 << max_bit_length];
 
+    // Gian: The original repo init total_time and call get_circuit() in the main fn()
+    self.total_time = 0.0;
     self.get_circuit(aritmetic_circuit);
   }
 
@@ -143,7 +143,9 @@ impl ZkProver {
   pub fn evaluate(&mut self) -> Vec<FieldElement> {
     let t0 = time::Instant::now();
 
-    // Below code was commented in the original repo, here we need it
+    // Gian: Below code was commented in the original Orion repo,
+    // here we need it, otherwise program panics!
+    // Todo: Debug
     self.circuit_value.push(vec![
       FieldElement::zero();
       1 << self.aritmetic_circuit.circuit[0].bit_length
@@ -162,7 +164,7 @@ impl ZkProver {
         FieldElement::zero();
         1 << self.aritmetic_circuit.circuit[i].bit_length
       ]);
-      for j in 0..self.aritmetic_circuit.circuit[i].bit_length {
+      for j in 0..(1 << self.aritmetic_circuit.circuit[i].bit_length) {
         let g = j;
         let ty: usize = self.aritmetic_circuit.circuit[i].gates[g].ty;
         let u = self.aritmetic_circuit.circuit[i].gates[g].u;
@@ -171,6 +173,7 @@ impl ZkProver {
         if ty == 0 {
           self.circuit_value[i][g] = self.circuit_value[i - 1][u] + self.circuit_value[i - 1][v];
         } else if ty == 1 {
+          // Gian: Since u is usize type, no need to assert u >=0
           assert!(u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length));
           assert!(v < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length));
           self.circuit_value[i][g] = self.circuit_value[i - 1][u] * self.circuit_value[i - 1][v];
@@ -207,7 +210,7 @@ impl ZkProver {
           assert!(v - u + 1 <= 60);
           for k in u..=v {
             self.circuit_value[i][g] = self.circuit_value[i][g]
-              + self.circuit_value[i - 1][k] * FieldElement::from_real(1 << (k - u));
+              + self.circuit_value[i - 1][k] * FieldElement::from_real(1usize << (k - u));
           }
         } else if ty == 13 {
           assert!(u == v);
