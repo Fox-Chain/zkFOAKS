@@ -77,7 +77,7 @@ pub struct ZkProver {
 impl ZkProver {
   pub fn new() -> Self {
     Self {
-      circuit_value: Vec::with_capacity(SIZE),
+      circuit_value: vec![vec![FieldElement::zero()]; SIZE],
       ..Default::default()
     }
   }
@@ -119,19 +119,18 @@ impl ZkProver {
     r_0: Vec<FieldElement>,
     output_raw: Vec<FieldElement>,
     r_0_size: usize,
-    output_size: usize,
+    mut output_size: usize,
   ) -> FieldElement {
     let t0 = time::Instant::now();
-    let mut outputsize = output_size;
-    let mut output = vec![FieldElement::zero(); outputsize];
+    let mut output = vec![FieldElement::zero(); output_size];
     for i in 0..output_size {
-      output.push(output_raw[i]);
+      output[i] = output_raw[i];
     }
     for i in 0..r_0_size {
-      for j in 0..(outputsize >> 1) {
+      for j in 0..(output_size >> 1) {
         output[j] = output[j << 1] * one_minus_r_0[i] + output[j << 1 | 1] * r_0[i];
       }
-      outputsize >>= 1;
+      output_size >>= 1;
     }
     let time_span = t0.elapsed();
     self.total_time += time_span.as_secs_f64();
@@ -145,10 +144,7 @@ impl ZkProver {
     // Gian: Below code was commented in the original Orion repo,
     // here we need it, otherwise program panics!
     // Todo: Debug
-    self.circuit_value.push(vec![
-      FieldElement::zero();
-      1 << self.aritmetic_circuit.circuit[0].bit_length
-    ]);
+
     for i in 0..(1 << self.aritmetic_circuit.circuit[0].bit_length) {
       let g = i;
       //todo: Could delete below variable, never used
@@ -159,10 +155,8 @@ impl ZkProver {
     assert!(self.aritmetic_circuit.total_depth < 1000000);
 
     for i in 1..(self.aritmetic_circuit.total_depth) {
-      self.circuit_value.push(vec![
-        FieldElement::zero();
-        1 << self.aritmetic_circuit.circuit[i].bit_length
-      ]);
+      self.circuit_value[i] =
+        vec![FieldElement::zero(); 1 << self.aritmetic_circuit.circuit[i].bit_length];
       for j in 0..(1 << self.aritmetic_circuit.circuit[i].bit_length) {
         let g = j;
         let ty: usize = self.aritmetic_circuit.circuit[i].gates[g].ty;
