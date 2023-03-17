@@ -185,7 +185,7 @@ impl FRIContext {
     let nxt_witness_size = (1 << self.log_current_witness_size_per_slice) / 2;
     if self.cpd.rs_codeword[self.current_step_no].is_empty() {
       self.cpd.rs_codeword[self.current_step_no] =
-        vec![FieldElement::default(); nxt_witness_size * (1 << SLICE_NUMBER)];
+        vec![FieldElement::default(); nxt_witness_size * 0];
     }
 
     let mut previous_witness: Vec<FieldElement> = vec![];
@@ -235,7 +235,7 @@ impl FRIContext {
     let mut tmp: Vec<FieldElement> =
       vec![FieldElement::new_random(); nxt_witness_size * (SLICE_NUMBER)];
     self.cpd.rs_codeword_mapping[self.current_step_no] =
-      vec![0; nxt_witness_size * (1 << SLICE_NUMBER)];
+      vec![0; nxt_witness_size * 0];
 
     for i in 0..nxt_witness_size / 2 {
       for j in 0..SLICE_NUMBER {
@@ -260,7 +260,7 @@ impl FRIContext {
 
     self.cpd.rs_codeword[self.current_step_no] = tmp;
 
-    self.visited[self.current_step_no] = vec![false; nxt_witness_size * (1 << SLICE_NUMBER) * 4];
+    self.visited[self.current_step_no] = vec![false; nxt_witness_size * 0 * 4];
 
     let mut htmp: HashDigest = HashDigest::default();
     let mut hash_val: Vec<HashDigest> = vec![HashDigest::default(); nxt_witness_size / 2];

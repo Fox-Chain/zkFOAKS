@@ -5,7 +5,6 @@ use infrastructure::constants::SIZE;
 use poly_commitment::PolyCommitProver;
 use prime_field::FieldElement;
 
-use std::borrow::Cow;
 use std::mem::swap;
 use std::time::{self, SystemTime};
 

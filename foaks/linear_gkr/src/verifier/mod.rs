@@ -1,17 +1,12 @@
-//#![feature(core_intrinsics)]
 use infrastructure::constants::LOG_SLICE_NUMBER;
 use infrastructure::constants::SLICE_NUMBER;
 use std::fs;
 use std::fs::read_to_string;
-use std::io;
 use std::process;
-// use std::borrow::Borrow;
 
 use poly_commitment::PolyCommitVerifier;
 use prime_field::FieldElement;
 use std::fs::File;
-use std::io::BufRead;
-use std::io::BufReader;
 use std::io::{Error, Write};
 use std::mem;
 use std::time;
@@ -67,11 +62,12 @@ impl ZkVerifier {
   pub fn new() -> Self {
     Default::default()
   }
-  //ToDo!: Improve unwrap() handling, use "?" operator. Improve println!(), could use eprintln()
+  
   pub fn read_circuit(&mut self, circuit_path: &str, meta_path: &str) -> Option<usize> {
     let d: usize;
     let circuit_content = read_to_string(&circuit_path).unwrap();
     let mut circuit_lines = circuit_content.lines();
+
     if let Some(value) = circuit_lines.next() {
       d = value.parse().unwrap_or_else(|err| {
         eprintln!("Problem parsing total number of layers from file: {}", err);
@@ -81,6 +77,7 @@ impl ZkVerifier {
       eprintln!("Empty File!!!");
       process::exit(1);
     }
+
     self.aritmetic_circuit.circuit = vec![Layer::new(); d + 1];
     self.aritmetic_circuit.total_depth = d + 1;
 
@@ -118,7 +115,8 @@ impl ZkVerifier {
           self.aritmetic_circuit.circuit[1].gates = vec![Gate::new(); n_pad];
         }
       }
-      let mut max_gate: Option<usize> = None;
+
+      let mut max_gate: Option<usize>;
       let mut previous_g: Option<usize> = None;
 
       for j in 0..number_gates {
@@ -127,7 +125,7 @@ impl ZkVerifier {
         let u: usize = next_line_splited.next().unwrap().parse().unwrap();
         let mut v: usize = next_line_splited.next().unwrap().parse().unwrap();
         //println!("{} {} {} {} ", ty, g, u, v);
-        /*panic!();*/
+        
         if ty != 3 {
           if ty == 5 {
             assert!(u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length));
@@ -159,15 +157,13 @@ impl ZkVerifier {
         }
         if ty == 6 {
           if v != 0 {
-            //todo: improve error handling
-            println!("WARNING, v!=0 for NOT gate")
+            eprintln!("WARNING, v!=0 for NOT gate")
           }
           v = 0;
         }
         if ty == 10 {
           if v != 0 {
-            //todo: improve error handling
-            println!("WARNING, v!=0 for relay gate {}", i)
+            eprintln!("WARNING, v!=0 for relay gate {}", i)
           }
           v = 0;
         }
@@ -176,7 +172,7 @@ impl ZkVerifier {
         }
         if let Some(prev_g) = previous_g {
           if g != prev_g + 1 {
-            println!(
+            eprintln!(
               "Error, gates must be in sorted order, and full [0, 2^n - 1]. {} {} {} {}",
               i, j, g, prev_g
             );
@@ -184,7 +180,7 @@ impl ZkVerifier {
           }
         } else {
           if g != 0 {
-            println!(
+            eprintln!(
               "Error, gates must be in sorted order, and full [0, 2^n - 1]. {} {} {} -1",
               i, j, g
             );
@@ -250,7 +246,7 @@ impl ZkVerifier {
           self.aritmetic_circuit.circuit[0].bit_length = cnt - 1;
         }
       }
-      //todo: improve error handling
+      
       println!(
         "layer {}, bit_length {}",
         i, self.aritmetic_circuit.circuit[i].bit_length
@@ -317,9 +313,9 @@ impl ZkVerifier {
     self.beta_u_block_second_half = vec![FieldElement::zero(); 1 << second_half_len];
   }
 
-  //Decided to implemente the verify() function from orion repo
-
+  //Decided to implement the verify() function from orion repo
   pub fn verify(&mut self, output_path: &String, bit_length: usize) -> bool {
+    println!("output path: {}", output_path);
     // Initialize the prover,
     // the original repo initialize the prover in the main fn()
     let mut zk_prover = ZkProver::new();
@@ -340,9 +336,9 @@ impl ZkVerifier {
     let result = zk_prover.evaluate();
     let mut alpha = FieldElement::real_one();
     let mut beta = FieldElement::zero();
+    
     //	random_oracle oracle; // Orion just declare the variable but dont use it later
-    let capacity =
-      self.aritmetic_circuit.circuit[self.aritmetic_circuit.total_depth - 1].bit_length;
+    let capacity = self.aritmetic_circuit.circuit[self.aritmetic_circuit.total_depth - 1].bit_length;
     let mut r_0 = Self::generate_randomness(capacity);
     let mut r_1 = Self::generate_randomness(capacity);
     let mut one_minus_r_0 = vec![FieldElement::zero(); capacity];
@@ -362,9 +358,10 @@ impl ZkVerifier {
       capacity,
       1 << capacity,
     );
-    // }
+    
     let time_span = t_a.elapsed();
     println!("    Time:: {}", time_span.as_secs_f64());
+
     a_0 = alpha * a_0;
     let mut alpha_beta_sum = a_0;
     let _direct_relay_value: FieldElement;
@@ -413,8 +410,10 @@ impl ZkVerifier {
         vec![FieldElement::zero(); self.aritmetic_circuit.circuit[i - 1].bit_length];
 
       for j in 0..(self.aritmetic_circuit.circuit[i - 1].bit_length) {
-        one_minus_r_u.push(FieldElement::from_real(1) - r_u[j]);
-        one_minus_r_v.push(FieldElement::from_real(1) - r_v[j]);
+        one_minus_r_u[j] = FieldElement::from_real(1) - r_u[j];
+        one_minus_r_v[j] = FieldElement::from_real(1) - r_v[j];
+        //one_minus_r_u.push(FieldElement::from_real(1) - r_u[j]);
+        //one_minus_r_v.push(FieldElement::from_real(1) - r_v[j]);
       }
 
       for j in 0..(self.aritmetic_circuit.circuit[i - 1].bit_length) {
@@ -459,7 +458,7 @@ impl ZkVerifier {
           != alpha_beta_sum
         {
           //todo: Improve error handling
-          println!(
+          eprintln!(
             "Verification fail, phase2, circuit {}, current bit {}",
             i, j
           );
@@ -506,8 +505,6 @@ impl ZkVerifier {
         alpha,
         beta,
       );
-
-      //todo
 
       let predicates_calc_span = predicates_calc.elapsed();
       //println!("predicates_calc_span: {:?}", predicates_calc_span);
