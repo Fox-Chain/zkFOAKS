@@ -575,6 +575,7 @@ impl ZkVerifier {
       1 << self.aritmetic_circuit.circuit[0].bit_length
     );
 
+    zk_prover.poly_prover.commit_private_array(private_array, log_array_length)
     todo!();
     //From here need to change a lot
     // let mut fri_context = FRIContext::new();

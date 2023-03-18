@@ -79,11 +79,12 @@ impl PolyCommitProver {
 
     let mut tmp = Vec::<FieldElement>::with_capacity(slice_real_ele_cnt);
 
-    let order = slice_size * slice_count;
+    //let order = slice_size * slice_count;
 
     let now = time::Instant::now();
 
-    let mut scratch_pad = rs_polynomial::ScratchPad::from_order(order);
+    // replaces init_scratch_pad
+    let mut scratch_pad = rs_polynomial::ScratchPad::from_order(slice_size * slice_count);
 
     for i in 0..slice_count {
       let mut all_zero = true;

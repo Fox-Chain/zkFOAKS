@@ -45,7 +45,7 @@ pub fn my_mod(x: usize) -> usize {
   (x >> 61) + (x & MOD)
 }
 
-pub fn my_mult(x: usize, y: usize) -> usize {
+pub fn my_mult(x: usize, y: usize) -> usize { // todo: debug
   // return a value between [0, 2PRIME) = x * y mod PRIME
   // return ((hi << 3) | (lo >> 61)) + (lo & PRIME)
   let (lo, hi) = x.widening_mul(y);

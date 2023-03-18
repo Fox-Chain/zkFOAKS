@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::mem;
 use std::ops::{Deref, DerefMut};
 
 use rayon::prelude::*;
@@ -32,6 +33,7 @@ impl ScratchPad {
         let rou =
             FieldElement::get_root_of_unity(my_log(order).expect("Log order not power of two"))
                 .expect("Log order too high");
+
         let inv_rou = rou.inverse();
 
         twiddle_factor.push(FieldElement::real_one());
@@ -203,18 +205,27 @@ pub fn inverse_fast_fourier_transform(
         coefficient_len = order;
     }
 
-    let sub_eval: Cow<[FieldElement]> = {
-        if coefficient_len != order {
-            let mut sub_eval = Vec::with_capacity(coefficient_len);
-
-            for i in 0..coefficient_len {
-                sub_eval[i] = evaluations[i * (order / coefficient_len)];
-            }
-
-            Cow::Owned(sub_eval)
-        } else {
-            Cow::Borrowed(evaluations)
+    let mut sub_eval: Cow<'_, [FieldElement]> = if coefficient_len != order {
+        let sub_eval_cap = coefficient_len * mem::size_of::<FieldElement>();
+        let mut temp_sub_eval: Vec<_> = (0..sub_eval_cap).map(|_| FieldElement::zero()).collect();
+        for i in 0..coefficient_len {
+            temp_sub_eval[i] = evaluations[i * (order / coefficient_len)];
         }
+
+        Cow::Owned(temp_sub_eval)
+
+        /* 
+        Implementation if we take in count parallelism, however, we need to lock each thread to mutate the vector, 
+        as in rust is not memory safe to use a vector across multiple thread simultaneously
+
+        let temp_sub_eval = Mutex::new(Vec::with_capacity(coef_len));
+        (0..coef_len).into_par_iter().for_each(|i| {
+            temp_sub_eval.lock().unwrap().push(evaluations[i * (order / coef_len)]);
+        });
+        Cow::Owned(temp_sub_eval.into_inner().unwrap())
+        */
+    } else {
+        Cow::Borrowed(evaluations)
     };
 
     let mut new_rou = FieldElement::real_one();
@@ -242,8 +253,8 @@ pub fn inverse_fast_fourier_transform(
         }
     }
 
-    assert!(log_order.is_some());
-    assert!(log_coefficient.is_some());
+    assert!(log_order.is_some() && log_coefficient.is_some());
+    //assert!(log_coefficient.is_some());
 
     let log_order = log_order.unwrap();
 
@@ -251,7 +262,18 @@ pub fn inverse_fast_fourier_transform(
         inv_rou = inv_rou * tmp;
         tmp = tmp * tmp;
     }
-    assert!(inv_rou * inv_rou == FieldElement::real_one());
+    assert!(inv_rou * new_rou == FieldElement::real_one());
+
+    fast_fourier_transform(
+        sub_eval.to_mut(), 
+        order,
+        &mut coefficient_len,
+        inv_rou,
+        dst, 
+        scratch_pad.twiddle_factor_size, 
+        root_of_unity, 
+        dst
+    );
 
     // let mut inv_twiddle_factor = INV_TWIDDLE_FACTOR.write().unwrap();
 
