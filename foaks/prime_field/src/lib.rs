@@ -45,6 +45,7 @@ pub fn my_mod(x: usize) -> usize {
   (x >> 61) + (x & MOD)
 }
 
+// Gian: Passed test, well implemented
 pub fn my_mult(x: usize, y: usize) -> usize {
   // return a value between [0, 2PRIME) = x * y mod PRIME
   // return ((hi << 3) | (lo >> 61)) + (lo & PRIME)
