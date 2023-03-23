@@ -276,8 +276,8 @@ impl ZkProver {
     let zero = FieldElement::zero();
     for i in 0..self.total_uv {
       //todo! linear_poly != FieldElement
-      let x = LinearPoly::maps(self.circuit_value[self.sumcheck_layer_id - 1][i]);
-      self.v_mult_add0[i] = x;
+      self.v_mult_add0[i] =
+        LinearPoly::new_single_input(self.circuit_value[self.sumcheck_layer_id - 1][i]);
 
       //self.v_mult_add[i] = self.circuit_value[self.sumcheck_layer_id - 1][i];
       self.add_v_array[i].a = zero;
@@ -706,7 +706,8 @@ impl ZkProver {
       self.add_v_array[i].b = zero;
       //todo! linear_poly != FieldElement
       //self.v_mult_add[i] = self.circuit_value[self.sumcheck_layer_id - 1][i];
-      self.v_mult_add0[i] = LinearPoly::maps(self.circuit_value[self.sumcheck_layer_id - 1][i]);
+      self.v_mult_add0[i] =
+        LinearPoly::new_single_input(self.circuit_value[self.sumcheck_layer_id - 1][i]);
     }
 
     let mut intermediates0 = vec![FieldElement::zero(); total_g];

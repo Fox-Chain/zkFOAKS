@@ -9,10 +9,12 @@ pub struct LinearPoly {
 }
 
 impl LinearPoly {
-  //maps from FieldElement to LinearPoly
-  // unfinished, check C/C++ repo
-  pub fn maps(arg: FieldElement) -> Self {
-    Self { a: arg, b: arg }
+  //maps from FieldElement to LinearPoly //Check Original repo
+  pub fn new_single_input(arg: FieldElement) -> Self {
+    Self {
+      a: FieldElement::zero(),
+      b: arg,
+    }
   }
 
   pub fn zero() -> Self {
