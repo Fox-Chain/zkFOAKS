@@ -83,14 +83,14 @@ impl<T> DerefMut for UnsafeSendSyncRawPtr<T> {
 }
 
 pub fn fast_fourier_transform(
-    dst: &mut [Vec<FieldElement>; 3],
-    twiddle_factor: &mut [FieldElement],
-    twiddle_factor_size: &mut usize,
     coefficients: &[FieldElement],
     coefficient_len: usize,
     order: usize,
     root_of_unity: FieldElement,
     result: &mut [FieldElement],
+    twiddle_factor: &mut [FieldElement],
+    dst: &mut [Vec<FieldElement>;3],
+    twiddle_factor_size: &mut usize,
 ) {
     let mut rot_mul: [FieldElement; MAX_ORDER] = [FieldElement::default(); MAX_ORDER];
 
@@ -189,7 +189,7 @@ pub fn fast_fourier_transform(
         }
     }
 
-    // result[..order].copy_from_slice(&DST[0].read().unwrap()[..order]);
+    (0..order).for_each(|i| result[i] = dst[0][i]);
 }
 
 pub fn inverse_fast_fourier_transform(
@@ -205,7 +205,7 @@ pub fn inverse_fast_fourier_transform(
         coefficient_len = order;
     }
 
-    let mut sub_eval: Cow<'_, [FieldElement]> = if coefficient_len != order {
+    let sub_eval: Cow<'_, [FieldElement]> = if coefficient_len != order {
         let sub_eval_cap = coefficient_len * mem::size_of::<FieldElement>();
         let mut temp_sub_eval: Vec<_> = (0..sub_eval_cap).map(|_| FieldElement::zero()).collect();
         for i in 0..coefficient_len {
@@ -264,32 +264,23 @@ pub fn inverse_fast_fourier_transform(
     }
     assert!(inv_rou * new_rou == FieldElement::real_one());
 
+    // todo: check
     fast_fourier_transform(
-        sub_eval.to_mut(), 
+        sub_eval.as_ref(),
         order,
-        &mut coefficient_len,
+        coefficient_len,
         inv_rou,
-        dst, 
-        scratch_pad.twiddle_factor_size, 
-        root_of_unity, 
-        dst
+        dst,
+        &mut scratch_pad.inv_twiddle_factor,
+        &mut scratch_pad.dst,
+        &mut scratch_pad.twiddle_factor_size
     );
 
-    // let mut inv_twiddle_factor = INV_TWIDDLE_FACTOR.write().unwrap();
+    let inv_n = FieldElement::inverse(FieldElement::from_real(order));
+    assert!(inv_n * FieldElement::from_real(order) == FieldElement::from_real(1));
 
-    // fast_fourier_transform(
-    //     &sub_eval[..],
-    //     order,
-    //     coefficient_len,
-    //     inv_rou,
-    //     dst,
-    //     &mut inv_twiddle_factor.deref_mut()[..],
-    // );
+    (0..coefficient_len).for_each(|i| {
+        dst[i] = dst[i] * inv_n;
+    });
 
-    // let inv_n = FieldElement::from_real(order.try_into().unwrap()).inverse();
-    // assert!(inv_n * FieldElement::from_real(order.try_into().unwrap()) == FieldElement::real_one());
-
-    // dst.par_iter_mut().take(coefficient_len).for_each(|item| {
-    //     *item = *item * inv_n;
-    // });
 }

@@ -1,8 +1,8 @@
-use std::{time, usize};
+use std::{time, usize, mem::size_of};
 
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, MAX_BIT_LENGTH, MAX_FRI_DEPTH, RS_CODE_RATE, SLICE_NUMBER},
-  my_hash::HashDigest,
+  my_hash::{HashDigest, my_hash}, merkle_tree,
 };
 use poly_commitment::PolyCommitContext;
 use prime_field::FieldElement;
@@ -173,10 +173,39 @@ pub fn request_init_commit(
   leaf_hash[oracle_indicator].reserve(1 << (*log_current_witness_size_per_slice - 1));
   for i in 0..(1 << (*log_current_witness_size_per_slice - 1)) {
     let tmp_hash = HashDigest::new();
-    let data = [HashDigest::new(), HashDigest::new()];
+    let mut data = [HashDigest::new(), HashDigest::new()];
 
-    for j in 0..(1 << log_leaf_size) {}
+    let mut j = 0;
+    let end = 1 << log_leaf_size;
+    while j < end {
+      unsafe {
+        std::ptr::copy_nonoverlapping<FieldElement>(data,
+          witness_rs_codeword_interleaved[oracle_indicator][(i << log_leaf_size) | j],
+          2);
+      }
+
+      data[1] = tmp_hash;
+
+      j += 2;
+    }
+
+    leaf_hash.push(vec![tmp_hash]);
   }
 
-  unimplemented!()
+  unsafe {
+    merkle_tree::create_tree(
+      leaf_hash[oracle_indicator],
+      1 << (*log_current_witness_size_per_slice - 1),
+      &mut witness_merkle[oracle_indicator],
+      Some(size_of::<HashDigest>()),
+    Some(true));
+  }
+
+  visited_init[oracle_indicator] = vec![1 << *log_current_witness_size_per_slice];
+  visited_witness[oracle_indicator] = vec![1 << (bit_len + RS_CODE_RATE)];
+
+
+  fri_timer = &mut now.elapsed().as_secs_f64();
+
+  witness_merkle[oracle_indicator][1]
 }
