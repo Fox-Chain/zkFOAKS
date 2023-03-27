@@ -11,12 +11,12 @@ use std::{
 
 use self::error::{PrimeFieldError, RootOfUnityError};
 
-pub const MOD: usize = 2305843009213693951;
+pub const MOD: u64 = 2305843009213693951;
 
 pub static mut INITIALIZED: AtomicBool = AtomicBool::new(false);
 
 pub const MASK: u32 = 4294967295; // 2^32 - 1
-pub const PRIME: usize = 2305843009213693951; // 2^61 - 1
+pub const PRIME: u64 = 2305843009213693951; // 2^61 - 1
 
 pub const MAX_ORDER: usize = 62;
 
@@ -41,12 +41,12 @@ impl FieldElementContext {
   }
 }
 
-pub fn my_mod(x: usize) -> usize {
+pub fn my_mod(x: u64) -> u64 {
   (x >> 61) + (x & MOD)
 }
 
-// Gian: Passed test, well implemented
-pub fn my_mult(x: usize, y: usize) -> usize {
+// Gian: tested ok, well implemented
+pub fn my_mult(x: u64, y: u64) -> u64 {
   // return a value between [0, 2PRIME) = x * y mod PRIME
   // return ((hi << 3) | (lo >> 61)) + (lo & PRIME)
   let (lo, hi) = x.widening_mul(y);
@@ -94,8 +94,8 @@ impl VecFieldElement {
 
 #[derive(Serialize, Default, Debug, PartialEq, Eq, Copy, Clone)]
 pub struct FieldElement {
-  pub real: usize,
-  pub img: usize,
+  pub real: u64,
+  pub img: u64,
 }
 
 impl FieldElement {
@@ -120,29 +120,29 @@ impl FieldElement {
   }
 
   pub fn new_random() -> Self {
-    let real = rand::random::<usize>() % MOD;
-    let img = rand::random::<usize>() % MOD;
+    let real = rand::random::<u64>() % MOD;
+    let img = rand::random::<u64>() % MOD;
 
     Self::new(real, img)
   }
 
   pub fn new_random_real_only() -> Self {
-    let real = rand::random::<usize>() % MOD;
+    let real = rand::random::<u64>() % MOD;
 
     Self::new(real, 0)
   }
 
-  pub const fn from_real(real: usize) -> Self {
+  pub const fn from_real(real: u64) -> Self {
     let real = real % MOD;
     Self { img: 0, real }
   }
 
-  pub const fn from_img(img: usize) -> Self {
+  pub const fn from_img(img: u64) -> Self {
     let img = img % MOD;
     Self { img, real: 0 }
   }
 
-  pub const fn new(real: usize, img: usize) -> Self {
+  pub const fn new(real: u64, img: u64) -> Self {
     Self { img, real }
   }
 
@@ -154,7 +154,7 @@ impl FieldElement {
     Self::new(1, 0)
   }
 
-  pub fn sum_parts(&self) -> usize {
+  pub fn sum_parts(&self) -> u64 {
     self.real + self.img
   }
 
@@ -197,14 +197,14 @@ impl FieldElement {
   //}
 }
 
-fn verify_lt_mod_once(mut a: usize) -> usize {
+fn verify_lt_mod_once(mut a: u64) -> u64 {
   if a >= MOD {
     a -= MOD;
   }
   a
 }
 
-fn verify_lt_mod_many(mut a: usize) -> usize {
+fn verify_lt_mod_many(mut a: u64) -> u64 {
   while a >= MOD {
     a -= MOD;
   }
