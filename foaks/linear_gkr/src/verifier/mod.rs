@@ -849,8 +849,8 @@ impl ZkVerifier {
     let k = size;
     let mut ret = vec![FieldElement::zero(); k];
 
-    for _i in 0..k {
-      ret.push(FieldElement::new_random());
+    for i in 0..k {
+      ret[i] = FieldElement::new_random();
     }
     ret
   }

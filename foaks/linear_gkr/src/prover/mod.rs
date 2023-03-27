@@ -175,7 +175,7 @@ impl ZkProver {
           self.circuit_value[i][g] = FieldElement::from_real(0);
         } else if ty == 3 {
           // It suppose to be input gate, it just read the 'u' input, what about 'v' input
-          self.circuit_value[i][g] = FieldElement::from_real(u);
+          self.circuit_value[i][g] = FieldElement::from_real(u as u64);
         } else if ty == 4 {
           self.circuit_value[i][g] = self.circuit_value[i - 1][u];
         } else if ty == 5 {
@@ -204,7 +204,7 @@ impl ZkProver {
           assert!(v - u + 1 <= 60);
           for k in u..=v {
             self.circuit_value[i][g] = self.circuit_value[i][g]
-              + self.circuit_value[i - 1][k] * FieldElement::from_real(1usize << (k - u));
+              + self.circuit_value[i - 1][k] * FieldElement::from_real(1u64 << (k - u));
           }
         } else if ty == 13 {
           assert!(u == v);
