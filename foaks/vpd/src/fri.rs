@@ -119,7 +119,7 @@ pub fn request_init_commit(
 
   let now = time::Instant::now();
 
-  let sliced_input_length_per_block = 1 << *witness_bit_length_per_slice;
+  // let sliced_input_length_per_block = 1 << *witness_bit_length_per_slice; No usages
   assert!(*witness_bit_length_per_slice >= 0);
 
   let mut root_of_unity =
@@ -142,7 +142,7 @@ pub fn request_init_commit(
   let log_leaf_size = LOG_SLICE_NUMBER + 1;
   for i in 0..SLICE_NUMBER {
     assert_eq!(
-      <usize as std::convert::TryInto<i64>>::try_into(*log_current_witness_size_per_slice).unwrap()
+      <usize as TryInto<i64>>::try_into(*log_current_witness_size_per_slice).unwrap()
         - RS_CODE_RATE as i64,
       *witness_bit_length_per_slice
     );
@@ -159,7 +159,7 @@ pub fn request_init_commit(
 
     witness_rs_mapping[oracle_indicator].0[i].reserve(1 << *log_current_witness_size_per_slice);
 
-    let a = FieldElement::zero();
+    // let a = FieldElement::zero(); No usages
     for j in 0..(1 << (*log_current_witness_size_per_slice - 1)) {
       assert!((j << log_leaf_size | (i << 1) | 1) < (1 << (bit_len + RS_CODE_RATE)));
       assert!((j << log_leaf_size | (i << 1) | 1) < slice_size * slice_count);
@@ -179,8 +179,9 @@ pub fn request_init_commit(
     let end = 1 << log_leaf_size;
     while j < end {
       unsafe {
-        std::ptr::copy_nonoverlapping<FieldElement>(data,
-          witness_rs_codeword_interleaved[oracle_indicator][(i << log_leaf_size) | j],
+        std::ptr::copy_nonoverlapping(
+          &witness_rs_codeword_interleaved[oracle_indicator][i << log_leaf_size | j],
+          &mut data as *mut _ as *mut HashDigest as *mut FieldElement,
           2);
       }
 
@@ -194,18 +195,17 @@ pub fn request_init_commit(
 
   unsafe {
     merkle_tree::create_tree(
-      leaf_hash[oracle_indicator],
+      leaf_hash[oracle_indicator].clone(),
       1 << (*log_current_witness_size_per_slice - 1),
       &mut witness_merkle[oracle_indicator],
       Some(size_of::<HashDigest>()),
     Some(true));
   }
 
-  visited_init[oracle_indicator] = vec![1 << *log_current_witness_size_per_slice];
-  visited_witness[oracle_indicator] = vec![1 << (bit_len + RS_CODE_RATE)];
+  visited_init[oracle_indicator] = vec![false; 1 << *log_current_witness_size_per_slice];
+  visited_witness[oracle_indicator] = vec![false; 1 << (bit_len + RS_CODE_RATE)];
 
-
-  fri_timer = &mut now.elapsed().as_secs_f64();
+  *fri_timer = now.elapsed().as_secs_f64();
 
   witness_merkle[oracle_indicator][1]
 }

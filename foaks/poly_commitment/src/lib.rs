@@ -113,14 +113,14 @@ impl PolyCommitProver {
         );
 
         fast_fourier_transform(
-          &mut scratch_pad.dst,
-          &mut scratch_pad.twiddle_factor,
-          &mut scratch_pad.twiddle_factor_size,
           &tmp[..],
           slice_real_ele_cnt,
           slice_size,
           FieldElement::get_root_of_unity(utility::my_log(slice_size).unwrap()).unwrap(),
           &mut l_eval[i * slice_size..],
+          &mut scratch_pad.twiddle_factor,
+          &mut scratch_pad.dst,
+          &mut scratch_pad.twiddle_factor_size,
         )
       }
     }

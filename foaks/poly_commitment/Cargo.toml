@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 infrastructure = { path = "../infrastructure" }
 prime_field = { path = "../prime_field" }
+#vpd = { path = "../vpd" }

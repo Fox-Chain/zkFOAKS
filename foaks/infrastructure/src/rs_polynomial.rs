@@ -58,9 +58,9 @@ impl ScratchPad {
     }
 
     pub fn delete(&mut self) {
-        std::mem::take(&mut self.dst[0]);
-        std::mem::take(&mut self.dst[1]);
-        std::mem::take(&mut self.twiddle_factor);
+        mem::take(&mut self.dst[0]);
+        mem::take(&mut self.dst[1]);
+        mem::take(&mut self.twiddle_factor);
     }
 }
 
@@ -119,7 +119,7 @@ pub fn fast_fourier_transform(
     let log_order = log_order.unwrap();
     let log_coefficient = log_coefficient.unwrap();
 
-    assert!(rot_mul[log_order] == FieldElement::real_one());
+    assert_eq!(rot_mul[log_order], FieldElement::real_one());
     assert!(log_coefficient <= log_order);
 
     let blk_sz = order / coefficient_len;
@@ -155,7 +155,7 @@ pub fn fast_fourier_transform(
             let cur = dep & 1;
             let pre = cur ^ 1;
 
-            assert!(cur != pre);
+            assert_ne!(cur, pre);
 
             let mut cur_ptr_lock = &dst[cur];
             let mut pre_ptr_lock = &dst[pre];
@@ -166,7 +166,7 @@ pub fn fast_fourier_transform(
                 UnsafeSendSyncRawPtr(&mut pre_ptr_lock as *const _ as *mut Vec<FieldElement>);
 
             let gap = (twiddle_size / order) * (1 << dep);
-            assert!(twiddle_size % order == 0);
+            assert_eq!(twiddle_size % order, 0);
             {
                 (0..(blk_size / 2)).into_par_iter().for_each(|k| {
                     // Safety:
@@ -262,7 +262,7 @@ pub fn inverse_fast_fourier_transform(
         inv_rou = inv_rou * tmp;
         tmp = tmp * tmp;
     }
-    assert!(inv_rou * new_rou == FieldElement::real_one());
+    assert_eq!(inv_rou * new_rou, FieldElement::real_one());
 
     // todo: check
     fast_fourier_transform(
@@ -276,8 +276,8 @@ pub fn inverse_fast_fourier_transform(
         &mut scratch_pad.twiddle_factor_size
     );
 
-    let inv_n = FieldElement::inverse(FieldElement::from_real(order));
-    assert!(inv_n * FieldElement::from_real(order) == FieldElement::from_real(1));
+    let inv_n = FieldElement::inverse(FieldElement::from_real(order as u64));
+    assert_eq!(inv_n * FieldElement::from_real(order as u64), FieldElement::from_real(1));
 
     (0..coefficient_len).for_each(|i| {
         dst[i] = dst[i] * inv_n;
