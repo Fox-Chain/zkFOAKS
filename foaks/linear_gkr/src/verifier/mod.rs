@@ -10,6 +10,7 @@ use std::fs::File;
 use std::io::{Error, Write};
 use std::mem;
 use std::time;
+use infrastructure::my_hash::HashDigest;
 
 use crate::circuit_fast_track::Gate;
 use crate::circuit_fast_track::Layer;
@@ -67,6 +68,18 @@ impl ZkVerifier {
     let d: usize;
     let circuit_content = read_to_string(&circuit_path).unwrap();
     let mut circuit_lines = circuit_content.lines();
+    let describe_gate = |input_gate: usize, ix: usize| {
+      if !(input_gate < (1 << self.aritmetic_circuit.circuit[ix -1].bit_length)) {
+        println!(
+          "{} {} {} {} {} ",
+          ty,
+          g,
+          u,
+          v,
+          (1 << self.aritmetic_circuit.circuit[ix - 1].bit_length)
+        );
+      }
+    };
 
     if let Some(value) = circuit_lines.next() {
       d = value.parse().unwrap_or_else(|err| {
@@ -131,27 +144,9 @@ impl ZkVerifier {
             assert!(u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length));
             assert!(v > u && v <= (1 << self.aritmetic_circuit.circuit[i - 1].bit_length));
           } else {
-            if !(u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)) {
-              println!(
-                "{} {} {} {} {} ",
-                ty,
-                g,
-                u,
-                v,
-                (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)
-              );
-            }
+            describe_gate(u, i);
             assert!(u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length));
-            if !(v < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)) {
-              println!(
-                "{} {} {} {} {} ",
-                ty,
-                g,
-                u,
-                v,
-                (1 << self.aritmetic_circuit.circuit[i - 1].bit_length)
-              );
-            }
+            describe_gate(v, i);
             assert!(v < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length));
           }
         }
@@ -168,7 +163,7 @@ impl ZkVerifier {
           v = 0;
         }
         if ty == 13 {
-          assert!(u == v);
+          assert_eq!(u, v);
         }
         if let Some(prev_g) = previous_g {
           if g != prev_g + 1 {
@@ -575,105 +570,58 @@ impl ZkVerifier {
       1 << self.aritmetic_circuit.circuit[0].bit_length
     );
 
-    zk_prover.poly_prover.commit_private_array(private_array, log_array_length)
-    todo!();
-    //From here need to change a lot
-    // let mut fri_context = FRIContext::new();
-    // let (merkle_root_l, scratch_pad) = commit_private_array(
-    //   &mut fri_context,
-    //   &mut zk_prover.poly_prover,
-    //   zk_prover.circuit_value[0].clone(),
-    //   self.aritmetic_circuit.circuit[0].bit_length,
-    // );
+    let merkle_root_l = zk_prover.poly_prover.commit_private_array(
+      &zk_prover.circuit_value[0], self.aritmetic_circuit.circuit[0].bit_length);
 
-    // println!("Merkle_root_l: {:?}", merkle_root_l);
+    self.ctx.q_eval_real = vec![FieldElement::default(), 1 << self.aritmetic_circuit.circuit[0].bit_length];
+    self.dfs_for_public_eval(0usize, FieldElement::real_one(), &r_0, &one_minus_r_0,
+                             self.aritmetic_circuit.circuit[0].bit_length, 0);
 
-    // self.ctx.q_eval_real =
-    //   vec![FieldElement::zero(); 1 << self.aritmetic_circuit.circuit[0].bit_length];
-    // Self::dfs_for_public_eval(
-    //   self,
-    //   0,
-    //   FieldElement::real_one(),
-    //   r_0.clone(),
-    //   one_minus_r_0.clone(),
-    //   self.aritmetic_circuit.circuit[0].bit_length,
-    //   0,
-    // );
+    let merkle_root_h = zk_prover.poly_prover.commit_public_array(
+      &self.ctx.q_eval_real, self.aritmetic_circuit.circuit[0].bit_length,
+      alpha_beta_sum, &mut all_sum);
 
-    // let merkle_root_h = commit_public_array(
-    //   &mut fri_context,
-    //   &mut zk_prover.poly_prover,
-    //   self.ctx.q_eval_real.clone(),
-    //   self.aritmetic_circuit.circuit[0].bit_length,
-    //   alpha_beta_sum,
-    //   &mut all_sum,
-    //   scratch_pad,
-    // );
+    self.proof_size += 2 * mem::size_of::<HashDigest>();
+    self.vpd_randomness = r_0.clone();
+    self.one_minus_vpd_randomness = one_minus_r_0.clone();
+    //From poly_ver.p = &(p -> poly_prover); TODO check if the implementation is correct
+    self.poly_verifier.pc_prover = zk_prover.poly_prover;
 
-    // println!("Merkle_root_h: {:?}", merkle_root_h);
+    let public_array = self.public_array_prepare(
+      &r_0,
+      one_minus_r_0.clone(),
+      self.aritmetic_circuit.circuit[0].bit_length,
+    );
 
-    // self.proof_size += 2 * mem::size_of::<HashDigest>();
-    // self.vpd_randomness = r_0.clone();
-    // self.one_minus_vpd_randomness = one_minus_r_0.clone();
+    let input_0_verify = self.poly_verifier.verify_poly_commitment(
+      &all_sum,
+      self.aritmetic_circuit.circuit[0].bit_length,
+      &public_array,
+      verification_time,
+      self.proof_size,
+      zk_prover.total_time,
+      merkle_root_l,
+      merkle_root_h
+    );
 
-    // //Todo! Debug reference-borrowing
+    zk_prover.poly_prover.total_time_pc_p += self.poly_verifier.pc_prover.total_time_pc_p;
 
-    // self.poly_verifier.pc_prover = zk_prover.poly_prover.clone();
+    if !input_0_verify {
+      eprintln!("Verification fail, input vpd");
+      return false;
+    } else {
+      println!("Verification pass");
+      println!("Prove time {}", verification_rdl_time);
+      println!("Verification time {}", verification_time - verification_rdl_time);
+      self.v_time = verification_time - verification_rdl_time;
+      println!("Proof size (bytes) {}", self.proof_size);
 
-    // let public_array = Self::public_array_prepare(
-    //   self,
-    //   r_0.clone(),
-    //   one_minus_r_0,
-    //   self.aritmetic_circuit.circuit[0].bit_length,
-    // );
-    // //prime_field::field_element *public_array = public_array_prepare_generic(q_eval_real, C.circuit[0].bit_length);
+      let mut result = File::create(output_path).expect("Error creating file");
+      write!(result, "{} {} {} {} {}\n", zk_prover.total_time, verification_time, predicates_calc_time, verification_rdl_time, self.proof_size)
+          .expect("Error while writing");
+    }
 
-    // //let input_0_verify = true;
-    // //let mut zk_pp = PolyCommitProver::default();
-
-    // let input_0_verify = verify_poly_commitment(
-    //   &mut fri_context,
-    //   &mut zk_prover.poly_prover,
-    //   all_sum,
-    //   self.aritmetic_circuit.circuit[0].bit_length,
-    //   public_array,
-    //   &mut verification_time,
-    //   &mut self.proof_size,
-    //   &mut zk_prover.total_time,
-    //   merkle_root_l,
-    //   merkle_root_h,
-    // );
-
-    // //Todo! Debug time
-
-    // zk_prover.total_time += self.poly_verifier.pc_prover.total_time_pc_p;
-    // //let input_0_verify = input_0_verify.unwrap();
-    // if !(input_0_verify.as_ref().ok() == Some(&0)) {
-    //   println!("Verification fail, input vpd");
-    //   println!("where:{:?} ", input_0_verify);
-    //   return false;
-    // } else {
-    //   println!("Verification pass");
-    //   println!("Prove Time: {}", zk_prover.total_time);
-    //   println!("Verification rdl time: {}", verification_rdl_time);
-    //   //verification rdl time is the non-parallel part of the circuit. In all of our experiments and most applications, it can be calculated in O(log n) or O(log^2 n) time. We didn't implement the fast method due to the deadline.
-    //   println!(
-    //     "Verification Time: {}",
-    //     verification_time - verification_rdl_time
-    //   );
-    //   self.v_time = verification_time - verification_rdl_time;
-    //   println!("Proof size(bytes): {} ", self.proof_size);
-
-    //   Self::write_file(
-    //     output_path,
-    //     zk_prover.total_time,
-    //     verification_time,
-    //     predicates_calc_time,
-    //     verification_rdl_time,
-    //     self.proof_size,
-    //   );
-    // }
-    // true
+    true
   }
 
   pub fn write_file(
@@ -702,7 +650,7 @@ impl ZkVerifier {
 
   pub fn public_array_prepare(
     &mut self,
-    r: Vec<FieldElement>,
+    r: &Vec<FieldElement>,
     one_minus_r: Vec<FieldElement>,
     log_length: usize,
   ) -> Vec<FieldElement> {
@@ -714,7 +662,7 @@ impl ZkVerifier {
       self,
       0,
       FieldElement::real_one(),
-      r.clone(),
+      r,
       mov_pos,
       one_minus_r.clone(),
       0,
@@ -723,7 +671,7 @@ impl ZkVerifier {
       self,
       0,
       FieldElement::real_one(),
-      r.clone(),
+      r,
       one_minus_r.clone(),
       0,
       log_length - LOG_SLICE_NUMBER,
@@ -735,10 +683,8 @@ impl ZkVerifier {
     for i in 0..(1 << LOG_SLICE_NUMBER) {
       for j in 0..coef_slice_size {
         q_coef_arr[i * coef_slice_size + j] = q_coef_verifier[j] * self.ctx.q_ratio[i];
-        assert!(
-          self.ctx.q_eval_real[i * coef_slice_size + j]
-            == self.ctx.q_ratio[i] * self.ctx.q_eval_verifier[j]
-        );
+        assert_eq!(self.ctx.q_eval_real[i * coef_slice_size + j],
+                   self.ctx.q_ratio[i] * self.ctx.q_eval_verifier[j]);
       }
     }
     q_coef_arr
@@ -748,7 +694,7 @@ impl ZkVerifier {
     &mut self,
     dep: usize,
     val: FieldElement,
-    r: Vec<FieldElement>,
+    r: &Vec<FieldElement>,
     one_minus_r: Vec<FieldElement>,
     pos: usize,
     r_len: usize,
@@ -760,7 +706,7 @@ impl ZkVerifier {
         self,
         dep + 1,
         val * one_minus_r[r_len - 1 - dep],
-        r.clone(),
+        r,
         one_minus_r.clone(),
         pos << 1,
         r_len,
@@ -782,7 +728,7 @@ impl ZkVerifier {
     &mut self,
     dep: usize,
     val: FieldElement,
-    r: Vec<FieldElement>,
+    r: &Vec<FieldElement>,
     mov_pos: usize,
     one_minus_r: Vec<FieldElement>,
     pos: usize,
@@ -794,7 +740,7 @@ impl ZkVerifier {
         self,
         dep + 1,
         val * one_minus_r[mov_pos + LOG_SLICE_NUMBER - 1 - dep],
-        r.clone(),
+        r,
         0,
         one_minus_r.clone(),
         pos << 1,
@@ -814,8 +760,8 @@ impl ZkVerifier {
     &mut self,
     dep: usize,
     val: FieldElement,
-    r_0: Vec<FieldElement>,
-    one_minus_r_0: Vec<FieldElement>,
+    r_0: &Vec<FieldElement>,
+    one_minus_r_0: &Vec<FieldElement>,
     r_0_len: usize,
     pos: usize,
   ) {
@@ -825,9 +771,9 @@ impl ZkVerifier {
       Self::dfs_for_public_eval(
         self,
         dep + 1,
-        val * one_minus_r_0[r_0_len - 1 - dep],
-        r_0.clone(),
-        one_minus_r_0.clone(),
+        val * (*one_minus_r_0)[r_0_len - 1 - dep],
+        r_0,
+        one_minus_r_0,
         r_0_len,
         pos << 1,
       );
@@ -859,17 +805,17 @@ impl ZkVerifier {
     r_g: &Vec<FieldElement>,
     r_u: &Vec<FieldElement>,
   ) -> FieldElement {
-    if depth != 1 {
+    return if depth != 1 {
       let ret = FieldElement::from_real(0);
-      return ret;
+      ret
     } else {
       let mut ret = FieldElement::from_real(1);
       for i in 0..(self.aritmetic_circuit.circuit[depth].bit_length) {
         ret = ret
-          * (FieldElement::from_real(1) - r_g[i] - r_u[i]
+            * (FieldElement::from_real(1) - r_g[i] - r_u[i]
             + FieldElement::from_real(2) * r_g[i] * r_u[i]);
       }
-      return ret;
+      ret
     }
   }
 
@@ -1096,10 +1042,8 @@ impl ZkVerifier {
         one_block_beta.push(FieldElement::zero());
       }
 
-      assert!(
-        (1 << self.aritmetic_circuit.circuit[depth].log_block_size)
-          == self.aritmetic_circuit.circuit[depth].block_size
-      );
+      assert_eq!((1 << self.aritmetic_circuit.circuit[depth].log_block_size),
+                 self.aritmetic_circuit.circuit[depth].block_size);
 
       for i in 0..self.aritmetic_circuit.circuit[depth].log_block_size {
         let mut g = i;
@@ -1570,7 +1514,7 @@ impl ZkVerifier {
     }
     for i in 0..gate_type_count {
       if self.aritmetic_circuit.circuit[depth].is_parallel {
-        assert!(ret[i] == ret_para[i]);
+        assert_eq!(ret[i], ret_para[i]);
       }
     }
     ret
@@ -1580,6 +1524,4 @@ impl ZkVerifier {
   pub fn V_in() {} //Never used
   pub fn read_r1cs() {} //Never used, original code is all commented in Orion, empty in Virgo
   pub fn self_inner_product_test() {} //Never used, implemented only in Virgo, empty in Orion
-  pub fn verify_poly_commitment() {} //Todo in VPD, their imput parameter is the output of
-                                     // commit_public_array() and commit_private_array()
 }

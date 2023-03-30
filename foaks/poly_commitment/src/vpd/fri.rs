@@ -4,7 +4,7 @@ use infrastructure::{
   constants::{LOG_SLICE_NUMBER, MAX_BIT_LENGTH, MAX_FRI_DEPTH, RS_CODE_RATE, SLICE_NUMBER},
   my_hash::{HashDigest, my_hash}, merkle_tree,
 };
-use poly_commitment::PolyCommitContext;
+use crate::PolyCommitContext;
 use prime_field::FieldElement;
 
 #[derive(Default)]
@@ -96,7 +96,7 @@ pub fn request_init_commit(
     l_eval,
     h_eval_arr,
     ..
-  }: PolyCommitContext,
+  }: &PolyCommitContext,
   bit_len: usize,
   oracle_indicator: usize,
 ) -> HashDigest {

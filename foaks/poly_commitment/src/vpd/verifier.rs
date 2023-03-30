@@ -8,8 +8,9 @@ use infrastructure::{
 
 use poly_commitment::LdtCommitment;
 use prime_field::FieldElement;
+use crate::LdtCommitment;
 
-use crate::fri::FRIContext;
+use crate::vpd::fri::FRIContext;
 
 pub fn verify_merkle(
   hash_digest: HashDigest,
@@ -70,7 +71,7 @@ impl FRIContext {
       (pow_0, pow_1)
     };
 
-    assert!(pow_0 + (1 << self.log_current_witness_size_per_slice) / 2 == pow_1);
+    assert_eq!(pow_0 + (1 << self.log_current_witness_size_per_slice) / 2, pow_1);
 
     let mut value: Vec<(FieldElement, FieldElement)> = vec![];
     let log_leaf_size = LOG_SLICE_NUMBER + 1;
@@ -122,7 +123,7 @@ impl FRIContext {
 
       assert_eq!(test_hash, self.witness_merkle[oracle_indicator][pos]);
     }
-    assert!(pos == 1);
+    assert_eq!(pos, 1);
     (value, com_hhash)
   }
 

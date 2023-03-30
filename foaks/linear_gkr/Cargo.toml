@@ -11,4 +11,3 @@ ethnum = "1.2.2"
 infrastructure = { path = "../infrastructure" }
 prime_field = { path = "../prime_field" }
 poly_commitment = { path = "../poly_commitment" }
-vpd = { path = "../vpd" }
