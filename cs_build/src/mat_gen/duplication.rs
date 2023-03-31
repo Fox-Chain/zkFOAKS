@@ -38,7 +38,7 @@ pub fn check_dup_stack_len(
 }
 
 // Constraint: 1 * (src - dst) = 0
-pub fn push_element_check_matrix_gen(
+pub fn dup_element_check_matrix_gen(
     src_0_in: u64,
     src_1_in: u64,
     src_2_in: u64,
