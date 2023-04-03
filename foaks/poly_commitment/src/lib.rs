@@ -1,7 +1,13 @@
 mod vpd;
 
+use std::ffi::CString;
+use std::fs::File;
+use std::io::Read;
+use std::os::raw::{c_char, c_float, c_int};
+use std::process::Command;
 use std::thread::sleep;
 use std::time;
+use rand::Rng;
 
 use prime_field::FieldElement;
 
@@ -9,7 +15,9 @@ use infrastructure::constants::*;
 use infrastructure::my_hash::HashDigest;
 use infrastructure::rs_polynomial::{self, fast_fourier_transform, inverse_fast_fourier_transform, ScratchPad};
 use infrastructure::utility;
-use crate::vpd::fri::{FRIContext, request_init_commit};
+use infrastructure::utility::{min, my_log};
+use crate::vpd::fri::{FRIContext, request_init_commit, request_init_value_with_merkle, request_step_commit, TripleVec};
+use crate::vpd::verifier::verify_merkle;
 
 #[derive(Default)]
 pub struct LdtCommitment {
@@ -55,12 +63,12 @@ pub struct PolyCommitContext {
 pub struct PolyCommitProver {
     pub total_time_pc_p: f64,
     ctx: PolyCommitContext,
-    fri_ctx: Option<FRIContext>,
-    scratch_pad: ScratchPad
+    pub fri_ctx: Option<FRIContext>,
+    scratch_pad: ScratchPad,
 }
 
 impl PolyCommitProver {
-    pub fn commit_private_array(&mut self, private_array: &[FieldElement], log_array_length: usize, ) -> HashDigest {
+    pub fn commit_private_array(&mut self, private_array: &[FieldElement], log_array_length: usize) -> HashDigest {
         self.total_time_pc_p = 0.;
         let t0 = time::Instant::now();
 
@@ -112,7 +120,7 @@ impl PolyCommitProver {
                     &private_array[i * slice_real_ele_cnt..],
                     slice_real_ele_cnt,
                     slice_real_ele_cnt,
-                    FieldElement::get_root_of_unity(utility::my_log(slice_real_ele_cnt).unwrap()).unwrap(),
+                    FieldElement::get_root_of_unity(my_log(slice_real_ele_cnt).unwrap()).unwrap(),
                     &mut tmp[..],
                 );
 
@@ -120,7 +128,7 @@ impl PolyCommitProver {
                     &tmp[..],
                     slice_real_ele_cnt,
                     slice_size,
-                    FieldElement::get_root_of_unity(utility::my_log(slice_size).unwrap()).unwrap(),
+                    FieldElement::get_root_of_unity(my_log(slice_size).unwrap()).unwrap(),
                     &mut l_eval[i * slice_size..],
                     &mut self.scratch_pad.twiddle_factor,
                     &mut self.scratch_pad.dst,
@@ -173,7 +181,7 @@ impl PolyCommitProver {
                 &public_array[i * self.ctx.slice_real_ele_cnt..],
                 self.ctx.slice_real_ele_cnt,
                 self.ctx.slice_real_ele_cnt,
-                FieldElement::get_root_of_unity(utility::my_log(self.ctx.slice_real_ele_cnt).unwrap()).unwrap(),
+                FieldElement::get_root_of_unity(my_log(self.ctx.slice_real_ele_cnt).unwrap()).unwrap(),
                 &mut tmp,
             );
 
@@ -181,7 +189,7 @@ impl PolyCommitProver {
                 &temp,
                 self.ctx.slice_real_ele_cnt,
                 self.ctx.slice_size,
-                FieldElement::get_root_of_unity(utility::my_log(self.ctx.slice_size).unwrap()).unwrap(),
+                FieldElement::get_root_of_unity(my_log(self.ctx.slice_size).unwrap()).unwrap(),
                 &mut self.ctx.q_eval[i * self.ctx.slice_size..],
                 &mut self.scratch_pad.twiddle_factor,
                 &mut self.scratch_pad.dst,
@@ -246,7 +254,7 @@ impl PolyCommitProver {
                     &self.ctx.lq_eval,
                     2 * self.ctx.slice_real_ele_cnt,
                     2 * self.ctx.slice_real_ele_cnt,
-                    FieldElement::get_root_of_unity(utility::my_log(2 * self.ctx.slice_real_ele_cnt).unwrap()).unwrap(),
+                    FieldElement::get_root_of_unity(my_log(2 * self.ctx.slice_real_ele_cnt).unwrap()).unwrap(),
                     &mut self.ctx.lq_coef,
                 );
 
@@ -258,7 +266,7 @@ impl PolyCommitProver {
                     &self.ctx.h_coef,
                     self.ctx.slice_real_ele_cnt,
                     self.ctx.slice_size,
-                    FieldElement::get_root_of_unity(utility::my_log(self.ctx.slice_size).unwrap()).unwrap(),
+                    FieldElement::get_root_of_unity(my_log(self.ctx.slice_size).unwrap()).unwrap(),
                     &mut self.ctx.h_eval,
                     &mut self.scratch_pad.twiddle_factor,
                     &mut self.scratch_pad.dst,
@@ -278,7 +286,7 @@ impl PolyCommitProver {
                 let g = self.ctx.l_eval[i * self.ctx.slice_size + j] *
                     self.ctx.q_eval[i * self.ctx.slice_size + j] -
                     (self.scratch_pad.twiddle_factor[twiddle_gap * j % self.scratch_pad.twiddle_factor_size] - FieldElement::real_one()) *
-                    self.ctx.h_eval[j];
+                        self.ctx.h_eval[j];
 
                 if j < self.ctx.slice_size / 2 {
                     assert!((j << log_leaf_size | (i << 1) | 0) < self.ctx.slice_count * self.ctx.slice_size);
@@ -322,7 +330,7 @@ impl PolyCommitProver {
         println!("PostGKR prepare time {}", time_span);
 
         t0 = time::Instant::now();
-        let ret = request_init_commit(&mut fri_ctx, &self.ctx,r_0_len, 1);
+        let ret = request_init_commit(&mut fri_ctx, &self.ctx, r_0_len, 1);
 
         time_span = t0.elapsed().as_secs_f64();
         self.total_time_pc_p += time_span;
@@ -347,23 +355,256 @@ impl PolyCommitVerifier {
         all_sum: &[FieldElement],
         log_length: usize,
         public_array: &[FieldElement],
-        v_time: f64,
-        proof_size: usize,
+        mut v_time: f64,
+        mut proof_size: usize,
         p_time: f64,
         merkle_tree_l: HashDigest,
-        merkle_tree_h: HashDigest
-    ) {
-        let slice_count = 1 << LOG_SLICE_NUMBER;
-        let slice_size = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+        merkle_tree_h: HashDigest,
+        fri_ctx: &FRIContext,
+    ) -> bool {
+        let mut command: [c_char; 1024] = [0; 1024];
+        let path = CString::new("./fft_gkr").unwrap();
+        let path_str = path.to_str().unwrap();
+        let log_length_str = (log_length - LOG_SLICE_NUMBER).to_string();
 
-        let t0 = time::Instant::now();
-        let t1 = time::Instant::now();
+        unsafe {
+            sprintf(
+                command.as_mut_ptr(),
+                "%s %s log_fftgkr.txt",
+                path_str.as_ptr(),
+                log_length_str.as_ptr(),
+            );
+        }
 
-        // let inv_2 =
-        unimplemented!()
+        let _output = Command::new("sh")
+            .arg("-c")
+            .arg(command.to_vec())
+            .output()
+            .expect("Failed to execute command");
+
+        let mut v_time_fft: c_float = 0.0;
+        let mut proof_size_fft: c_int = 0;
+        let mut p_time_fft: c_float = 0.0;
+
+        let fft_gkr_result = CString::new("log_fftgkr.txt").unwrap();
+        let fft_gkr_result_str = fft_gkr_result.to_str().unwrap();
+        let mut file = match File::open(fft_gkr_result_str) {
+            Err(err) => panic!("Couldn't open {}: {}", fft_gkr_result_str, err),
+            Ok(file) => file,
+        };
+
+        let mut contents = String::new();
+        file.read_to_string(&mut contents)
+            .expect("something went wrong reading the file");
+
+        let mut iter = contents.split_whitespace();
+        v_time_fft = iter.next().unwrap().parse::<c_float>().unwrap();
+        proof_size_fft = iter.next().unwrap().parse::<c_int>().unwrap();
+        p_time_fft = iter.next().unwrap().parse::<c_float>().unwrap();
+
+        *v_time += v_time_fft as f64;
+        *proof_size += proof_size_fft;
+        *p_time += p_time_fft as f64;
+
+        let com = self.pc_prover.commit_phase(log_length);
+        let coef_slice_size = 1 << (log_length - LOG_SLICE_NUMBER);
+
+        for _ in 0..33 {
+            let slice_count = 1 << LOG_SLICE_NUMBER;
+            let slice_size = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+
+            let mut t0: time::Instant;
+            let time_span: f64;
+
+            let inv_2 = FieldElement::from_real(2).inverse();
+
+            let alpha_l: TripleVec;
+            let alpha_h: TripleVec;
+            let mut alpha: TripleVec = (vec![], vec![]);
+            let mut beta: TripleVec = (vec![], vec![]);
+
+            let mut s0 = FieldElement::default();
+            let mut s1 = FieldElement::default();
+            let mut pre_y = FieldElement::default();
+            let mut root_of_unity = FieldElement::default();
+            let mut y = FieldElement::default();
+
+            let equ_beta: bool;
+            assert!(log_length - LOG_SLICE_NUMBER > 0);
+            let mut pow: u128 = 0;
+            let gen_val = |alpha: &TripleVec, i: usize| (alpha.0[j].0 + alpha.0[j].1) * inv_2 + (alpha.0[j].0 - alpha.0[j].1) * inv_2 * com.randomness[i] * inv_mu;
+
+            for i in 0..log_length - LOG_SLICE_NUMBER {
+                t0 = time::Instant::now();
+
+                if i == 0 {
+                    loop {
+                        pow = rand::thread_rng().gen::<u128>() % (1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i));
+
+                        if pow < (1 << (log_length - LOG_SLICE_NUMBER - i)) || pow % 2 == 1 { break; }
+                    }
+
+                    root_of_unity = FieldElement::get_root_of_unity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i).unwrap();
+                    y = FieldElement::fast_pow(root_of_unity, pow);
+                } else {
+                    root_of_unity = root_of_unity * root_of_unity;
+                    pow = pow % (1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i));
+                    pre_y = y;
+                    y = y * y;
+                }
+
+                let mut s0_pow: u128 = 0;
+                let mut s1_pow: u128 = 0;
+                assert_eq!(pow % 2, 0);
+
+                s0_pow = pow / 2;
+                s1_pow = pow + (1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i)) / 2;
+
+                s0 = FieldElement::fast_pow(root_of_unity, s0_pow);
+                s1 = FieldElement::fast_pow(root_of_unity, s1_pow);
+
+                let indicator;
+
+                if i != 0 {
+                    assert!(s1 == pre_y || s0 == pre_y);
+                    if s1 == pre_y { indicator = 1; } else { indicator = 0; }
+                }
+
+                assert_eq!(s0 * s0, y);
+                assert_eq!(s1 * s1, y);
+
+                let new_size = 0;
+
+                if i == 0 {
+                    time_span = t0.elapsed().as_secs_f64();
+                    v_time += time_span;
+                    alpha_l = request_init_value_with_merkle(s0_pow, s1_pow, new_size, 0, fri_ctx);
+                    alpha_h = request_init_value_with_merkle(s0_pow, s1_pow, new_size, 1, fri_ctx);
+
+                    proof_size += new_size;
+
+                    t0 = time::Instant::now();
+                    if !verify_merkle(merkle_tree_l, alpha_l.1, alpha_l.1.len(), if s0_pow < s1_pow { s0_pow } else { s1_pow }, alpha_l.0) {
+                        return false;
+                    }
+
+                    if !verify_merkle(merkle_tree_h, alpha_h.1, alpha_h.1.len(), if s0_pow < s1_pow { s0_pow } else { s1_pow }, alpha_h.0) {
+                        return false;
+                    }
+
+                    v_time += t0.elapsed().as_secs_f64();
+                    beta = request_step_commit(0, pow / 2, new_size, fri_ctx);
+
+                    proof_size += new_size;
+
+                    t0 = time::Instant::now();
+
+                    // let inv_mu = root_of_unity.fast_pow(pow / 2).inverse();
+                    alpha.0.clear();
+                    alpha.1.clear();
+
+                    let mut rou = [FieldElement::default(); 2];
+                    let mut x = [FieldElement::default(); 2];
+                    let mut inv_x = [FieldElement::default(); 2];
+
+                    x[0] = FieldElement::get_root_of_unity(my_log(slice_size).unwrap()).unwrap();
+                    x[1] = FieldElement::get_root_of_unity(my_log(slice_size).unwrap()).unwrap();
+                    x[0] = x[0].fast_pow(s0_pow);
+                    x[1] = x[1].fast_pow(s1_pow);
+
+                    rou[0] = x[0].fast_pow((slice_size >> RS_CODE_RATE) as u128);
+                    rou[1] = x[1].fast_pow((slice_size >> RS_CODE_RATE) as u128);
+
+                    inv_x[0] = x[0].clone().inverse();
+                    inv_x[1] = x[1].clone().inverse();
+
+                    alpha.0.resize(slice_count, (FieldElement::default(), FieldElement::default()));
+
+                    let mut tst0 = FieldElement::from_real(0);
+                    let mut tst1 = FieldElement::from_real(0);
+
+                    x0 = FieldElement::from_real(1);
+                    x1 = FieldElement::from_real(1);
+
+                    for j in 0..slice_count {
+                        tst0 = FieldElement::from_real(0);
+                        tst1 = FieldElement::from_real(0);
+                        x0 = FieldElement::from_real(1);
+                        x1 = FieldElement::from_real(1);
+
+                        for k in 0..(1 << (log_length - LOG_SLICE_NUMBER)) {
+                            tst0 = tst0 + x0 * public_array[k + j * coef_slice_size];
+                            x0 = x0 * x[0];
+                            tst1 = tst1 + x1 * public_array[k + j * coef_slice_size];
+                            x1 = x1 * x[1];
+                        }
+
+                        let one = FieldElement::from_real(1);
+                        {
+                            alpha.0[j].0 = alpha_l.0[j].0 * tst0 - (rou[0] - one) * alpha_h.0[j].0;
+                            alpha.0[j].0 = (alpha.0[j].0 * FieldElement::from_real((slice_size >> RS_CODE_RATE) as u64) - all_sum[j]) * inv_x[0];
+                            alpha.0[j].1 = alpha_l.0[j].1 * tst1 - (rou[1] - one) * alpha_h.0[j].1;
+                            alpha.0[j].1 = (alpha.0[j].1 * FieldElement::from_real((slice_size >> RS_CODE_RATE) as u64) - all_sum[j]) * inv_x[1];
+                        }
+
+                        if s0_pow > s1_pow {
+                            std::mem::swap(&mut alpha.0[j].0, &mut alpha.0[j].1);
+                        }
+
+                        let p_val = gen_val(&alpha, i);
+
+                        if p_val != beta.0[j].0 && p_val != beta.0[j].1 {
+                            eprintln!("Fri check consistency first round fail {}", j);
+                            return false;
+                        }
+
+                        if p_val == beta.0[j].0 { equ_beta = false } else { equ_beta = true };
+                    }
+
+                    time_span = t0.elapsed().as_secs_f64();
+                } else {
+                    time_span = t0.elapsed().as_secs_f64();
+                    v_time += time_span;
+
+                    alpha = beta.clone();
+                    beta = request_step_commit(i, pow / 2, new_size, fri_ctx);
+
+                    proof_size += new_size;
+
+                    t0 = time::Instant::now();
+
+                    if !verify_merkle(com.commitment_hash[i], beta.1, beta.1.len(), pow / 2, beta.0) {
+                        return false;
+                    }
+
+                    let inv_mu = root_of_unity.fast_pow(pow / 2).inverse();
+                    time_span = t0.elapsed().as_secs_f64();
+                    v_time += time_span;
+
+                    for j in 0..slice_count {
+                        let p_val_0 = gen_val(&alpha, i);
+                        let p_val_1 = (alpha.0[j].0 + alpha.0[j].1) * inv_2 + (alpha.0[j].1 - alpha.0[j].0) * inv_2 * com.randomness[i] * inv_mu;
+
+                        if p_val_0 != beta.0[j].0 && p_val_0 != beta.0[j].1 && p_val_1 != beta.0[j].0 && p_val_1 != beta.0[j].1 {
+                            eprintln!("Fri check consistency first round fail {}", j);
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            for i in 0..slice_count {
+                let template = fri_ctx.cpd.rs_codeword[com.mx_depth - 1][0 << (LOG_SLICE_NUMBER + 1) | i << 1 | 0];
+                for j in 0..(1 << (RS_CODE_RATE - 1)) {
+                    if fri_ctx.cpd.rs_codeword[com.mx_depth - 1][j << (LOG_SLICE_NUMBER + 1) | i << 1 | 0] != template {
+                        eprintln!("Fri rs code check fail");
+                        return false;
+                    }
+                }
+            }
+        }
+
+        true
     }
 }
 
-pub fn commit_phrase_step(r: FieldElement) -> HashDigest {
-  HashDigest::new()
-}

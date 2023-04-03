@@ -16,7 +16,7 @@ pub fn verify_merkle(
   hash_digest: HashDigest,
   merkle_path: Vec<HashDigest>,
   len: usize,
-  pow: i32,
+  pow: u128,
   values: Vec<(FieldElement, FieldElement)>,
 ) -> bool {
   // We need to make sure the len is always smaller than the size of merklePath.
@@ -133,7 +133,7 @@ impl FRIContext {
     &mut self,
     lvl: usize,
     pow: usize,
-    new_size: i64,
+    // new_size: i64,
   ) -> (Vec<(FieldElement, FieldElement)>, Vec<HashDigest>) {
     let mut new_size = 0;
     let mut pow_0 = 0;
@@ -189,8 +189,8 @@ impl FRIContext {
         vec![FieldElement::default(); nxt_witness_size * 0];
     }
 
-    let mut previous_witness: Vec<FieldElement> = vec![];
-    let mut previous_witness_mapping: Vec<usize> = vec![];
+    //let mut previous_witness: Vec<FieldElement> = vec![];
+    //let mut previous_witness_mapping: Vec<usize> = vec![];
 
     let (previous_witness, previous_witness_mapping) = match self.current_step_no {
       0 => (
