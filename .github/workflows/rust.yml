@@ -18,4 +18,4 @@ jobs:
     - name: Move to folder
       run: cd foaks
     - name: Build
-      run: cd zkfoaks
+      run: cargo build
