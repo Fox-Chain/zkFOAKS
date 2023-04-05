@@ -15,7 +15,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Move to folder
-      run: cd foaks
-          cargo build
-    - name: Build
+    - name: build
+      working-directory: ./foaks
+      run: cargo build
