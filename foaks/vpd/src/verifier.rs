@@ -181,154 +181,155 @@ impl FRIContext {
   }
 
   /// Given fold parameter r, return the root of the merkle tree of next level.
-  pub fn commit_phase_step(&mut self, r: FieldElement) -> HashDigest {
-    let nxt_witness_size = (1 << self.log_current_witness_size_per_slice) / 2;
-    if self.cpd.rs_codeword[self.current_step_no].is_empty() {
-      self.cpd.rs_codeword[self.current_step_no] =
-        vec![FieldElement::default(); nxt_witness_size * (1 << SLICE_NUMBER)];
-    }
-
-    let mut previous_witness: Vec<FieldElement> = vec![];
-    let mut previous_witness_mapping: Vec<usize> = vec![];
-
-    let (previous_witness, previous_witness_mapping) = match self.current_step_no {
-      0 => (
-        self.virtual_oracle_witness.clone(),
-        self.virtual_oracle_witness_mapping.clone(),
-      ),
-      _ => (
-        self.cpd.rs_codeword[self.current_step_no - 1].clone(),
-        self.cpd.rs_codeword_mapping[self.current_step_no - 1].clone(),
-      ),
-    };
-
-    let inv_2 = FieldElement::default().inverse();
-
-    let log_leaf_size = LOG_SLICE_NUMBER + 1;
-
-    for i in 0..nxt_witness_size {
-      let qual_res_0 = i;
-      let qual_res_1 = (1 << (self.log_current_witness_size_per_slice - 1) + i) / 2;
-      let pos = usize::min(qual_res_0, qual_res_1);
-
-      let inv_mu = self.l_group[((1 << self.log_current_witness_size_per_slice) - i)
-        & ((1 << self.log_current_witness_size_per_slice) - 1)];
-
-      for j in 0..SLICE_NUMBER {
-        let real_pos = previous_witness_mapping[(pos) << LOG_SLICE_NUMBER | j];
-        // assert((i << LOG_SLICE_NUMBER | j) < nxt_witness_size * SLICE_COUNT);
-        // we should check this since the original code has BUG comment
-        self.cpd.rs_codeword[self.current_step_no][i << LOG_SLICE_NUMBER | j] = inv_2
-          * (previous_witness[real_pos] + previous_witness[real_pos | 1])
-          + inv_mu * r * (previous_witness[real_pos] - previous_witness[real_pos | 1]);
+  /*  pub fn commit_phase_step(&mut self, r: FieldElement) -> HashDigest {
+      let nxt_witness_size = (1 << self.log_current_witness_size_per_slice) / 2;
+      if self.cpd.rs_codeword[self.current_step_no].is_empty() {
+        self.cpd.rs_codeword[self.current_step_no] =
+          vec![FieldElement::default(); nxt_witness_size * (1 << SLICE_NUMBER)];
       }
-    }
 
-    for i in 0..nxt_witness_size {
-      self.l_group[i] = self.l_group[i * 2];
-    }
+      let mut previous_witness: Vec<FieldElement> = vec![];
+      let mut previous_witness_mapping: Vec<usize> = vec![];
 
-    // we assume poly_commit::slice_count is (1 << SLICE_NUMBER) here
+      let (previous_witness, previous_witness_mapping) = match self.current_step_no {
+        0 => (
+          self.virtual_oracle_witness.clone(),
+          self.virtual_oracle_witness_mapping.clone(),
+        ),
+        _ => (
+          self.cpd.rs_codeword[self.current_step_no - 1].clone(),
+          self.cpd.rs_codeword_mapping[self.current_step_no - 1].clone(),
+        ),
+      };
 
-    // Gian: Why they assumed that??? Because of that, most of the implementation is wrong
-    // Be carefull!!!
-    let mut tmp: Vec<FieldElement> =
-      vec![FieldElement::new_random(); nxt_witness_size * (SLICE_NUMBER)];
-    self.cpd.rs_codeword_mapping[self.current_step_no] =
-      vec![0; nxt_witness_size * (1 << SLICE_NUMBER)];
+      let inv_2 = FieldElement::default().inverse();
 
-    for i in 0..nxt_witness_size / 2 {
-      for j in 0..SLICE_NUMBER {
-        let a = i << LOG_SLICE_NUMBER | j;
-        let b = (i + nxt_witness_size / 2) << LOG_SLICE_NUMBER | j;
-        let c = (i) << log_leaf_size | (j << 1) | 0;
-        let d = (i) << log_leaf_size | (j << 1) | 1;
+      let log_leaf_size = LOG_SLICE_NUMBER + 1;
 
-        self.cpd.rs_codeword_mapping[self.current_step_no][a] = (i) << log_leaf_size | (j << 1) | 0;
-        self.cpd.rs_codeword_mapping[self.current_step_no][b] = (i) << log_leaf_size | (j << 1) | 0;
+      for i in 0..nxt_witness_size {
+        let qual_res_0 = i;
+        let qual_res_1 = (1 << (self.log_current_witness_size_per_slice - 1) + i) / 2;
+        let pos = usize::min(qual_res_0, qual_res_1);
 
-        tmp[c] = self.cpd.rs_codeword[self.current_step_no][i << LOG_SLICE_NUMBER | j];
-        tmp[d] = self.cpd.rs_codeword[self.current_step_no]
-          [(i + nxt_witness_size / 2) << LOG_SLICE_NUMBER | j];
+        let inv_mu = self.l_group[((1 << self.log_current_witness_size_per_slice) - i)
+          & ((1 << self.log_current_witness_size_per_slice) - 1)];
 
-        assert!(a < nxt_witness_size * SLICE_NUMBER);
-        assert!(b < nxt_witness_size * SLICE_NUMBER);
-        assert!(c < nxt_witness_size * SLICE_NUMBER);
-        assert!(d < nxt_witness_size * SLICE_NUMBER);
+        for j in 0..SLICE_NUMBER {
+          let real_pos = previous_witness_mapping[(pos) << LOG_SLICE_NUMBER | j];
+          // assert((i << LOG_SLICE_NUMBER | j) < nxt_witness_size * SLICE_COUNT);
+          // we should check this since the original code has BUG comment
+          self.cpd.rs_codeword[self.current_step_no][i << LOG_SLICE_NUMBER | j] = inv_2
+            * (previous_witness[real_pos] + previous_witness[real_pos | 1])
+            + inv_mu * r * (previous_witness[real_pos] - previous_witness[real_pos | 1]);
+        }
       }
-    }
 
-    self.cpd.rs_codeword[self.current_step_no] = tmp;
+      for i in 0..nxt_witness_size {
+        self.l_group[i] = self.l_group[i * 2];
+      }
 
-    self.visited[self.current_step_no] = vec![false; nxt_witness_size * (1 << SLICE_NUMBER) * 4];
+      // we assume poly_commit::slice_count is (1 << SLICE_NUMBER) here
 
-    let mut htmp: HashDigest = HashDigest::default();
-    let mut hash_val: Vec<HashDigest> = vec![HashDigest::default(); nxt_witness_size / 2];
+      // Gian: Why they assumed that??? Because of that, most of the implementation is wrong
+      // Be carefull!!!
+      let mut tmp: Vec<FieldElement> =
+        vec![FieldElement::new_random(); nxt_witness_size * (SLICE_NUMBER)];
+      self.cpd.rs_codeword_mapping[self.current_step_no] =
+        vec![0; nxt_witness_size * (1 << SLICE_NUMBER)];
 
-    unsafe {
       for i in 0..nxt_witness_size / 2 {
-        for j in 0..(1 << LOG_SLICE_NUMBER) {
-          let mut data = [HashDigest::default(), HashDigest::default()];
+        for j in 0..SLICE_NUMBER {
+          let a = i << LOG_SLICE_NUMBER | j;
+          let b = (i + nxt_witness_size / 2) << LOG_SLICE_NUMBER | j;
           let c = (i) << log_leaf_size | (j << 1) | 0;
           let d = (i) << log_leaf_size | (j << 1) | 1;
 
-          let data_ele = [
-            self.cpd.rs_codeword[self.current_step_no][c],
-            self.cpd.rs_codeword[self.current_step_no][d],
-          ];
+          self.cpd.rs_codeword_mapping[self.current_step_no][a] = (i) << log_leaf_size | (j << 1) | 0;
+          self.cpd.rs_codeword_mapping[self.current_step_no][b] = (i) << log_leaf_size | (j << 1) | 0;
 
-          data[0] = hash_single_field_element(data_ele[0]);
-          data[1] = htmp;
+          tmp[c] = self.cpd.rs_codeword[self.current_step_no][i << LOG_SLICE_NUMBER | j];
+          tmp[d] = self.cpd.rs_codeword[self.current_step_no]
+            [(i + nxt_witness_size / 2) << LOG_SLICE_NUMBER | j];
+
+          assert!(a < nxt_witness_size * SLICE_NUMBER);
+          assert!(b < nxt_witness_size * SLICE_NUMBER);
+          assert!(c < nxt_witness_size * SLICE_NUMBER);
+          assert!(d < nxt_witness_size * SLICE_NUMBER);
         }
-        hash_val[i] = htmp;
       }
 
-      // write merkle tree to self.cpd.merkle[self.current_step_no]
-      let current_step_no = self.cpd.merkle[self.current_step_no].clone();
-      create_tree(
-        hash_val,
-        nxt_witness_size / 2,
-        self.cpd.merkle[self.current_step_no].as_mut(),
-        Some(std::mem::size_of::<HashDigest>()),
-        Some(current_step_no.is_empty()),
-      )
+      self.cpd.rs_codeword[self.current_step_no] = tmp;
+
+      self.visited[self.current_step_no] = vec![false; nxt_witness_size * (1 << SLICE_NUMBER) * 4];
+
+      let mut htmp: HashDigest = HashDigest::default();
+      let mut hash_val: Vec<HashDigest> = vec![HashDigest::default(); nxt_witness_size / 2];
+
+      unsafe {
+        for i in 0..nxt_witness_size / 2 {
+          for j in 0..(1 << LOG_SLICE_NUMBER) {
+            let mut data = [HashDigest::default(), HashDigest::default()];
+            let c = (i) << log_leaf_size | (j << 1) | 0;
+            let d = (i) << log_leaf_size | (j << 1) | 1;
+
+            let data_ele = [
+              self.cpd.rs_codeword[self.current_step_no][c],
+              self.cpd.rs_codeword[self.current_step_no][d],
+            ];
+
+            data[0] = hash_single_field_element(data_ele[0]);
+            data[1] = htmp;
+          }
+          hash_val[i] = htmp;
+        }
+
+        // write merkle tree to self.cpd.merkle[self.current_step_no]
+        let current_step_no = self.cpd.merkle[self.current_step_no].clone();
+        create_tree(
+          hash_val,
+          nxt_witness_size / 2,
+          self.cpd.merkle[self.current_step_no].as_mut(),
+          Some(std::mem::size_of::<HashDigest>()),
+          Some(current_step_no.is_empty()),
+        )
+      }
+
+      self.cpd.merkle_size[self.current_step_no] = nxt_witness_size / 2;
+      self.log_current_witness_size_per_slice -= 1;
+
+      self.current_step_no += 1;
+      self.cpd.merkle[self.current_step_no - 1][1] // since we increment current_step_no up there
     }
-
-    self.cpd.merkle_size[self.current_step_no] = nxt_witness_size / 2;
-    self.log_current_witness_size_per_slice -= 1;
-
-    self.current_step_no += 1;
-    self.cpd.merkle[self.current_step_no - 1][1] // since we increment current_step_no up there
-  }
-
+  */
   /// Return the final rs code since it is only constant size
   pub fn commit_phase_final(&self) -> Vec<FieldElement> {
     self.cpd.rs_codeword[self.current_step_no - 1].clone()
   }
 
-  pub fn commit_phase(&mut self, log_length: usize) -> LdtCommitment {
-    // let log_current_witness_size_per_slice_cp = self.log_current_witness_size_per_slice;
-    // assumming we already have the initial commit
-    let mut codeword_size = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
-    // repeat until the codeword is constant
-    let mut ret: Vec<HashDigest> = Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
-    let mut randomness: Vec<FieldElement> =
-      Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+  /*  pub fn commit_phase(&mut self, log_length: usize) -> LdtCommitment {
+      // let log_current_witness_size_per_slice_cp = self.log_current_witness_size_per_slice;
+      // assumming we already have the initial commit
+      let mut codeword_size = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+      // repeat until the codeword is constant
+      let mut ret: Vec<HashDigest> = Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+      let mut randomness: Vec<FieldElement> =
+        Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
 
-    let mut ptr = 0;
-    while codeword_size > 1 << RS_CODE_RATE {
-      assert!(ptr < log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
-      randomness[ptr] = FieldElement::new_random();
-      ret[ptr] = self.commit_phase_step(randomness[ptr]);
-      codeword_size /= 2;
-      ptr += 1;
-    }
+      let mut ptr = 0;
+      while codeword_size > 1 << RS_CODE_RATE {
+        assert!(ptr < log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+        randomness[ptr] = FieldElement::new_random();
+        ret[ptr] = self.commit_phase_step(randomness[ptr]);
+        codeword_size /= 2;
+        ptr += 1;
+      }
 
-    LdtCommitment {
-      commitment_hash: ret,
-      final_rs_code: self.commit_phase_final(),
-      randomness,
-      mx_depth: ptr,
+      LdtCommitment {
+        commitment_hash: ret,
+        final_rs_code: self.commit_phase_final(),
+        randomness,
+        mx_depth: ptr,
+      }
     }
-  }
+  */
 }

@@ -1380,7 +1380,7 @@ impl ZkVerifier {
           }
         }
         for j in 0..gate_type_count {
-          if (j == 6 || j == 10 || j == 5 || j == 12) {
+          if j == 6 || j == 10 || j == 5 || j == 12 {
             ret_para[j] = ret_para[j]
               + prefix_alpha_v0 * one_block_alpha[j]
               + prefix_beta_v0 * one_block_beta[j];
@@ -1390,7 +1390,7 @@ impl ZkVerifier {
           }
         }
       }
-      if (!debug_mode) {
+      if !debug_mode {
         ret = ret_para.clone();
       }
     }
@@ -1409,13 +1409,13 @@ impl ZkVerifier {
         let v = self.aritmetic_circuit.circuit[depth].gates[i].v;
 
         let g_first_half = g & ((1 << first_half_g) - 1);
-        let g_second_half = (g >> first_half_g);
+        let g_second_half = g >> first_half_g;
         let u_first_half = u & ((1 << first_half_uv) - 1);
         let u_second_half = u >> first_half_uv;
         let v_first_half = v & ((1 << first_half_uv) - 1);
         let v_second_half = v >> first_half_uv;
 
-        match (self.aritmetic_circuit.circuit[depth].gates[i].ty) {
+        match self.aritmetic_circuit.circuit[depth].gates[i].ty {
           0 => {
             ret[0] = ret[0]
               + (self.beta_g_r0_first_half[g_first_half]

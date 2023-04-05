@@ -440,7 +440,7 @@ impl ZkProver {
             self.ctx.gate_meet
               [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty] = true;
           }
-          self.add_mult_sum[u].b = (self.add_mult_sum[u].b + intermediates0[i]);
+          self.add_mult_sum[u].b = self.add_mult_sum[u].b + intermediates0[i];
         }
         5 => {
           //sum gate
