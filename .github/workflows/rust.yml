@@ -17,5 +17,5 @@ jobs:
     - uses: actions/checkout@v3
     - name: Move to folder
       run: cd foaks
+          cargo build
     - name: Build
-      run: cargo build
