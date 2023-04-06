@@ -25,7 +25,7 @@ pub unsafe fn hash_double_field_element_merkle_damgard(
 ) -> HashDigest {
     let mut data = [HashDigest::default(); 2];
     data[0] = prev_hash;
-    let mut element = [x, y];
+    let element = [x, y];
     copy_nonoverlapping(
         std::ptr::addr_of!(element) as *const HashDigest,
         std::ptr::addr_of_mut!(data[1]),

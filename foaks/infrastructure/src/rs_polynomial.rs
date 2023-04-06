@@ -9,7 +9,7 @@ use prime_field::FieldElement;
 
 const MAX_ORDER: usize = 28;
 
-#[derive(Default)]
+#[derive(Default, Debug, Clone)]
 pub struct ScratchPad {
     pub dst: [Vec<FieldElement>; 3],
     pub twiddle_factor: Vec<FieldElement>,

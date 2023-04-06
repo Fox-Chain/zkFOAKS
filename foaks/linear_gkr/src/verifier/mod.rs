@@ -68,15 +68,15 @@ impl ZkVerifier {
         let d: usize;
         let circuit_content = read_to_string(&circuit_path).unwrap();
         let mut circuit_lines = circuit_content.lines();
-        let describe_gate = |input_gate: usize, ix: usize| {
-            if !(input_gate < (1 << self.aritmetic_circuit.circuit[ix - 1].bit_length)) {
+        let describe_gate = |circuit: &Vec<Layer>, input_gate: usize, ix: usize, ty, g, u, v| {
+            if !(input_gate < (1 << circuit[ix - 1].bit_length)) {
                 println!(
                     "{} {} {} {} {} ",
                     ty,
                     g,
                     u,
                     v,
-                    (1 << self.aritmetic_circuit.circuit[ix - 1].bit_length)
+                    (1 << circuit[ix - 1].bit_length)
                 );
             }
         };
@@ -144,9 +144,9 @@ impl ZkVerifier {
                         assert!(u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length));
                         assert!(v > u && v <= (1 << self.aritmetic_circuit.circuit[i - 1].bit_length));
                     } else {
-                        describe_gate(u, i);
+                        describe_gate(& self.aritmetic_circuit.circuit, u, i, ty, g, u, v, );
                         assert!(u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length));
-                        describe_gate(v, i);
+                        describe_gate(& self.aritmetic_circuit.circuit, v, i, ty, g, u, v);
                         assert!(v < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length));
                     }
                 }
@@ -308,7 +308,7 @@ impl ZkVerifier {
     }
 
     //Decided to implement the verify() function from orion repo
-    pub fn verify(&mut self, output_path: &String, bit_length: usize) -> bool {
+    pub fn verify(self, output_path: &String, bit_length: usize) -> bool {
         println!("output path: {}", output_path);
         // Initialize the prover,
         // the original repo initialize the prover in the main fn()
@@ -383,7 +383,7 @@ impl ZkVerifier {
             let r_u = Self::generate_randomness(self.aritmetic_circuit.circuit[i - 1].bit_length);
             let mut r_v = Self::generate_randomness(self.aritmetic_circuit.circuit[i - 1].bit_length);
 
-            let direct_relay_value = alpha * Self::direct_relay(self, i, &r_0, &r_u)
+            let direct_relay_value = alpha * Self::direct_relay(&mut self, i, &r_0, &r_u)
                 + beta * Self::direct_relay(self, i, &r_1, &r_u);
 
             if i == 1 {
@@ -475,7 +475,7 @@ impl ZkVerifier {
 
             let predicates_calc = time::Instant::now();
             Self::beta_init(
-                self,
+                &mut self,
                 i,
                 alpha,
                 beta,
@@ -490,7 +490,7 @@ impl ZkVerifier {
             );
 
             let predicates_value = Self::predicates(
-                self,
+                &mut self,
                 i,
                 r_0.clone(),
                 r_1.clone(),
@@ -572,7 +572,7 @@ impl ZkVerifier {
         let merkle_root_l = zk_prover.poly_prover.commit_private_array(
             &zk_prover.circuit_value[0], self.aritmetic_circuit.circuit[0].bit_length);
 
-        self.ctx.q_eval_real = vec![FieldElement::default(), 1 << self.aritmetic_circuit.circuit[0].bit_length];
+        self.ctx.q_eval_real = vec![FieldElement::default(); 1 << self.aritmetic_circuit.circuit[0].bit_length];
         self.dfs_for_public_eval(0usize, FieldElement::real_one(), &r_0, &one_minus_r_0,
                                  self.aritmetic_circuit.circuit[0].bit_length, 0);
 
@@ -584,7 +584,7 @@ impl ZkVerifier {
         self.vpd_randomness = r_0.clone();
         self.one_minus_vpd_randomness = one_minus_r_0.clone();
         //From poly_ver.p = &(p -> poly_prover); TODO check if the implementation is correct
-        self.poly_verifier.pc_prover = zk_prover.poly_prover;
+        self.poly_verifier.pc_prover = zk_prover.poly_prover.clone();
 
         let public_array = self.public_array_prepare(
             &r_0,
@@ -601,7 +601,7 @@ impl ZkVerifier {
             zk_prover.total_time,
             merkle_root_l,
             merkle_root_h,
-            &zk_prover.poly_prover.fri_ctx.unwrap(),
+            &mut zk_prover.poly_prover.fri_ctx.unwrap(),
         );
 
         zk_prover.poly_prover.total_time_pc_p += self.poly_verifier.pc_prover.total_time_pc_p;
@@ -1356,13 +1356,13 @@ impl ZkVerifier {
                 let v = self.aritmetic_circuit.circuit[depth].gates[i].v;
 
                 let g_first_half = g & ((1 << first_half_g) - 1);
-                let g_second_half = (g >> first_half_g);
+                let g_second_half = g >> first_half_g;
                 let u_first_half = u & ((1 << first_half_uv) - 1);
                 let u_second_half = u >> first_half_uv;
                 let v_first_half = v & ((1 << first_half_uv) - 1);
                 let v_second_half = v >> first_half_uv;
 
-                match (self.aritmetic_circuit.circuit[depth].gates[i].ty) {
+                match self.aritmetic_circuit.circuit[depth].gates[i].ty {
                     0 => {
                         ret[0] = ret[0]
                             + (self.beta_g_r0_first_half[g_first_half]
@@ -1474,10 +1474,7 @@ impl ZkVerifier {
                     }
                     10 => {
                         if relay_set == false {
-                            tmp_u_val = vec![
-                                FieldElement::zero();
-                                1 << self.aritmetic_circuit.circuit[depth - 1].bit_length,
-                            ];
+                            tmp_u_val = vec![FieldElement::zero(); 1 << self.aritmetic_circuit.circuit[depth - 1].bit_length];
 
                             for i in 0..(1 << self.aritmetic_circuit.circuit[depth - 1].bit_length) {
                                 let u_first_half = i & ((1 << first_half_uv) - 1);

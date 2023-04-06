@@ -1,12 +1,10 @@
 use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
-use std::{char::MAX, thread::current};
 
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, RS_CODE_RATE, SLICE_NUMBER},
   my_hash::{self, HashDigest},
 };
 
-use poly_commitment::LdtCommitment;
 use prime_field::FieldElement;
 use crate::LdtCommitment;
 
@@ -14,10 +12,10 @@ use crate::vpd::fri::FRIContext;
 
 pub fn verify_merkle(
   hash_digest: HashDigest,
-  merkle_path: Vec<HashDigest>,
+  merkle_path: &Vec<HashDigest>,
   len: usize,
   pow: u128,
-  values: Vec<(FieldElement, FieldElement)>,
+  values: &Vec<(FieldElement, FieldElement)>,
 ) -> bool {
   // We need to make sure the len is always smaller than the size of merklePath.
   assert!(merkle_path.len() >= len);
@@ -29,7 +27,7 @@ pub fn verify_merkle(
   let mut new_hash = HashDigest::new();
 
   for i in 0..(len - 1) {
-    if (pow & i as i32).is_positive() {
+    if ((pow & i as u128) as i32).is_positive() {
       let data: [HashDigest; 2] = [merkle_path[i], current_hash];
       new_hash = my_hash::my_hash(data);
     } else {
@@ -278,7 +276,7 @@ impl FRIContext {
             self.cpd.rs_codeword[self.current_step_no][d],
           ];
 
-          data[0] = hash_single_field_element(data_ele[0]);
+          data[0] = hash_single_field_element(data_ele[0]); // TODO check
           data[1] = htmp;
         }
         hash_val[i] = htmp;

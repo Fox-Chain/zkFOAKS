@@ -2,10 +2,10 @@ use prime_field::FieldElement;
 use std::vec::Vec;
 
 // use the same distance parameter from brakedown
-pub const target_distance: f64 = 0.07;
-pub const distance_threshold: i32 = ((1.0 / target_distance) as i32) - 1;
-pub const rs_rate: i32 = 2;
-pub const alpha: f64 = 0.238;
+pub const TARGET_DISTANCE: f64 = 0.07;
+pub const DISTANCE_THRESHOLD: i32 = ((1.0 / TARGET_DISTANCE) as i32) - 1;
+pub const RS_RATE: i32 = 2;
+pub const ALPHA: f64 = 0.238;
 pub const beta: f64 = 0.1205;
 pub const r: f64 = 1.72;
 pub const cn: i32 = 10;
@@ -67,12 +67,12 @@ pub fn generate_random_expander(L: i64, R: i64, d: i64) -> Graph {
 #[inline]
 pub unsafe fn expander_init(n: i64, dep: Option<i32>) -> i64 {
     // random Graph
-    if n <= distance_threshold as i64 {
+    if n <= DISTANCE_THRESHOLD as i64 {
         n
     } else {
         let mut dep_ = dep.unwrap_or(0i32);
-        C[dep_ as usize] = generate_random_expander(n, ((alpha * (n as f64)) as i64), cn as i64);
-        let L: i64 = expander_init(((alpha * (n as f64)) as i64), Some(dep_ + 1i32));
+        C[dep_ as usize] = generate_random_expander(n, ((ALPHA * (n as f64)) as i64), cn as i64);
+        let L: i64 = expander_init(((ALPHA * (n as f64)) as i64), Some(dep_ + 1i32));
         D[dep_ as usize] = generate_random_expander(
             L,
             (((n as f64) * (r - 1f64) - (L as f64)) as i64),

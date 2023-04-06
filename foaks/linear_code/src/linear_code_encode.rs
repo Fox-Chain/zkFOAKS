@@ -1,5 +1,5 @@
-use crate::expanders::alpha;
-use crate::expanders::distance_threshold;
+use crate::expanders::ALPHA;
+use crate::expanders::DISTANCE_THRESHOLD;
 use crate::expanders::C;
 use crate::expanders::D;
 use prime_field::FieldElement;
@@ -32,7 +32,7 @@ pub unsafe fn encode(
       i = i + 1i64;
     }
   }
-  if n <= distance_threshold as i64 {
+  if n <= DISTANCE_THRESHOLD as i64 {
     for i in 0..(n as usize) {
       // TODO: check out-of-range
       dst[i] = src[i];
@@ -43,7 +43,7 @@ pub unsafe fn encode(
   for i in 0..(n as usize) {
     scratch[0][dep][i] = src[i];
   }
-  let R: i64 = (alpha * (n as f64)) as i64;
+  let R: i64 = (ALPHA * (n as f64)) as i64;
   for j in 0..(R as usize) {
     scratch[1][dep][j] = FieldElement::from_real(0);
   }
