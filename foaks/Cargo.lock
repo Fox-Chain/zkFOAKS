@@ -218,6 +218,7 @@ name = "linear_code"
 version = "0.1.0"
 dependencies = [
  "lazy_static",
+ "linear_gkr",
  "prime_field",
  "rand 0.8.5",
 ]
@@ -232,6 +233,17 @@ dependencies = [
  "poly_commitment",
  "prime_field",
  "vpd",
+]
+
+[[package]]
+name = "linear_pc"
+version = "0.1.0"
+dependencies = [
+ "infrastructure",
+ "linear_code",
+ "linear_gkr",
+ "prime_field",
+ "rand 0.8.5",
 ]
 
 [[package]]

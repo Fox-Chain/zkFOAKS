@@ -1,12 +1,15 @@
 [package]
-name = "linear_code"
+name = "linear_pc"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-prime_field = { path = "../prime_field" }
 linear_gkr = { path = "../linear_gkr" }
+infrastructure = { path = "../infrastructure" }
+prime_field = { path = "../prime_field" }
+linear_code = { path = "../linear_code" }
 rand = "0.8.5"
-lazy_static = "1.4.0"
+
+

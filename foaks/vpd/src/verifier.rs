@@ -324,11 +324,12 @@ impl FRIContext {
       ptr += 1;
     }
 
-    LdtCommitment {
-      commitment_hash: ret,
-      final_rs_code: self.commit_phase_final(),
-      randomness,
-      mx_depth: ptr,
+      LdtCommitment {
+        commitment_hash: ret,
+        final_rs_code: self.commit_phase_final(),
+        randomness,
+        mx_depth: ptr,
+      }
     }
   }*/
 }
