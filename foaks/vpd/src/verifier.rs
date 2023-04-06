@@ -306,23 +306,23 @@ impl FRIContext {
     self.cpd.rs_codeword[self.current_step_no - 1].clone()
   }
 
-  /*  pub fn commit_phase(&mut self, log_length: usize) -> LdtCommitment {
-      // let log_current_witness_size_per_slice_cp = self.log_current_witness_size_per_slice;
-      // assumming we already have the initial commit
-      let mut codeword_size = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
-      // repeat until the codeword is constant
-      let mut ret: Vec<HashDigest> = Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
-      let mut randomness: Vec<FieldElement> =
-        Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+  /*pub fn commit_phase(&mut self, log_length: usize) -> LdtCommitment {
+    // let log_current_witness_size_per_slice_cp = self.log_current_witness_size_per_slice;
+    // assumming we already have the initial commit
+    let mut codeword_size = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+    // repeat until the codeword is constant
+    let mut ret: Vec<HashDigest> = Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+    let mut randomness: Vec<FieldElement> =
+      Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
 
-      let mut ptr = 0;
-      while codeword_size > 1 << RS_CODE_RATE {
-        assert!(ptr < log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
-        randomness[ptr] = FieldElement::new_random();
-        ret[ptr] = self.commit_phase_step(randomness[ptr]);
-        codeword_size /= 2;
-        ptr += 1;
-      }
+    let mut ptr = 0;
+    while codeword_size > 1 << RS_CODE_RATE {
+      assert!(ptr < log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+      randomness[ptr] = FieldElement::new_random();
+      ret[ptr] = self.commit_phase_step(randomness[ptr]);
+      codeword_size /= 2;
+      ptr += 1;
+    }
 
       LdtCommitment {
         commitment_hash: ret,
@@ -331,5 +331,5 @@ impl FRIContext {
         mx_depth: ptr,
       }
     }
-  */
+  }*/
 }
