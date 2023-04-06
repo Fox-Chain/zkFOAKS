@@ -243,6 +243,7 @@ dependencies = [
  "linear_code",
  "linear_gkr",
  "prime_field",
+ "rand 0.8.5",
 ]
 
 [[package]]
