@@ -338,8 +338,8 @@ impl PolyCommitProver {
         ret
     }
 
-    pub fn commit_phase(self, log_length: usize) -> LdtCommitment {
-        self.fri_ctx.unwrap_or_else(|| FRIContext::default()).commit_phase(log_length)
+    pub fn commit_phase(&mut self, log_length: usize) -> LdtCommitment {
+        self.fri_ctx.as_mut().unwrap().commit_phase(log_length)
     }
 }
 
@@ -350,7 +350,7 @@ pub struct PolyCommitVerifier {
 
 impl PolyCommitVerifier {
     pub fn verify_poly_commitment(
-        self,
+        &mut self,
         all_sum: &[FieldElement],
         log_length: usize,
         public_array: &[FieldElement],

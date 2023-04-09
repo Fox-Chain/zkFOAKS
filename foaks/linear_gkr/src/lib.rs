@@ -6,15 +6,20 @@ pub mod verifier;
 
 #[cfg(test)]
 mod test {
-    use prime_field::FieldElement;
+    use crate::config::Paths;
 
     #[test]
-    fn test() {
-        let mut a = vec![FieldElement::zero(); 3];
-        for i in 0..a.len() {
-            a[i] = FieldElement::real_one();
-        }
-        //a.push(FieldElement::real_one());
-        println!("{:?}", a);
+    fn print_paths() {
+        let circuit = "/workspaces/zkFOAKS/foaks/linear_gkr/mat_16_circuit.txt";
+        let meta = "/workspaces/zkFOAKS/foaks/linear_gkr/mat_16_meta.txt";
+
+        let envs = vec!["", "", circuit, meta]
+        .iter()
+        .map(|s| String::from(*s))
+        .collect::<Vec<String>>();
+
+        let paths = Paths::build(envs.into_iter()).unwrap();
+        assert_eq!(paths.file_path, circuit);
+        assert_eq!(paths.meta_path, meta);
     }
 }
