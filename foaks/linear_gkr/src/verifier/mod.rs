@@ -308,7 +308,7 @@ impl ZkVerifier {
     }
 
     //Decided to implement the verify() function from orion repo
-    pub fn verify(self, output_path: &String, bit_length: usize) -> bool {
+    pub fn verify(mut self, output_path: &String, bit_length: usize) -> bool {
         println!("output path: {}", output_path);
         // Initialize the prover,
         // the original repo initialize the prover in the main fn()
@@ -384,7 +384,7 @@ impl ZkVerifier {
             let mut r_v = Self::generate_randomness(self.aritmetic_circuit.circuit[i - 1].bit_length);
 
             let direct_relay_value = alpha * Self::direct_relay(&mut self, i, &r_0, &r_u)
-                + beta * Self::direct_relay(self, i, &r_1, &r_u);
+                + beta * Self::direct_relay(&mut self, i, &r_1, &r_u);
 
             if i == 1 {
                 for j in 0..self.aritmetic_circuit.circuit[i - 1].bit_length {
