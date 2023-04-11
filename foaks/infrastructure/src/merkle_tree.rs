@@ -37,55 +37,48 @@ pub unsafe fn hash_double_field_element_merkle_damgard(
 pub fn create_tree(
   src_data: Vec<HashDigest>,
   element_num: usize,
-  dst: Vec<HashDigest>,
+  dst: &mut Vec<HashDigest>,
   //element_size_: Option<usize>,
   alloc_required_: Option<bool>,
-) -> Vec<HashDigest> {
+) {
   // ToDo: Check this, do not need element_size_
   //let element_size = element_size_.unwrap_or(256 / 8);
   let alloc_required = alloc_required_.unwrap_or(false);
-  // Refactored code
+
   let mut size_after_padding = 1;
   while size_after_padding < element_num {
     size_after_padding *= 2;
   }
-  //ToDo: Chech if this is correct
-  let mut dst_ptr = if alloc_required {
-    vec![HashDigest::default(); size_after_padding * 2]
-  } else {
-    dst.to_vec()
-  };
-
-  //dst = dst_ptr;
-  dst_ptr = vec![HashDigest::default(); size_after_padding * 2];
-
+  if alloc_required {
+    *dst = vec![HashDigest::default(); size_after_padding * 2];
+  }
   let mut start_idx = size_after_padding;
   let mut current_lvl_size = size_after_padding;
   // TODO: parallel
-  for i in (0..current_lvl_size).rev() {
-    let data = [HashDigest::default(); 2];
+  for i in (current_lvl_size - 1)..=0 {
+    let mut data = [HashDigest::default(); 2];
     if i < element_num {
-      dst_ptr[i + start_idx] = src_data[i];
+      dst[i + start_idx] = src_data[i];
     } else {
-      dst_ptr[i + start_idx] = my_hash(data);
+      data = [HashDigest::default(); 2];
+      // my_hash(data, &mut dst[i + start_idx]);
+      dst[i + start_idx] = my_hash(data);
     }
   }
   current_lvl_size /= 2;
   start_idx -= current_lvl_size;
   while current_lvl_size >= 1 {
     // TODO: parallel
-    for i in 0..current_lvl_size {
+    for i in (0..current_lvl_size).rev() {
       let mut data = [HashDigest::default(); 2];
-      data[0] = dst_ptr[start_idx + current_lvl_size + i * 2];
-      data[1] = dst_ptr[start_idx + current_lvl_size + i * 2 + 1];
+      data[0] = dst[start_idx + current_lvl_size + i * 2];
+      data[1] = dst[start_idx + current_lvl_size + i * 2 + 1];
       // my_hash(data, &mut dst[start_idx + i]);
-      dst_ptr[start_idx + i] = my_hash(data);
+      dst[start_idx + i] = my_hash(data);
     }
     current_lvl_size /= 2;
     start_idx -= current_lvl_size;
   }
-  //ToDo: Check if this is correct
-  dst_ptr
 }
 
 pub fn verify_claim(
