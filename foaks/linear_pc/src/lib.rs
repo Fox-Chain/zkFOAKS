@@ -59,10 +59,10 @@ impl LinearPC {
         );
       }
     }
-    self.mt = merkle_tree::create_tree(
+    merkle_tree::create_tree(
       stash,
       (n / COLUMN_SIZE * 2).try_into().unwrap(),
-      self.mt.clone(),
+      &mut self.mt,
       //Some(std::mem::size_of::<HashDigest>()),
       Some(true),
     );
