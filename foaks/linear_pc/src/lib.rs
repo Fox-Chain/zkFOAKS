@@ -1,3 +1,6 @@
+use std::mem::size_of_val;
+
+use infrastructure::merkle_tree;
 use infrastructure::my_hash::HashDigest;
 use linear_code::linear_code_encode::Graph;
 use linear_code::parameter::{ALPHA, CN, COLUMN_SIZE, DISTANCE_THRESHOLD, DN, R};
@@ -16,7 +19,7 @@ pub struct LinearPC {
 }
 
 impl LinearPC {
-  pub fn commit(
+  pub unsafe fn commit(
     &mut self,
     src: Vec<FieldElement>,
     n: u64,
@@ -47,11 +50,23 @@ impl LinearPC {
     }
 
     for i in 0..(n / COLUMN_SIZE * 2) as usize {
-      //memset(&stash[i], 0, sizeof(__hhash_digest));
       stash[i] = HashDigest::default();
-      for j in 0..(COLUMN_SIZE / 2) as usize {}
+      for j in 0..(COLUMN_SIZE / 2) as usize {
+        stash[i] = merkle_tree::hash_double_field_element_merkle_damgard(
+          self.encoded_codeword[2 * j][i],
+          self.encoded_codeword[2 * j + 1][i],
+          stash[i],
+        );
+      }
     }
-    unimplemented!();
+    merkle_tree::create_tree(
+      stash,
+      (n / COLUMN_SIZE * 2).try_into().unwrap(),
+      &mut self.mt,
+      //Some(std::mem::size_of::<HashDigest>()),
+      Some(true),
+    );
+    self.mt.clone()
   }
 }
 
