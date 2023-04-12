@@ -1,7 +1,7 @@
 use crate::expanders::ALPHA;
-use crate::expanders::DISTANCE_THRESHOLD;
 use crate::expanders::C;
 use crate::expanders::D;
+use crate::expanders::DISTANCE_THRESHOLD;
 use prime_field::FieldElement;
 use std::vec::Vec;
 

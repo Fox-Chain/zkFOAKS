@@ -5,8 +5,8 @@ use infrastructure::{
   my_hash::{self, HashDigest},
 };
 
+use crate::{LdtCommitment, PolyCommitContext};
 use prime_field::FieldElement;
-use crate::LdtCommitment;
 
 use crate::vpd::fri::FRIContext;
 
@@ -69,7 +69,10 @@ impl FRIContext {
       (pow_0, pow_1)
     };
 
-    assert_eq!(pow_0 + (1 << self.log_current_witness_size_per_slice) / 2, pow_1);
+    assert_eq!(
+      pow_0 + (1 << self.log_current_witness_size_per_slice) / 2,
+      pow_1
+    );
 
     let mut value: Vec<(FieldElement, FieldElement)> = vec![];
     let log_leaf_size = LOG_SLICE_NUMBER + 1;
@@ -180,11 +183,11 @@ impl FRIContext {
   }
 
   /// Given fold parameter r, return the root of the merkle tree of next level.
-  pub fn commit_phase_step(&mut self, r: FieldElement) -> HashDigest {
+  pub fn commit_phase_step(&mut self, r: FieldElement, slice_count: usize) -> HashDigest {
     let nxt_witness_size = (1 << self.log_current_witness_size_per_slice) / 2;
     if self.cpd.rs_codeword[self.current_step_no].is_empty() {
       self.cpd.rs_codeword[self.current_step_no] =
-        vec![FieldElement::default(); nxt_witness_size * 0];
+        vec![FieldElement::default(); nxt_witness_size * slice_count];
     }
 
     //let mut previous_witness: Vec<FieldElement> = vec![];
@@ -207,8 +210,8 @@ impl FRIContext {
 
     for i in 0..nxt_witness_size {
       let qual_res_0 = i;
-      let qual_res_1 = (1 << (self.log_current_witness_size_per_slice - 1) + i) / 2;
-      let pos = usize::min(qual_res_0, qual_res_1);
+      let qual_res_1 = ((1 << (self.log_current_witness_size_per_slice - 1)) + i) / 2;
+      let pos = usize::min(qual_res_0, qual_res_1 as usize);
 
       let inv_mu = self.l_group[((1 << self.log_current_witness_size_per_slice) - i)
         & ((1 << self.log_current_witness_size_per_slice) - 1)];
@@ -227,14 +230,11 @@ impl FRIContext {
       self.l_group[i] = self.l_group[i * 2];
     }
 
-    // we assume poly_commit::slice_count is (1 << SLICE_NUMBER) here
-
-    // Gian: Why they assumed that??? Because of that, most of the implementation is wrong
-    // Be carefull!!!
+    // we assume poly_commit::slice_count is (1 << SLICE_NUMBER) here 
+    // NOTE: this assumption is solved by using slice_count from context
     let mut tmp: Vec<FieldElement> =
-      vec![FieldElement::new_random(); nxt_witness_size * (SLICE_NUMBER)];
-    self.cpd.rs_codeword_mapping[self.current_step_no] =
-      vec![0; nxt_witness_size * 0];
+      vec![FieldElement::new_random(); nxt_witness_size * slice_count];
+    self.cpd.rs_codeword_mapping[self.current_step_no] = vec![0; nxt_witness_size * slice_count];
 
     for i in 0..nxt_witness_size / 2 {
       for j in 0..SLICE_NUMBER {
@@ -259,7 +259,7 @@ impl FRIContext {
 
     self.cpd.rs_codeword[self.current_step_no] = tmp;
 
-    self.visited[self.current_step_no] = vec![false; nxt_witness_size * 0 * 4];
+    self.visited[self.current_step_no] = vec![false; nxt_witness_size * 4 * slice_count];
 
     let mut htmp: HashDigest = HashDigest::default();
     let mut hash_val: Vec<HashDigest> = vec![HashDigest::default(); nxt_witness_size / 2];
@@ -288,7 +288,7 @@ impl FRIContext {
         hash_val,
         nxt_witness_size / 2,
         self.cpd.merkle[self.current_step_no].as_mut(),
-        Some(std::mem::size_of::<HashDigest>()),
+        //Some(std::mem::size_of::<HashDigest>()),
         Some(current_step_no.is_empty()),
       )
     }
@@ -305,20 +305,21 @@ impl FRIContext {
     self.cpd.rs_codeword[self.current_step_no - 1].clone()
   }
 
-  pub fn commit_phase(&mut self, log_length: usize) -> LdtCommitment {
+  pub fn commit_phase(&mut self, log_length: usize, slice_count: usize) -> LdtCommitment {
     // let log_current_witness_size_per_slice_cp = self.log_current_witness_size_per_slice;
     // assumming we already have the initial commit
     let mut codeword_size = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
     // repeat until the codeword is constant
-    let mut ret: Vec<HashDigest> = Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+    let mut ret: Vec<HashDigest> =
+      vec![HashDigest::default(); log_length + RS_CODE_RATE - LOG_SLICE_NUMBER];
     let mut randomness: Vec<FieldElement> =
-      Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+      vec![FieldElement::default(); log_length + RS_CODE_RATE - LOG_SLICE_NUMBER];
 
     let mut ptr = 0;
     while codeword_size > 1 << RS_CODE_RATE {
       assert!(ptr < log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
       randomness[ptr] = FieldElement::new_random();
-      ret[ptr] = self.commit_phase_step(randomness[ptr]);
+      ret[ptr] = self.commit_phase_step(randomness[ptr], slice_count);
       codeword_size /= 2;
       ptr += 1;
     }
