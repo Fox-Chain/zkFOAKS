@@ -1,5 +1,5 @@
 // use the same distance parameter from brakedown
-pub const TARGET_DISTANCE: f64 = 0.07;
+pub const TARGET_DISTANCE: f32 = 0.07;
 pub const DISTANCE_THRESHOLD: i32 = ((1.0 / TARGET_DISTANCE) as i32) - 1;
 pub const RS_RATE: i32 = 2;
 pub const ALPHA: f64 = 0.238;

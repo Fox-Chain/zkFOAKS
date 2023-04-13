@@ -5,6 +5,7 @@ use std::{mem::size_of_val, process::exit};
 
 use crate::my_hash::{my_hash, HashDigest};
 
+// Todo: Debug coppy no overlapping
 pub unsafe fn hash_single_field_element(x: FieldElement) -> HashDigest {
   let mut data = [HashDigest::default(); 2];
   copy_nonoverlapping(
