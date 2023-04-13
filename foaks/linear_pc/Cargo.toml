@@ -11,5 +11,6 @@ infrastructure = { path = "../infrastructure" }
 prime_field = { path = "../prime_field" }
 linear_code = { path = "../linear_code" }
 rand = "0.8.5"
+fast-math = "0.1"
 
 

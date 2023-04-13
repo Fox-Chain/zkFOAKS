@@ -1,9 +1,10 @@
 use std::mem::size_of_val;
 
-use infrastructure::merkle_tree;
+use infrastructure::merkle_tree::{self, create_tree};
 use infrastructure::my_hash::HashDigest;
+use infrastructure::utility::my_log;
 use linear_code::linear_code_encode::Graph;
-use linear_code::parameter::{ALPHA, CN, COLUMN_SIZE, DISTANCE_THRESHOLD, DN, R};
+use linear_code::parameter::{ALPHA, CN, COLUMN_SIZE, DISTANCE_THRESHOLD, DN, R, TARGET_DISTANCE};
 use linear_gkr::prover::ZkProver;
 use linear_gkr::verifier::ZkVerifier;
 use prime_field::FieldElement;
@@ -67,6 +68,78 @@ impl LinearPC {
       Some(true),
     );
     self.mt.clone()
+  }
+
+  pub unsafe fn tensor_product_protocol(
+    &mut self,
+    r0: Vec<FieldElement>,
+    r1: Vec<FieldElement>,
+    size_r0: u64,
+    size_r1: u64,
+    n: u64,
+    com_mt: Vec<HashDigest>,
+  ) //-> (FieldElement, bool)
+  {
+    let verification_time = 0.0;
+    assert_eq!(size_r0 * size_r1, n);
+
+    let visited_com = vec![false; (n / COLUMN_SIZE * 4).try_into().unwrap()];
+    let visited_combined_com = vec![false; (n / COLUMN_SIZE * 4).try_into().unwrap()];
+
+    let proof_size = 0;
+    // Todo: check log2
+    let query_count: i64 = -128 / fast_math::log2(1.0 - TARGET_DISTANCE) as i64;
+    println!("Query count: {}", query_count);
+    println!("Column size: {}", COLUMN_SIZE);
+    println!("Number of merkle pathes: {}", query_count);
+    println!(
+      "Number of field elements: {}",
+      query_count * COLUMN_SIZE as i64
+    );
+
+    //prover construct the combined codeword
+
+    let mut combined_codeword = vec![FieldElement::zero(); self.codeword_size[0] as usize];
+    let mut combined_codeword_hash =
+      vec![HashDigest::default(); (n / COLUMN_SIZE * 2).try_into().unwrap()];
+    let mut combined_codeword_mt =
+      vec![HashDigest::default(); (n / COLUMN_SIZE * 4).try_into().unwrap()];
+    for i in 0..COLUMN_SIZE as usize {
+      for j in 0..self.codeword_size[0] as usize {
+        combined_codeword[j] = combined_codeword[j] + r0[i] * self.encoded_codeword[i][j];
+      }
+    }
+
+    let zero = FieldElement::zero();
+    for i in 0..(n / COLUMN_SIZE * 2) as usize {
+      if i < self.codeword_size[0] as usize {
+        combined_codeword_hash[i] = merkle_tree::hash_single_field_element(combined_codeword[i]);
+      } else {
+        combined_codeword_hash[i] = merkle_tree::hash_single_field_element(zero);
+      }
+    }
+
+    //merkle commit to combined_codeword
+    create_tree(
+      combined_codeword_hash,
+      (n / COLUMN_SIZE * 2).try_into().unwrap(),
+      &mut combined_codeword_mt,
+      Some(false),
+    );
+
+    //prover construct the combined original message
+    let mut combined_message = vec![FieldElement::zero(); n.try_into().unwrap()];
+    for i in 0..COLUMN_SIZE as usize {
+      for j in 0..self.codeword_size[0] as usize {
+        combined_message[j] = combined_message[j] + r0[i] * self.coef[i][j];
+      }
+    }
+
+    //check for encode
+    {
+      let test_codeword = vec![FieldElement::zero(); (n / COLUMN_SIZE * 2).try_into().unwrap()];
+    }
+    unimplemented!();
   }
 }
 
@@ -204,6 +277,22 @@ pub fn generate_random_expander(l: u64, r: u64, d: u64) -> Graph {
   ret
 }
 
-//open
+fn open_and_verify(x: FieldElement, n: u64, com_mt: Vec<HashDigest>) //-> (FieldElement, bool)
+{
+  assert_eq!(n % COLUMN_SIZE, 0);
+  //tensor product of r0 otimes r1
+  let mut r0 = vec![FieldElement::zero(); COLUMN_SIZE as usize];
+  let mut r1 = vec![FieldElement::zero(); COLUMN_SIZE as usize];
 
-//verify
+  let x_n = FieldElement::fast_pow(x, (n / COLUMN_SIZE).into());
+  r0[0] = FieldElement::real_one();
+  for j in 1..COLUMN_SIZE as usize {
+    r0[j] = r0[j - 1] * x_n;
+  }
+  r1[0] = FieldElement::real_one();
+  for j in 1..(n / COLUMN_SIZE) as usize {
+    r1[j] = r1[j - 1] * x;
+  }
+
+  //tensor_product_protocol(r0, r1, COLUMN_SIZE, n / COLUMN_SIZE, n, com_mt);
+}
