@@ -7,13 +7,14 @@ use crate::my_hash::{my_hash, HashDigest};
 
 pub unsafe fn hash_single_field_element(x: FieldElement) -> HashDigest {
     let mut data = [HashDigest::default(); 2];
-    //println!("hash_single_field_element");
-    /*copy_nonoverlapping(
+    
+    copy_nonoverlapping(
         std::ptr::addr_of!(x) as *const i128,
         std::ptr::addr_of_mut!(data[0].h0),
-        size_of_val(&data[0].h0),
+        1,
     );
-    assert_eq!(size_of_val(&x), size_of_val(&data[0].h0));*/
+    assert_eq!(size_of_val(&x), size_of_val(&data[0].h0));
+    
     my_hash(data)
 }
 
