@@ -363,7 +363,11 @@ impl PolyCommitProver {
   }
 
   pub fn commit_phase(&mut self, log_length: usize) -> LdtCommitment {
-    self.fri_ctx.as_mut().unwrap().commit_phase(log_length, self.ctx.slice_count)
+    self
+      .fri_ctx
+      .as_mut()
+      .unwrap()
+      .commit_phase(log_length, self.ctx.slice_count)
   }
 }
 
@@ -441,25 +445,21 @@ impl PolyCommitVerifier {
 
       let mut equ_beta: bool;
       assert!(log_length - LOG_SLICE_NUMBER > 0);
-      let mut pow: usize = 0;
+      let mut pow: u128 = 0;
 
       for i in 0..log_length - LOG_SLICE_NUMBER {
         t0 = time::Instant::now();
 
         if i == 0 {
-          loop {
-            pow = rand::thread_rng().gen::<usize>()
-              % (1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i));
-
-            if pow < (1 << (log_length - LOG_SLICE_NUMBER - i)) || pow % 2 == 1 {
-              break;
-            }
+          pow = rand::random::<u128>() % (1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i));
+          while pow < (1 << (log_length - LOG_SLICE_NUMBER - i)) || pow % 2 == 1 {
+            pow =
+              rand::random::<u128>() % (1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i));
           }
-
           root_of_unity =
             FieldElement::get_root_of_unity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i)
               .unwrap();
-          y = FieldElement::fast_pow(root_of_unity, pow as u128);
+          y = FieldElement::fast_pow(root_of_unity, pow);
         } else {
           root_of_unity = root_of_unity * root_of_unity;
           pow = pow % (1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i));
@@ -467,15 +467,13 @@ impl PolyCommitVerifier {
           y = y * y;
         }
 
-        let s0_pow: usize;
-        let s1_pow: usize;
         assert_eq!(pow % 2, 0);
 
-        s0_pow = pow / 2;
-        s1_pow = pow + (1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i)) / 2;
+        let s0_pow = pow / 2;
+        let s1_pow = pow + (1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i)) / 2;
 
-        s0 = FieldElement::fast_pow(root_of_unity, s0_pow as u128);
-        s1 = FieldElement::fast_pow(root_of_unity, s1_pow as u128);
+        s0 = FieldElement::fast_pow(root_of_unity, s0_pow);
+        s1 = FieldElement::fast_pow(root_of_unity, s1_pow);
 
         let indicator;
 
@@ -500,14 +498,26 @@ impl PolyCommitVerifier {
         if i == 0 {
           time_span = t0.elapsed().as_secs_f64();
           v_time += time_span;
-          alpha_l = request_init_value_with_merkle(s0_pow, s1_pow, new_size, 0, fri_ctx);
-          alpha_h = request_init_value_with_merkle(s0_pow, s1_pow, new_size, 1, fri_ctx);
+          alpha_l = request_init_value_with_merkle(
+            s0_pow.try_into().unwrap(),
+            s1_pow.try_into().unwrap(),
+            new_size,
+            0,
+            fri_ctx,
+          );
+          alpha_h = request_init_value_with_merkle(
+            s0_pow.try_into().unwrap(),
+            s1_pow.try_into().unwrap(),
+            new_size,
+            1,
+            fri_ctx,
+          );
 
           proof_size += new_size;
 
           t0 = time::Instant::now();
 
-          let min_pow = |s0: usize, s1: usize| if s0 < s1 { s0 as u128 } else { s1 as u128 };
+          let min_pow = |s0: u128, s1: u128| if s0 < s1 { s0 } else { s1 };
 
           if !verify_merkle(
             merkle_tree_l,
@@ -530,7 +540,7 @@ impl PolyCommitVerifier {
           }
 
           v_time += t0.elapsed().as_secs_f64();
-          beta = request_step_commit(0, pow / 2, new_size, fri_ctx);
+          beta = request_step_commit(0, (pow / 2).try_into().unwrap(), new_size, fri_ctx);
 
           proof_size += new_size;
 
@@ -617,7 +627,7 @@ impl PolyCommitVerifier {
           v_time += time_span;
 
           alpha = beta.clone();
-          beta = request_step_commit(i, pow / 2, new_size, fri_ctx);
+          beta = request_step_commit(i, (pow / 2).try_into().unwrap(), new_size, fri_ctx);
 
           proof_size += new_size;
 
