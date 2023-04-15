@@ -397,9 +397,9 @@ impl PolyCommitVerifier {
       .output()
       .expect("Failed to execute command");
 
-    let mut v_time_fft = 0.0;
-    let mut proof_size_fft: usize = 0;
-    let mut p_time_fft = 0.0;
+    let v_time_fft;
+    let proof_size_fft;
+    let p_time_fft;
 
     let mut file = match File::open("log_fftgkr.txt") {
       Err(err) => panic!("Couldn't open {}: {}", "log_fftgkr.txt", err),
@@ -470,10 +470,10 @@ impl PolyCommitVerifier {
         assert_eq!(pow % 2, 0);
 
         let s0_pow = pow / 2;
-        let s1_pow = pow + (1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i)) / 2;
+        let s1_pow = (pow + (1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i))) / 2;
 
-        s0 = FieldElement::fast_pow(root_of_unity, s0_pow);
-        s1 = FieldElement::fast_pow(root_of_unity, s1_pow);
+        s0 = root_of_unity.fast_pow(s0_pow);
+        s1 = root_of_unity.fast_pow(s1_pow);
 
         let indicator;
 

@@ -247,11 +247,10 @@ pub fn request_init_value_with_merkle(
 
   for i in 0..SLICE_NUMBER {
     value.push((
-      fri_ctx.witness_rs_codeword_interleaved[oracle_indicator]
-        [pow_0 << log_leaf_size | i << 1 | 0],
-      fri_ctx.witness_rs_codeword_interleaved[oracle_indicator]
-        [pow_0 << log_leaf_size | i << 1 | 1],
+      fri_ctx.witness_rs_codeword_interleaved[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 0],
+      fri_ctx.witness_rs_codeword_interleaved[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 1]
     ));
+
     assert_eq!(
       pow_0 << log_leaf_size | i << 1 | 1,
       fri_ctx.witness_rs_mapping[oracle_indicator][i][pow_1]
