@@ -407,7 +407,7 @@ impl ZkProver {
           intermediates1[i] = tmp;
         }
         _ => {
-          println!(
+          eprintln!(
             "Warning Unknown gate {}",
             self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty
           )
