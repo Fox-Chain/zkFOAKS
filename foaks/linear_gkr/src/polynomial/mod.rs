@@ -1,3 +1,5 @@
+mod lib;
+
 use prime_field::FieldElement;
 #[derive(Debug, Clone)]
 

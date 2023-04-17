@@ -6,14 +6,16 @@ use std::{mem::size_of_val, process::exit};
 use crate::my_hash::{my_hash, HashDigest};
 
 pub unsafe fn hash_single_field_element(x: FieldElement) -> HashDigest {
-  let mut data = [HashDigest::default(); 2];
-  copy_nonoverlapping(
-    std::ptr::addr_of!(x) as *const i128,
-    std::ptr::addr_of_mut!(data[0].h0),
-    size_of_val(&x),
-  );
-  assert_eq!(size_of_val(&x), size_of_val(&data[0].h0));
-  my_hash(data)
+    let mut data = [HashDigest::default(); 2];
+    
+    copy_nonoverlapping(
+        std::ptr::addr_of!(x) as *const i128,
+        std::ptr::addr_of_mut!(data[0].h0),
+        1,
+    );
+    assert_eq!(size_of_val(&x), size_of_val(&data[0].h0));
+    
+    my_hash(data)
 }
 
 //ToDo: Debbug copy_nonoverlapping
@@ -25,6 +27,7 @@ pub unsafe fn hash_double_field_element_merkle_damgard(
   let mut data = [HashDigest::default(); 2];
   data[0] = prev_hash;
   let mut element = [x, y];
+  println!("hash_double_field_element_merkle_damgard");
   copy_nonoverlapping(
     std::ptr::addr_of!(element) as *const HashDigest,
     std::ptr::addr_of_mut!(data[1]),
@@ -33,7 +36,7 @@ pub unsafe fn hash_double_field_element_merkle_damgard(
   assert_eq!(size_of_val(&data[1]), size_of_val(&element));
   my_hash(data)
 }
-// Refactored code
+
 pub fn create_tree(
   src_data: Vec<HashDigest>,
   element_num: usize,
@@ -68,6 +71,7 @@ pub fn create_tree(
   current_lvl_size /= 2;
   start_idx -= current_lvl_size;
   while current_lvl_size >= 1 {
+
     // TODO: parallel
     for i in (0..current_lvl_size).rev() {
       let mut data = [HashDigest::default(); 2];
