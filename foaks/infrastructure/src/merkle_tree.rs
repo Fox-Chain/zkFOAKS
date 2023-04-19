@@ -39,7 +39,6 @@ pub fn create_tree(
   src_data: Vec<HashDigest>,
   element_num: usize,
   dst: &mut Vec<HashDigest>,
-  //element_size_: Option<usize>,
   alloc_required_: Option<bool>,
 ) {
   // ToDo: Check this, do not need element_size_
@@ -87,21 +86,19 @@ pub fn verify_claim(
   tree: Vec<HashDigest>,
   leaf_hash: &mut HashDigest,
   pos_element_arr: usize,
-  N: usize,
+  n: usize,
   visited: &mut Vec<bool>,
   proof_size: &mut usize,
 ) -> bool {
   // check N is power of 2
-  assert_eq!(((N as i64) & -(N as i64)), N as i64);
-  let mut pos_element = pos_element_arr + N;
+  assert_eq!(((n as i64) & -(n as i64)), n as i64);
+  let mut pos_element = pos_element_arr + n;
   let mut data = [HashDigest::default(); 2];
   while pos_element != 1 {
-    let pos_1 = pos_element & 1;
-    let pos_2 = pos_element ^ 1;
-    data[pos_1] = *leaf_hash;
-    data[pos_1 ^ 1] = tree[pos_2];
-    if !visited[pos_2] {
-      visited[pos_2] = true;
+    data[pos_element & 1] = *leaf_hash;
+    data[(pos_element & 1) ^ 1] = tree[pos_element ^ 1];
+    if !visited[pos_element ^ 1] {
+      visited[pos_element ^ 1] = true;
       *proof_size += size_of_val(&leaf_hash);
     }
     *leaf_hash = my_hash(data);
