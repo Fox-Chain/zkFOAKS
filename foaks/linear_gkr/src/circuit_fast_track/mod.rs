@@ -12,18 +12,6 @@ pub struct Gate {
   pub parameter_length: usize,
 }
 
-/*impl Default for Gate {
-    fn default() -> Self {
-        Self {
-            ty: 2,
-            u: 0,
-            v: 0,
-            src: vec![],
-            weight: vec![],
-            parameter_length: 0,
-        }
-    }
-}*/
 impl Gate {
   pub fn new() -> Self {
     Self {
@@ -69,7 +57,7 @@ impl Layer {
 pub struct LayeredCircuit {
   pub circuit: Vec<Layer>,
   pub total_depth: usize,
-  pub nputs: Vec<FieldElement>,
+  pub inputs: Vec<FieldElement>,
 }
 
 impl LayeredCircuit {
