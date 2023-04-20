@@ -1,6 +1,4 @@
-use std::error::Error;
-use std::fs;
-
+#[derive(Debug)]
 pub struct Paths {
   pub file_path: String,
   pub meta_path: String,
@@ -26,10 +24,4 @@ impl Paths {
       meta_path,
     })
   }
-}
-
-pub fn run(config: Paths) -> Result<(), Box<dyn Error>> {
-  let contents = fs::read_to_string(config.file_path)?;
-
-  Ok(())
 }

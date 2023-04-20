@@ -5,7 +5,6 @@ use infrastructure::constants::SIZE;
 use poly_commitment::PolyCommitProver;
 use prime_field::FieldElement;
 
-use std::borrow::Cow;
 use std::mem::swap;
 use std::time::{self, SystemTime};
 
@@ -78,7 +77,7 @@ pub struct ZkProver {
 impl ZkProver {
   pub fn new() -> Self {
     Self {
-      circuit_value: vec![vec![FieldElement::zero()]; SIZE],
+      circuit_value: vec![vec![]; SIZE],
       ..Default::default()
     }
   }
@@ -155,9 +154,12 @@ impl ZkProver {
     }
     assert!(self.aritmetic_circuit.total_depth < 1000000);
 
+    self.circuit_value[0] =
+      vec![FieldElement::zero(); 1 << self.aritmetic_circuit.circuit[0].bit_length];
     for i in 1..(self.aritmetic_circuit.total_depth) {
       self.circuit_value[i] =
         vec![FieldElement::zero(); 1 << self.aritmetic_circuit.circuit[i].bit_length];
+
       for j in 0..(1 << self.aritmetic_circuit.circuit[i].bit_length) {
         let g = j;
         let ty: usize = self.aritmetic_circuit.circuit[i].gates[g].ty;
