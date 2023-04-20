@@ -32,7 +32,7 @@ impl Gate {
 
 #[derive(Default, Debug, Clone)]
 pub struct Layer {
-  pub src_expander_c_mempool: Vec<i32>,
+  pub src_expander_c_mempool: Vec<usize>,
   pub src_expander_d_mempool: Vec<i32>,
   pub weight_expander_c_mempool: Vec<FieldElement>,
   pub weight_expander_d_mempool: Vec<FieldElement>,
