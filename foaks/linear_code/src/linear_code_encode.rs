@@ -7,13 +7,13 @@ use crate::parameter::*;
 
 #[derive(Default, Clone)]
 pub struct Graph {
-  pub degree: i32,
-  pub neighbor: Vec<Vec<u64>>,
-  pub r_neighbor: Vec<Vec<u64>>,
+  pub degree: usize,
+  pub neighbor: Vec<Vec<usize>>,
+  pub r_neighbor: Vec<Vec<usize>>,
   pub weight: Vec<Vec<FieldElement>>,
   pub r_weight: Vec<Vec<FieldElement>>,
-  pub l: u64,
-  pub r: u64,
+  pub l: usize,
+  pub r: usize,
 }
 
 // TODO this can be something like
@@ -48,38 +48,38 @@ impl LinearCodeEncodeContext {
     &mut self,
     src: Vec<FieldElement>,
     dst: &mut Vec<FieldElement>,
-    n: u64,
+    n: usize,
     dep_: Option<usize>,
-  ) -> u64 {
+  ) -> usize {
     let dep = dep_.unwrap_or(0);
     if !self.encode_initialized {
       self.encode_initialized = true;
-      let mut i = 0u64;
+      let mut i = 0usize;
       while (n >> i) > 1 {
-        let size = ((2 * n) >> i) as usize;
-        self.scratch[0][i as usize] = vec![FieldElement::default(); size];
-        self.scratch[1][i as usize] = vec![FieldElement::default(); size];
+        let size = (2 * n) >> i;
+        self.scratch[0][i] = vec![FieldElement::default(); size];
+        self.scratch[1][i] = vec![FieldElement::default(); size];
         i = i + 1;
       }
     }
     if n <= DISTANCE_THRESHOLD.try_into().unwrap() {
-      for i in 0..(n as usize) {
+      for i in 0..n {
         dst[i] = src[i];
       }
       return n;
     }
-    for i in 0..(n as usize) {
+    for i in 0..n {
       self.scratch[0][dep][i] = src[i];
     }
-    let mut r = (ALPHA * (n as f64)) as u64; //chech here
-    for j in 0..r as usize {
+    let mut r = (ALPHA * (n as f64)) as usize; //chech here
+    for j in 0..r {
       self.scratch[1][dep][j] = FieldElement::zero();
     }
     //expander mult
-    for i in 0..(n as usize) {
+    for i in 0..(n) {
       let val = src[i];
-      for d in 0..self.c[dep].degree as usize {
-        let target = self.c[dep].neighbor[i][d] as usize;
+      for d in 0..self.c[dep].degree {
+        let target = self.c[dep].neighbor[i][d];
         self.scratch[1][dep][target] =
           self.scratch[1][dep][target] + self.c[dep].weight[i][d] * val;
       }
@@ -87,51 +87,51 @@ impl LinearCodeEncodeContext {
     // TODO
     let l = self.encode(
       self.scratch[1][dep].clone(),
-      &mut (self.scratch[0][dep][(n as usize)..]).to_vec(),
+      &mut (self.scratch[0][dep][n..]).to_vec(),
       r,
       Some(dep + 1),
     );
     assert_eq![self.d[dep].l, l];
     // R consumed
     r = self.d[dep].r;
-    for i in 0..(r as usize) {
-      self.scratch[0][dep][(n + l) as usize + i] = FieldElement::from_real(0);
+    for i in 0..r {
+      self.scratch[0][dep][n + l + i] = FieldElement::from_real(0);
     }
-    for i in 0..(l as usize) {
+    for i in 0..l {
       let ref val = src[i];
-      for d in 0..(self.d[dep].degree as usize) {
+      for d in 0..self.d[dep].degree {
         let target = self.d[dep].neighbor[i][d];
-        self.scratch[0][dep][(n + l + target) as usize] =
-          self.scratch[0][dep][(n + l + target) as usize] + *val * self.d[dep].weight[i][d];
+        self.scratch[0][dep][n + l + target] =
+          self.scratch[0][dep][n + l + target] + *val * self.d[dep].weight[i][d];
       }
     }
-    for i in 0..((n + l + r) as usize) {
+    for i in 0..(n + l + r) {
       dst[i] = self.scratch[0][dep][i];
     }
     // return
     return n + l + r;
   }
 
-  pub fn generate_random_expander(l: u64, r: u64, d: u64) -> Graph {
+  pub fn generate_random_expander(l: usize, r: usize, d: usize) -> Graph {
     let mut ret: Graph = Graph::default();
-    ret.degree = i32::try_from(d).unwrap();
-    ret.neighbor.truncate(l as usize);
-    ret.weight.truncate(l as usize);
+    ret.degree = d;
+    ret.neighbor.truncate(l);
+    ret.weight.truncate(l);
 
-    ret.r_neighbor.truncate(r as usize);
-    ret.r_weight.truncate(r as usize);
+    ret.r_neighbor.truncate(r);
+    ret.r_weight.truncate(r);
 
-    for i in 0..(l as usize) {
-      ret.neighbor[i].truncate(d as usize);
-      ret.weight[i].truncate(d as usize);
-      for j in 0..(d as usize) {
-        let target = rand::random::<u64>() % r;
+    for i in 0..l {
+      ret.neighbor[i].truncate(d);
+      ret.weight[i].truncate(d);
+      for j in 0..d {
+        let target = rand::random::<usize>() % r;
         // TODO
         // let weight: FieldElement = prime_field::random();
         let weight = FieldElement::default();
         ret.neighbor[i][j] = target;
-        ret.r_neighbor[target as usize].push(i as u64);
-        ret.r_weight[target as usize].push(weight);
+        ret.r_neighbor[target].push(i);
+        ret.r_weight[target].push(weight);
         ret.weight[i][j] = weight;
       }
     }
@@ -141,17 +141,17 @@ impl LinearCodeEncodeContext {
     ret
   }
 
-  pub unsafe fn expander_init(&mut self, n: u64, dep: Option<usize>) -> u64 {
+  pub unsafe fn expander_init(&mut self, n: usize, dep: Option<usize>) -> usize {
     // random Graph
-    if n <= DISTANCE_THRESHOLD as u64 {
+    if n <= DISTANCE_THRESHOLD as usize {
       n
     } else {
       let dep = dep.unwrap_or(0);
-      self.c[dep as usize] = Self::generate_random_expander(n, (ALPHA * (n as f64)) as u64, CN);
-      let l = self.expander_init((ALPHA * (n as f64)) as u64, Some(dep + 1));
-      self.d[dep as usize] =
-        Self::generate_random_expander(l, ((n as f64) * (R - 1f64) - (l as f64)) as u64, DN);
-      n + l + (((n as f64) * (R - 1.0) - (l as f64)) as u64)
+      self.c[dep] = Self::generate_random_expander(n, (ALPHA * (n as f64)) as usize, CN);
+      let l = self.expander_init((ALPHA * (n as f64)) as usize, Some(dep + 1));
+      self.d[dep] =
+        Self::generate_random_expander(l, ((n as f64) * (R - 1f64) - (l as f64)) as usize, DN);
+      n + l + (((n as f64) * (R - 1.0) - (l as f64)) as usize)
     }
   }
 }
