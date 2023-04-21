@@ -315,7 +315,7 @@ impl ZkVerifier {
     // Initialize the prover,
     // the original repo initialize the prover in the main fn()
     let mut zk_prover = ZkProver::new();
-    zk_prover.init_array(bit_length, &self.aritmetic_circuit);
+    zk_prover.init_array(bit_length, self.aritmetic_circuit.clone());
 
     self.proof_size = 0;
     //there is a way to compress binlinear pairing element

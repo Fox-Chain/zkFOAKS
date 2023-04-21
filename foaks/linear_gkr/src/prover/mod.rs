@@ -82,7 +82,7 @@ impl ZkProver {
     }
   }
 
-  pub fn init_array(&mut self, max_bit_length: usize, aritmetic_circuit: &LayeredCircuit) {
+  pub fn init_array(&mut self, max_bit_length: usize, aritmetic_circuit: LayeredCircuit) {
     let half_length = (max_bit_length >> 1) + 1;
 
     self.ctx.gate_meet = vec![false; 15];
@@ -107,8 +107,8 @@ impl ZkProver {
     self.get_circuit(aritmetic_circuit);
   }
 
-  pub fn get_circuit(&mut self, from_verifier: &LayeredCircuit) {
-    self.aritmetic_circuit = from_verifier.clone();
+  pub fn get_circuit(&mut self, from_verifier: LayeredCircuit) {
+    self.aritmetic_circuit = from_verifier;
 
     self.ctx.inv_2 = FieldElement::from_real(2);
   }

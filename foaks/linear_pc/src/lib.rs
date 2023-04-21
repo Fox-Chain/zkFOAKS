@@ -5,7 +5,7 @@ use std::time::Instant;
 
 use infrastructure::merkle_tree::{self, create_tree};
 use infrastructure::my_hash::HashDigest;
-use infrastructure::utility::my_log;
+use infrastructure::utility::{max, my_log};
 use linear_code::linear_code_encode::Graph;
 use linear_code::linear_code_encode::LinearCodeEncodeContext;
 use linear_code::parameter::{ALPHA, CN, COLUMN_SIZE, DISTANCE_THRESHOLD, DN, R, TARGET_DISTANCE};
@@ -149,7 +149,47 @@ impl LinearPC {
       }
     }
 
-    unimplemented!();
+    let output_depth_output_size =
+      self.generate_enc_circuit(self.lcectx.c[0].r, n + self.lcectx.c[0].r, 1, 2);
+    // add final output
+    let final_output_depth = output_depth_output_size.0 + 1;
+    for i in 0..output_depth_output_size.1 {
+      self.verifier.aritmetic_circuit.circuit[final_output_depth].gates[i] =
+        Gate::from_params(10, i, 0);
+    }
+    //let d_input_offset = n; //Never used
+    let output_so_far = output_depth_output_size.1;
+    self.verifier.aritmetic_circuit.circuit[final_output_depth].src_expander_d_mempool =
+      vec![0; DN * self.lcectx.d[0].l];
+    self.verifier.aritmetic_circuit.circuit[final_output_depth].weight_expander_d_mempool =
+      vec![FieldElement::zero(); DN * self.lcectx.d[0].l];
+
+    for i in 0..self.lcectx.d[0].r {
+      self.verifier.aritmetic_circuit.circuit[final_output_depth].gates[output_so_far + i].ty = 14;
+      self.verifier.aritmetic_circuit.circuit[final_output_depth].gates[output_so_far + i]
+        .parameter_length = self.lcectx.d[0].r_neighbor[i].len();
+      self.verifier.aritmetic_circuit.circuit[final_output_depth].gates[output_so_far + i].src =
+        self.verifier.aritmetic_circuit.circuit[final_output_depth].src_expander_d_mempool
+          [d_mempool_ptr..]
+          .to_vec();
+      self.verifier.aritmetic_circuit.circuit[final_output_depth].gates[output_so_far + i].weight =
+        self.verifier.aritmetic_circuit.circuit[final_output_depth].weight_expander_d_mempool
+          [d_mempool_ptr..]
+          .to_vec();
+      d_mempool_ptr += self.lcectx.d[0].r_neighbor[i].len();
+      for j in 0..self.lcectx.d[0].r_neighbor[i].len() {
+        self.verifier.aritmetic_circuit.circuit[final_output_depth].gates[output_so_far + i].src
+          [j] = self.lcectx.d[0].r_neighbor[i][j] + n;
+        self.verifier.aritmetic_circuit.circuit[final_output_depth].gates[output_so_far + i]
+          .weight[j] = self.lcectx.d[0].r_weight[i][j];
+      }
+    }
+
+    for i in 0..query_count {
+      self.verifier.aritmetic_circuit.circuit[final_output_depth + 1].gates[i] =
+        Gate::from_params(10, query[i], 0);
+    }
+    assert_eq!(c_mempool_ptr, CN * self.lcectx.c[0].l);
   }
   pub unsafe fn tensor_product_protocol(
     &mut self,
@@ -290,8 +330,12 @@ impl LinearPC {
     }
     // generate circuit
 
-    // bool result = true;
-    // p.evaluate();
+    self.generate_circuit(&mut q, n / COLUMN_SIZE, query_count, combined_message);
+    //Todo: Check if is correct
+    //self.verifier.get_prover(&p); //Refactored, inside of zk_prover.init_array()
+    //self.prover.get_circuit(self.verifier.aritmetic_circuit); //Refactored, inside of zk_prover.init_array()
+    let mut max_bit_length: Option<usize> = None;
+    for i in 0..self.verifier.aritmetic_circuit.total_depth {}
     unimplemented!();
   }
 
@@ -342,6 +386,104 @@ impl LinearPC {
         .get(&(output_depth_output_size.0 + 1))
         .copied()
         .unwrap(),
+    )
+  }
+
+  fn generate_enc_circuit(
+    &mut self,
+    input_size: usize,
+    output_size_so_far: usize,
+    recursion_depth: usize,
+    input_depth: usize,
+  ) -> (usize, usize) {
+    if input_size <= DISTANCE_THRESHOLD.try_into().unwrap() {
+      return (input_depth, output_size_so_far);
+    }
+    // relay the output
+    for i in 0..output_size_so_far {
+      self.verifier.aritmetic_circuit.circuit[input_depth + 1].gates[i] =
+        Gate::from_params(10, i, 0);
+    }
+    self.verifier.aritmetic_circuit.circuit[input_depth + 1].src_expander_c_mempool =
+      vec![0; CN * self.lcectx.c[recursion_depth].l];
+    self.verifier.aritmetic_circuit.circuit[input_depth + 1].weight_expander_c_mempool =
+      vec![FieldElement::zero(); CN * self.lcectx.c[recursion_depth].l];
+    let mut mempool_ptr = 0;
+
+    for i in 0..self.lcectx.c[recursion_depth].r {
+      let neighbor_size = self.lcectx.c[recursion_depth].r_neighbor[i].len();
+      self.verifier.aritmetic_circuit.circuit[input_depth + 1].gates[output_size_so_far + i].ty =
+        14;
+      self.verifier.aritmetic_circuit.circuit[input_depth + 1].gates[output_size_so_far + i]
+        .parameter_length = neighbor_size;
+      //Todo: check if this is correct
+      self.verifier.aritmetic_circuit.circuit[input_depth + 1].gates[output_size_so_far + i].src =
+        self.verifier.aritmetic_circuit.circuit[input_depth + 1].src_expander_c_mempool
+          [mempool_ptr..]
+          .to_vec();
+      self.verifier.aritmetic_circuit.circuit[input_depth + 1].gates[output_size_so_far + i]
+        .weight = self.verifier.aritmetic_circuit.circuit[input_depth + 1]
+        .weight_expander_c_mempool[mempool_ptr..]
+        .to_vec();
+      mempool_ptr += self.lcectx.c[recursion_depth].r_neighbor[i].len();
+      let c_input_offset = output_size_so_far - input_size;
+      for j in 0..neighbor_size {
+        self.verifier.aritmetic_circuit.circuit[input_depth + 1].gates[output_size_so_far + i]
+          .src[j] = self.lcectx.c[recursion_depth].r_neighbor[i][j] + c_input_offset;
+        self.verifier.aritmetic_circuit.circuit[input_depth + 1].gates[output_size_so_far + i]
+          .weight[j] = self.lcectx.c[recursion_depth].r_weight[i][j];
+      }
+    }
+
+    let output_depth_output_size = self.generate_enc_circuit(
+      self.lcectx.c[recursion_depth].r,
+      output_size_so_far + self.lcectx.c[recursion_depth].r,
+      recursion_depth + 1,
+      input_depth + 1,
+    );
+    let d_input_offset = output_size_so_far;
+    let final_output_depth = output_depth_output_size.0 + 1;
+    //Todo: Check if this is correct
+    let output_size_so_far = output_depth_output_size.1;
+    mempool_ptr = 0;
+
+    // relay the output
+    for i in 0..output_size_so_far {
+      self.verifier.aritmetic_circuit.circuit[final_output_depth].gates[i] =
+        Gate::from_params(10, i, 0);
+    }
+
+    self.verifier.aritmetic_circuit.circuit[final_output_depth].src_expander_d_mempool =
+      vec![0; DN * self.lcectx.d[recursion_depth].l];
+    self.verifier.aritmetic_circuit.circuit[final_output_depth].weight_expander_d_mempool =
+      vec![FieldElement::zero(); DN * self.lcectx.d[recursion_depth].l];
+
+    for i in 0..DN * self.lcectx.d[recursion_depth].r {
+      let neighbor_size = self.lcectx.d[recursion_depth].r_neighbor[i].len();
+      self.verifier.aritmetic_circuit.circuit[final_output_depth].gates[output_size_so_far + i]
+        .ty = 14;
+      self.verifier.aritmetic_circuit.circuit[final_output_depth].gates[output_size_so_far + i]
+        .parameter_length = neighbor_size;
+      //Todo: check if this is correct
+      self.verifier.aritmetic_circuit.circuit[final_output_depth].gates[output_size_so_far + i]
+        .src = self.verifier.aritmetic_circuit.circuit[final_output_depth].src_expander_d_mempool
+        [mempool_ptr..]
+        .to_vec();
+      self.verifier.aritmetic_circuit.circuit[final_output_depth].gates[output_size_so_far + i]
+        .weight = self.verifier.aritmetic_circuit.circuit[final_output_depth]
+        .weight_expander_d_mempool[mempool_ptr..]
+        .to_vec();
+      mempool_ptr += self.lcectx.d[recursion_depth].r_neighbor[i].len();
+      for j in 0..neighbor_size {
+        self.verifier.aritmetic_circuit.circuit[final_output_depth].gates[output_size_so_far + i]
+          .src[j] = self.lcectx.d[recursion_depth].r_neighbor[i][j] + d_input_offset;
+        self.verifier.aritmetic_circuit.circuit[final_output_depth].gates[output_size_so_far + i]
+          .weight[j] = self.lcectx.d[recursion_depth].r_weight[i][j];
+      }
+    }
+    (
+      final_output_depth,
+      output_size_so_far + self.lcectx.d[recursion_depth].r,
     )
   }
 }
