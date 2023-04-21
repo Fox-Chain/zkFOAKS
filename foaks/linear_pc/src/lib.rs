@@ -7,6 +7,7 @@ use infrastructure::merkle_tree::{self, create_tree};
 use infrastructure::my_hash::HashDigest;
 use infrastructure::utility::my_log;
 use linear_code::linear_code_encode::Graph;
+use linear_code::linear_code_encode::LinearCodeEncodeContext;
 use linear_code::parameter::{ALPHA, CN, COLUMN_SIZE, DISTANCE_THRESHOLD, DN, R, TARGET_DISTANCE};
 use linear_gkr::circuit_fast_track::{Gate, Layer};
 use linear_gkr::prover::ZkProver;
@@ -22,6 +23,7 @@ pub struct LinearPC {
   prover: ZkProver,
   verifier: ZkVerifier,
   lcectx: LinearCodeEncodeContext,
+  gates_count: HashMap<u64, u64>,
 }
 
 impl LinearPC {
@@ -78,23 +80,21 @@ impl LinearPC {
     input: Vec<FieldElement>,
   ) {
     query.sort();
-    self
-      .lcectx
-      .prepare_gates_count(query.to_vec(), n, query_count);
-    println!("Depth {}", self.lcectx.gates_count.len());
+    self.prepare_gates_count(query.to_vec(), n, query_count);
+    println!("Depth {}", self.gates_count.len());
     assert_eq!((1 << my_log(n as usize).unwrap()), n);
 
     self.verifier.aritmetic_circuit.inputs = vec![FieldElement::zero(); n as usize];
-    self.verifier.aritmetic_circuit.total_depth = self.lcectx.gates_count.len() + 1;
+    self.verifier.aritmetic_circuit.total_depth = self.gates_count.len() + 1;
     self.verifier.aritmetic_circuit.circuit =
       vec![Layer::default(); self.verifier.aritmetic_circuit.total_depth];
     self.verifier.aritmetic_circuit.circuit[0].bit_length = my_log(n.try_into().unwrap()).unwrap();
     self.verifier.aritmetic_circuit.circuit[0].gates =
       vec![Gate::new(); 1 << self.verifier.aritmetic_circuit.circuit[0].bit_length];
 
-    for i in 0..self.lcectx.gates_count.len() {
+    for i in 0..self.gates_count.len() {
       self.verifier.aritmetic_circuit.circuit[i + 1].bit_length = my_log(
-        smallest_pow2_larger_or_equal_to(*self.lcectx.gates_count.get(&(i as u64)).unwrap())
+        smallest_pow2_larger_or_equal_to(*self.gates_count.get(&(i as u64)).unwrap())
           .try_into()
           .unwrap(),
       )
@@ -102,16 +102,16 @@ impl LinearPC {
       self.verifier.aritmetic_circuit.circuit[i + 1].gates =
         vec![Gate::new(); 1 << self.verifier.aritmetic_circuit.circuit[i + 1].bit_length];
     }
-    self.verifier.aritmetic_circuit.circuit[self.lcectx.gates_count.len() + 1].bit_length = my_log(
+    self.verifier.aritmetic_circuit.circuit[self.gates_count.len() + 1].bit_length = my_log(
       smallest_pow2_larger_or_equal_to(query_count)
         .try_into()
         .unwrap(),
     )
     .unwrap();
-    self.verifier.aritmetic_circuit.circuit[self.lcectx.gates_count.len() + 1].gates = vec![
+    self.verifier.aritmetic_circuit.circuit[self.gates_count.len() + 1].gates =
+      vec![
         Gate::new();
-        1 << self.verifier.aritmetic_circuit.circuit[self.lcectx.gates_count.len() + 1]
-          .bit_length
+        1 << self.verifier.aritmetic_circuit.circuit[self.gates_count.len() + 1].bit_length
       ];
 
     for i in 0..n as usize {
@@ -128,14 +128,20 @@ impl LinearPC {
       vec![0; (CN * self.lcectx.c[0].l).try_into().unwrap()];
     self.verifier.aritmetic_circuit.circuit[2].weight_expander_c_mempool =
       vec![FieldElement::zero(); (CN * self.lcectx.c[0].l).try_into().unwrap()];
-    let c_mempool_ptr = 0;
-    let d_mempool_ptr = 0;
-    for i in 0..self.lcectx.c[0].l as usize {
+    let mut c_mempool_ptr = 0;
+    let mut d_mempool_ptr = 0;
+    for i in 0..self.lcectx.c[0].r as usize {
       self.verifier.aritmetic_circuit.circuit[2].gates[i + (n as usize)] =
         Gate::from_params(14, 0, 0);
       self.verifier.aritmetic_circuit.circuit[2].gates[i + (n as usize)].parameter_length =
         self.lcectx.c[0].r_neighbor[i].len();
-      //self.verifier.aritmetic_circuit.circuit[2].gates[i +(n as usize)].src = self.verifier.aritmetic_circuit.circuit[2].src_expander_c_mempool[c_mempool_ptr];
+      //Todo: Check if this is correct
+      self.verifier.aritmetic_circuit.circuit[2].gates[i + (n as usize)].src =
+        self.verifier.aritmetic_circuit.circuit[2].src_expander_c_mempool[c_mempool_ptr..].to_vec();
+      self.verifier.aritmetic_circuit.circuit[2].gates[i + (n as usize)].weight =
+        self.verifier.aritmetic_circuit.circuit[2].weight_expander_c_mempool[c_mempool_ptr..]
+          .to_vec();
+      c_mempool_ptr += self.lcectx.c[0].r_neighbor[i].len();
     }
 
     unimplemented!();
@@ -285,44 +291,18 @@ impl LinearPC {
     // p.evaluate();
     unimplemented!();
   }
-}
-
-#[derive(Default)]
-pub struct LinearCodeEncodeContext {
-  pub scratch: Vec<Vec<Vec<FieldElement>>>,
-  pub encode_initialized: bool,
-  pub c: Vec<Graph>,
-  pub d: Vec<Graph>,
-  pub gates_count: HashMap<u64, u64>,
-}
-
-impl LinearCodeEncodeContext {
-  pub fn init() -> Self {
-    let scratch = vec![vec![vec![FieldElement::zero()]; 100]; 2];
-    let encode_initialized = false;
-    let c = vec![Graph::default(); 100];
-    let d = vec![Graph::default(); 100];
-
-    Self {
-      scratch,
-      encode_initialized,
-      c,
-      d,
-      ..Default::default()
-    }
-  }
 
   fn prepare_gates_count(&mut self, query: Vec<u64>, n: u64, query_count: u64) {
     //long long query_ptr = 0;
     // input layer
     self.gates_count.insert(0, n);
     // expander part
-    self.gates_count.insert(1, n + self.c[0].r);
-    let output_depth_output_size = self.prepare_enc_count(self.c[0].r, n, 1);
+    self.gates_count.insert(1, n + self.lcectx.c[0].r);
+    let output_depth_output_size = self.prepare_enc_count(self.lcectx.c[0].r, n, 1);
 
     self.gates_count.insert(
       output_depth_output_size.0 + 1,
-      n + output_depth_output_size.1 + self.d[0].r,
+      n + output_depth_output_size.1 + self.lcectx.d[0].r,
     );
     self
       .gates_count
@@ -341,16 +321,16 @@ impl LinearCodeEncodeContext {
     // output
     self.gates_count.insert(
       depth + 1,
-      output_size_so_far + input_size + self.c[depth as usize].r,
+      output_size_so_far + input_size + self.lcectx.c[depth as usize].r,
     );
     let output_depth_output_size = self.prepare_enc_count(
-      self.c[depth as usize].r,
+      self.lcectx.c[depth as usize].r,
       output_size_so_far + input_size,
       depth + 1,
     );
     self.gates_count.insert(
       output_depth_output_size.0 + 1,
-      output_depth_output_size.1 + self.d[depth as usize].r,
+      output_depth_output_size.1 + self.lcectx.d[depth as usize].r,
     );
     (
       output_depth_output_size.0 + 1,
@@ -361,117 +341,6 @@ impl LinearCodeEncodeContext {
         .unwrap(),
     )
   }
-
-  pub fn encode(
-    &mut self,
-    src: Vec<FieldElement>,
-    dst: &mut Vec<FieldElement>,
-    n: u64,
-    dep_: Option<usize>,
-  ) -> u64 {
-    let dep = dep_.unwrap_or(0);
-    if !self.encode_initialized {
-      self.encode_initialized = true;
-      let mut i = 0u64;
-      while (n >> i) > 1 {
-        let size = ((2 * n) >> i) as usize;
-        self.scratch[0][i as usize] = vec![FieldElement::default(); size];
-        self.scratch[1][i as usize] = vec![FieldElement::default(); size];
-        i = i + 1;
-      }
-    }
-    if n <= DISTANCE_THRESHOLD.try_into().unwrap() {
-      for i in 0..(n as usize) {
-        dst[i] = src[i];
-      }
-      return n;
-    }
-    for i in 0..(n as usize) {
-      self.scratch[0][dep][i] = src[i];
-    }
-    let mut r = (ALPHA * (n as f64)) as u64; //chech here
-    for j in 0..r as usize {
-      self.scratch[1][dep][j] = FieldElement::zero();
-    }
-    //expander mult
-    for i in 0..(n as usize) {
-      let val = src[i];
-      for d in 0..self.c[dep].degree as usize {
-        let target = self.c[dep].neighbor[i][d] as usize;
-        self.scratch[1][dep][target] =
-          self.scratch[1][dep][target] + self.c[dep].weight[i][d] * val;
-      }
-    }
-    // TODO
-    let l = self.encode(
-      self.scratch[1][dep].clone(),
-      &mut (self.scratch[0][dep][(n as usize)..]).to_vec(),
-      r,
-      Some(dep + 1),
-    );
-    assert_eq![self.d[dep].l, l];
-    // R consumed
-    r = self.d[dep].r;
-    for i in 0..(r as usize) {
-      self.scratch[0][dep][(n + l) as usize + i] = FieldElement::from_real(0);
-    }
-    for i in 0..(l as usize) {
-      let ref val = src[i];
-      for d in 0..(self.d[dep].degree as usize) {
-        let target = self.d[dep].neighbor[i][d];
-        self.scratch[0][dep][(n + l + target) as usize] =
-          self.scratch[0][dep][(n + l + target) as usize] + *val * self.d[dep].weight[i][d];
-      }
-    }
-    for i in 0..((n + l + r) as usize) {
-      dst[i] = self.scratch[0][dep][i];
-    }
-    // return
-    return n + l + r;
-  }
-
-  pub fn expander_init(&mut self, n: u64, dep: Option<i32>) -> u64 {
-    // random Graph
-    if n <= DISTANCE_THRESHOLD.try_into().unwrap() {
-      n
-    } else {
-      let mut dep_ = dep.unwrap_or(0i32);
-      self.c[dep_ as usize] = generate_random_expander(n, (ALPHA * (n as f64)) as u64, CN as u64);
-      let L = self.expander_init((ALPHA * (n as f64)) as u64, Some(dep_ + 1i32));
-      self.d[dep_ as usize] =
-        generate_random_expander(L, ((n as f64) * (R - 1f64) - (L as f64)) as u64, DN as u64);
-      n + L + (((n as f64) * (R - 1.0) - (L as f64)) as u64)
-    }
-  }
-}
-
-pub fn generate_random_expander(l: u64, r: u64, d: u64) -> Graph {
-  let mut ret: Graph = Graph::default();
-  ret.degree = i32::try_from(d).unwrap();
-  ret.neighbor.truncate(l as usize);
-  ret.weight.truncate(l as usize);
-
-  ret.r_neighbor.truncate(r as usize);
-  ret.r_weight.truncate(r as usize);
-
-  for i in 0..(l as usize) {
-    ret.neighbor[i].truncate(d as usize);
-    ret.weight[i].truncate(d as usize);
-    for j in 0..(d as usize) {
-      let target = rand::random::<u64>() % r;
-      // TODO
-      // let weight: FieldElement = prime_field::random();
-      let weight = FieldElement::default();
-      ret.neighbor[i][j] = target;
-      ret.r_neighbor[target as usize].push(i as u64);
-      ret.r_weight[target as usize].push(weight);
-      ret.weight[i][j] = weight;
-    }
-  }
-
-  ret.l = l;
-  ret.r = r;
-  ret
 }
 
 fn open_and_verify(x: FieldElement, n: u64, com_mt: Vec<HashDigest>) //-> (FieldElement, bool)

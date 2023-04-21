@@ -6,5 +6,6 @@ members = [
     "linear_code",
     "intrinsics",
     "poly_commitment",
-    "prime_field"
+    "prime_field",
+		"linear_pc"
 ]
