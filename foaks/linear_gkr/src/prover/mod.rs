@@ -236,13 +236,13 @@ impl ZkProver {
     self.circuit_value[self.aritmetic_circuit.total_depth - 1].clone()
   }
 
-  pub fn get_witness(&mut self, inputs: Vec<FieldElement>, _n: u32) {
-    // Do we really need this line of code?
-    //self.circuit_value[0] =
-    // Vec::with_capacity(1 << self.aritmetic_circuit.circuit[0].bit_length);
-    self.circuit_value[0] = inputs.clone();
-    // todo()
-    //self.circuit_value[0] = inputs[..n].to_vec();
+  //Todo: Improve this function with Rust features
+  pub fn get_witness(&mut self, inputs: Vec<FieldElement>, n: usize) {
+    self.circuit_value[0] =
+      vec![FieldElement::zero(); 1 << self.aritmetic_circuit.circuit[0].bit_length];
+    for i in 0..n {
+      self.circuit_value[0][i] = inputs[i];
+    }
   }
 
   pub fn sumcheck_init(

@@ -200,8 +200,7 @@ impl LinearPC {
     n: usize,
     com_mt: Vec<HashDigest>,
     linear_code_encode: &mut LinearCodeEncodeContext,
-  ) //-> (FieldElement, bool)
-  {
+  ) -> (FieldElement, bool) {
     //let mut verification_time = 0.0;
     assert_eq!(size_r0 * size_r1, n);
 
@@ -313,7 +312,7 @@ impl LinearPC {
     }
     let time_span = v_t0.elapsed();
     //verification_time += time_span.as_secs_f64();
-    let verification_time = time_span.as_secs_f64();
+    let mut verification_time = time_span.as_secs_f64();
 
     // setup code-switching
     let mut answer = FieldElement::zero();
@@ -330,13 +329,48 @@ impl LinearPC {
     }
     // generate circuit
 
-    self.generate_circuit(&mut q, n / COLUMN_SIZE, query_count, combined_message);
+    self.generate_circuit(
+      &mut q,
+      n / COLUMN_SIZE,
+      query_count,
+      combined_message.clone(),
+    );
     //Todo: Check if is correct
-    //self.verifier.get_prover(&p); //Refactored, inside of zk_prover.init_array()
+    //self.verifier.get_prover(&p); //Refactored, inside of zk_verifier has not zk_prover
     //self.prover.get_circuit(self.verifier.aritmetic_circuit); //Refactored, inside of zk_prover.init_array()
     let mut max_bit_length: Option<usize> = None;
-    for i in 0..self.verifier.aritmetic_circuit.total_depth {}
-    unimplemented!();
+    for i in 0..self.verifier.aritmetic_circuit.total_depth {
+      if Some(self.verifier.aritmetic_circuit.circuit[i].bit_length) > max_bit_length {
+        max_bit_length = Some(self.verifier.aritmetic_circuit.circuit[i].bit_length);
+      }
+    }
+    // p.init_array(max_bit_length); Refactored inside verifier.verify()
+    self.verifier.init_array(max_bit_length.unwrap());
+    // p.get_witness(combined_message, N / column_size); Refactored inside verifier.verify()
+
+    let (result, time_diff) = self.verifier.verify2(
+      &String::from("log.txt"),
+      max_bit_length.unwrap(),
+      combined_message.clone(),
+      n / COLUMN_SIZE,
+      query_count,
+      combined_codeword,
+      q,
+    );
+
+    verification_time += time_diff;
+    verification_time += self.verifier.v_time;
+    proof_size += query_count * std::mem::size_of::<FieldElement>();
+    // Dont need to do this in Rust right?
+    //p.delete_self();
+    //v.delete_self();
+    println!(
+      "Proof size for tensor IOP {} bytes",
+      proof_size + self.verifier.proof_size
+    );
+    println!("Verification time {}", verification_time);
+
+    (answer, result)
   }
 
   fn prepare_gates_count(&mut self, query: Vec<usize>, n: usize, query_count: usize) {
