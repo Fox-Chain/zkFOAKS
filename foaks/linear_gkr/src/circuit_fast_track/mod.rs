@@ -48,9 +48,7 @@ pub struct Layer {
 }
 
 impl Layer {
-  pub fn new() -> Self {
-    Default::default()
-  }
+  pub fn new() -> Self { Default::default() }
 }
 
 #[derive(Default, Debug, Clone)]
@@ -61,7 +59,5 @@ pub struct LayeredCircuit {
 }
 
 impl LayeredCircuit {
-  pub fn new() -> Self {
-    Default::default()
-  }
+  pub fn new() -> Self { Default::default() }
 }

@@ -1,17 +1,19 @@
-use std::collections::HashMap;
-use std::default;
-use std::mem::size_of_val;
-use std::time::Instant;
+use std::{collections::HashMap, default, mem::size_of_val, time::Instant};
 
-use infrastructure::merkle_tree::{self, create_tree};
-use infrastructure::my_hash::HashDigest;
-use infrastructure::utility::{max, my_log};
-use linear_code::linear_code_encode::Graph;
-use linear_code::linear_code_encode::LinearCodeEncodeContext;
-use linear_code::parameter::{ALPHA, CN, COLUMN_SIZE, DISTANCE_THRESHOLD, DN, R, TARGET_DISTANCE};
-use linear_gkr::circuit_fast_track::{Gate, Layer};
-use linear_gkr::prover::ZkProver;
-use linear_gkr::verifier::ZkVerifier;
+use infrastructure::{
+  merkle_tree::{self, create_tree},
+  my_hash::HashDigest,
+  utility::{max, my_log},
+};
+use linear_code::{
+  linear_code_encode::LinearCodeEncodeContext,
+  parameter::{ALPHA, CN, COLUMN_SIZE, DISTANCE_THRESHOLD, DN, R, TARGET_DISTANCE},
+};
+use linear_gkr::{
+  circuit_fast_track::{Gate, Layer},
+  prover::ZkProver,
+  verifier::ZkVerifier,
+};
 use prime_field::FieldElement;
 
 //commit
@@ -41,7 +43,8 @@ impl LinearPC {
       // Todo: Debug, could use std::ptr::copy_nonoverlapping() instead
       self.coef[i] = (src[i * (n / COLUMN_SIZE)..]).to_vec();
 
-      //memset(encoded_codeword[i], 0, sizeof(prime_field::field_element) * n / COLUMN_SIZE * 2);
+      //memset(encoded_codeword[i], 0, sizeof(prime_field::field_element) * n /
+      // COLUMN_SIZE * 2);
 
       self.codeword_size[i] = self.lcectx.encode(
         (src[i * (n / COLUMN_SIZE)..]).to_vec(),
@@ -191,6 +194,7 @@ impl LinearPC {
     }
     assert_eq!(c_mempool_ptr, CN * self.lcectx.c[0].l);
   }
+
   pub unsafe fn tensor_product_protocol(
     &mut self,
     r0: Vec<FieldElement>,
@@ -336,8 +340,9 @@ impl LinearPC {
       combined_message.clone(),
     );
     //Todo: Check if is correct
-    //self.verifier.get_prover(&p); //Refactored, inside of zk_verifier has not zk_prover
-    //self.prover.get_circuit(self.verifier.aritmetic_circuit); //Refactored, inside of zk_prover.init_array()
+    //self.verifier.get_prover(&p); //Refactored, inside of zk_verifier has not
+    // zk_prover self.prover.get_circuit(self.verifier.aritmetic_circuit);
+    // //Refactored, inside of zk_prover.init_array()
     let mut max_bit_length: Option<usize> = None;
     for i in 0..self.verifier.aritmetic_circuit.total_depth {
       if Some(self.verifier.aritmetic_circuit.circuit[i].bit_length) > max_bit_length {
@@ -346,7 +351,8 @@ impl LinearPC {
     }
     // p.init_array(max_bit_length); Refactored inside verifier.verify()
     self.verifier.init_array(max_bit_length.unwrap());
-    // p.get_witness(combined_message, N / column_size); Refactored inside verifier.verify()
+    // p.get_witness(combined_message, N / column_size); Refactored inside
+    // verifier.verify()
 
     let (result, time_diff) = self.verifier.verify2(
       &String::from("log.txt"),
@@ -520,28 +526,41 @@ impl LinearPC {
       output_size_so_far + self.lcectx.d[recursion_depth].r,
     )
   }
-}
 
-fn open_and_verify(x: FieldElement, n: usize, com_mt: Vec<HashDigest>) //-> (FieldElement, bool)
-{
-  assert_eq!(n % COLUMN_SIZE, 0);
-  //tensor product of r0 otimes r1
-  let mut r0 = vec![FieldElement::zero(); COLUMN_SIZE];
-  let mut r1 = vec![FieldElement::zero(); COLUMN_SIZE];
+  fn open_and_verify(
+    &mut self,
+    x: FieldElement,
+    n: usize,
+    com_mt: Vec<HashDigest>,
+    linear_code_encode: &mut LinearCodeEncodeContext,
+  ) -> (FieldElement, bool) {
+    assert_eq!(n % COLUMN_SIZE, 0);
+    //tensor product of r0 otimes r1
+    let mut r0 = vec![FieldElement::zero(); COLUMN_SIZE];
+    let mut r1 = vec![FieldElement::zero(); COLUMN_SIZE];
 
-  let x_n = FieldElement::fast_pow(x, (n / COLUMN_SIZE).try_into().unwrap());
-  r0[0] = FieldElement::real_one();
-  for j in 1..COLUMN_SIZE {
-    r0[j] = r0[j - 1] * x_n;
+    let x_n = FieldElement::fast_pow(x, (n / COLUMN_SIZE).try_into().unwrap());
+    r0[0] = FieldElement::real_one();
+    for j in 1..COLUMN_SIZE {
+      r0[j] = r0[j - 1] * x_n;
+    }
+    r1[0] = FieldElement::real_one();
+    for j in 1..(n / COLUMN_SIZE) {
+      r1[j] = r1[j - 1] * x;
+    }
+    unsafe {
+      self.tensor_product_protocol(
+        r0,
+        r1,
+        COLUMN_SIZE,
+        n / COLUMN_SIZE,
+        n,
+        com_mt,
+        linear_code_encode,
+      )
+    }
   }
-  r1[0] = FieldElement::real_one();
-  for j in 1..(n / COLUMN_SIZE) {
-    r1[j] = r1[j - 1] * x;
-  }
-
-  //tensor_product_protocol(r0, r1, COLUMN_SIZE, n / COLUMN_SIZE, n, com_mt);
 }
-
 fn smallest_pow2_larger_or_equal_to(x: usize) -> usize {
   for i in 0..32 {
     if (1 << i) >= x {

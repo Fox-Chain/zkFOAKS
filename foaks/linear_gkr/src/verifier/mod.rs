@@ -1,25 +1,23 @@
-use infrastructure::constants::LOG_SLICE_NUMBER;
-use infrastructure::constants::SLICE_NUMBER;
-use infrastructure::rs_polynomial::inverse_fast_fourier_transform;
-use infrastructure::rs_polynomial::ScratchPad;
-use std::fs;
-use std::fs::read_to_string;
-use std::process;
-use std::time::Instant;
+use infrastructure::{
+  constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
+  rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
+};
+use std::{fs, fs::read_to_string, process, time::Instant};
 
 use infrastructure::my_hash::HashDigest;
 use poly_commitment::PolyCommitVerifier;
 use prime_field::FieldElement;
-use std::fs::File;
-use std::io::{Error, Write};
-use std::mem;
-use std::time;
+use std::{
+  fs::File,
+  io::{Error, Write},
+  mem, time,
+};
 
-use crate::circuit_fast_track::Gate;
-use crate::circuit_fast_track::Layer;
-use crate::circuit_fast_track::LayeredCircuit;
-use crate::polynomial::QuadraticPoly;
-use crate::prover::ZkProver;
+use crate::{
+  circuit_fast_track::{Gate, Layer, LayeredCircuit},
+  polynomial::QuadraticPoly,
+  prover::ZkProver,
+};
 
 #[derive(Default, Debug)]
 pub struct VerifierContext {
@@ -35,7 +33,7 @@ pub struct ZkVerifier {
   pub v_time: f64,
   pub poly_verifier: PolyCommitVerifier,
   /** @name Randomness&Const
-  	* Storing randomness or constant for simplifying computation*/
+   * Storing randomness or constant for simplifying computation */
   beta_g_r0_first_half: Vec<FieldElement>,
   beta_g_r0_second_half: Vec<FieldElement>,
   beta_g_r1_first_half: Vec<FieldElement>,
@@ -63,9 +61,7 @@ pub struct ZkVerifier {
 }
 
 impl ZkVerifier {
-  pub fn new() -> Self {
-    Default::default()
-  }
+  pub fn new() -> Self { Default::default() }
 
   pub fn read_circuit(&mut self, circuit_path: &str, meta_path: &str) -> Option<usize> {
     let d: usize;
@@ -334,7 +330,8 @@ impl ZkVerifier {
     let mut alpha = FieldElement::real_one();
     let mut beta = FieldElement::zero();
 
-    //	random_oracle oracle; // Orion just declare the variable but dont use it later
+    //	random_oracle oracle; // Orion just declare the variable but dont use it
+    // later
     let capacity =
       self.aritmetic_circuit.circuit[self.aritmetic_circuit.total_depth - 1].bit_length;
     let mut r_0 = Self::generate_randomness(capacity);
@@ -396,10 +393,12 @@ impl ZkVerifier {
         }
       }
 
-      //V should test the maskR for two points, V does random linear combination of these points first
+      //V should test the maskR for two points, V does random linear combination of
+      // these points first
       let _random_combine = Self::generate_randomness(1)[0];
 
-      //Every time all one test to V, V needs to do a linear combination for security.
+      //Every time all one test to V, V needs to do a linear combination for
+      // security.
       let _linear_combine = Self::generate_randomness(1)[0]; // mem leak
 
       let mut one_minus_r_u =
@@ -470,7 +469,8 @@ impl ZkVerifier {
         alpha_beta_sum = poly.eval(&r_v[j]) + direct_relay_value * zk_prover.v_u;
       }
       //Add one more round for maskR
-      //quadratic_poly poly p->sumcheck_finalroundR(previous_random, C.current[i - 1].bit_length);
+      //quadratic_poly poly p->sumcheck_finalroundR(previous_random, C.current[i -
+      // 1].bit_length);
 
       let final_claims = zk_prover.sumcheck_finalize(previous_random);
 
@@ -599,7 +599,8 @@ impl ZkVerifier {
     self.proof_size += 2 * mem::size_of::<HashDigest>();
     self.vpd_randomness = r_0.clone();
     self.one_minus_vpd_randomness = one_minus_r_0.clone();
-    //From poly_ver.p = &(p -> poly_prover); TODO check if the implementation is correct
+    //From poly_ver.p = &(p -> poly_prover); TODO check if the implementation is
+    // correct
     self.poly_verifier.pc_prover = zk_prover.poly_prover.clone();
 
     let public_array = self.public_array_prepare(
@@ -683,7 +684,8 @@ impl ZkVerifier {
     let mut alpha = FieldElement::real_one();
     let mut beta = FieldElement::zero();
 
-    //	random_oracle oracle; // Orion just declare the variable but dont use it later
+    //	random_oracle oracle; // Orion just declare the variable but dont use it
+    // later
     let capacity =
       self.aritmetic_circuit.circuit[self.aritmetic_circuit.total_depth - 1].bit_length;
     let mut r_0 = Self::generate_randomness(capacity);
@@ -745,10 +747,12 @@ impl ZkVerifier {
         }
       }
 
-      //V should test the maskR for two points, V does random linear combination of these points first
+      //V should test the maskR for two points, V does random linear combination of
+      // these points first
       let _random_combine = Self::generate_randomness(1)[0];
 
-      //Every time all one test to V, V needs to do a linear combination for security.
+      //Every time all one test to V, V needs to do a linear combination for
+      // security.
       let _linear_combine = Self::generate_randomness(1)[0]; // mem leak
 
       let mut one_minus_r_u =
@@ -819,7 +823,8 @@ impl ZkVerifier {
         alpha_beta_sum = poly.eval(&r_v[j]) + direct_relay_value * zk_prover.v_u;
       }
       //Add one more round for maskR
-      //quadratic_poly poly p->sumcheck_finalroundR(previous_random, C.current[i - 1].bit_length);
+      //quadratic_poly poly p->sumcheck_finalroundR(previous_random, C.current[i -
+      // 1].bit_length);
 
       let final_claims = zk_prover.sumcheck_finalize(previous_random);
 
@@ -946,7 +951,8 @@ impl ZkVerifier {
     self.proof_size += 2 * mem::size_of::<HashDigest>();
     self.vpd_randomness = r_0.clone();
     self.one_minus_vpd_randomness = one_minus_r_0.clone();
-    //From poly_ver.p = &(p -> poly_prover); TODO check if the implementation is correct
+    //From poly_ver.p = &(p -> poly_prover); TODO check if the implementation is
+    // correct
     self.poly_verifier.pc_prover = zk_prover.poly_prover.clone();
 
     let public_array = self.public_array_prepare(
@@ -1005,6 +1011,7 @@ impl ZkVerifier {
 
     (true, time_span)
   }
+
   pub fn write_file(
     output_path: &String,
     total_time: f64,
@@ -1147,6 +1154,7 @@ impl ZkVerifier {
       );
     }
   }
+
   pub fn dfs_for_public_eval(
     &mut self,
     dep: usize,
@@ -1914,8 +1922,10 @@ impl ZkVerifier {
   }
 
   pub fn v_in() {}
+
   //Never used
   pub fn read_r1cs() {}
+
   //Never used, original code is all commented in Orion, empty in Virgo
   pub fn self_inner_product_test() {} //Never used, implemented only in Virgo, empty in Orion
 }

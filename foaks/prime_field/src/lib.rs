@@ -41,9 +41,7 @@ impl FieldElementContext {
   }
 }
 
-pub fn my_mod(x: u64) -> u64 {
-  (x >> 61) + (x & MOD)
-}
+pub fn my_mod(x: u64) -> u64 { (x >> 61) + (x & MOD) }
 
 // Gian: tested ok, well implemented
 pub fn my_mult(x: u64, y: u64) -> u64 {
@@ -99,13 +97,9 @@ pub struct FieldElement {
 }
 
 impl FieldElement {
-  fn to_owned_bytes(self) -> Result<Vec<u8>, PrimeFieldError> {
-    Ok(bincode::serialize(&self)?)
-  }
+  fn to_owned_bytes(self) -> Result<Vec<u8>, PrimeFieldError> { Ok(bincode::serialize(&self)?) }
 
-  pub fn bit_stream(&self) -> Result<Vec<u8>, PrimeFieldError> {
-    self.to_owned_bytes()
-  }
+  pub fn bit_stream(&self) -> Result<Vec<u8>, PrimeFieldError> { self.to_owned_bytes() }
 
   pub fn as_bytes(&self) -> &[i128] {
     unsafe {
@@ -115,9 +109,8 @@ impl FieldElement {
       )
     }
   }
-  pub fn size(&self) -> usize {
-    std::mem::size_of::<Self>()
-  }
+
+  pub fn size(&self) -> usize { std::mem::size_of::<Self>() }
 
   pub fn new_random() -> Self {
     let real = rand::random::<u64>() % MOD;
@@ -142,21 +135,13 @@ impl FieldElement {
     Self { img, real: 0 }
   }
 
-  pub const fn new(real: u64, img: u64) -> Self {
-    Self { img, real }
-  }
+  pub const fn new(real: u64, img: u64) -> Self { Self { img, real } }
 
-  pub const fn zero() -> Self {
-    Self::new(0, 0)
-  }
+  pub const fn zero() -> Self { Self::new(0, 0) }
 
-  pub const fn real_one() -> Self {
-    Self::new(1, 0)
-  }
+  pub const fn real_one() -> Self { Self::new(1, 0) }
 
-  pub fn sum_parts(&self) -> u64 {
-    self.real + self.img
-  }
+  pub fn sum_parts(&self) -> u64 { self.real + self.img }
 
   pub fn inverse(self) -> Self {
     let p: u128 = 2305843009213693951;

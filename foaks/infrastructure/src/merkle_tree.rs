@@ -1,22 +1,20 @@
 use prime_field::FieldElement;
-use std::ptr::copy_nonoverlapping;
-use std::vec::Vec;
-use std::{mem::size_of_val, process::exit};
+use std::{mem::size_of_val, process::exit, ptr::copy_nonoverlapping, vec::Vec};
 
 use crate::my_hash::{my_hash, HashDigest};
 
 // Todo: Debug coppy no overlapping
 pub unsafe fn hash_single_field_element(x: FieldElement) -> HashDigest {
-    let mut data = [HashDigest::default(); 2];
-    
-    copy_nonoverlapping(
-        std::ptr::addr_of!(x) as *const i128,
-        std::ptr::addr_of_mut!(data[0].h0),
-        1,
-    );
-    assert_eq!(size_of_val(&x), size_of_val(&data[0].h0));
-    
-    my_hash(data)
+  let mut data = [HashDigest::default(); 2];
+
+  copy_nonoverlapping(
+    std::ptr::addr_of!(x) as *const i128,
+    std::ptr::addr_of_mut!(data[0].h0),
+    1,
+  );
+  assert_eq!(size_of_val(&x), size_of_val(&data[0].h0));
+
+  my_hash(data)
 }
 
 //ToDo: Debbug copy_nonoverlapping
@@ -71,7 +69,6 @@ pub fn create_tree(
   current_lvl_size /= 2;
   start_idx -= current_lvl_size;
   while current_lvl_size >= 1 {
-
     // TODO: parallel
     for i in (0..current_lvl_size).rev() {
       let mut data = [HashDigest::default(); 2];

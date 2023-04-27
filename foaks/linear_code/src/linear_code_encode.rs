@@ -1,7 +1,6 @@
 use crate::parameter::DISTANCE_THRESHOLD;
 use prime_field::FieldElement;
-use std::collections::HashMap;
-use std::vec::Vec;
+use std::{collections::HashMap, vec::Vec};
 
 use crate::parameter::*;
 
@@ -19,7 +18,8 @@ pub struct Graph {
 // TODO this can be something like
 // this https://crates.io/crates/lazy_static or this https://github.com/matklad/once_cell
 
-// pub static mut D: Vec<Graph> = Vec::new(); // TODO this can actually be lazy_cell
+// pub static mut D: Vec<Graph> = Vec::new(); // TODO this can actually be
+// lazy_cell
 
 #[derive(Default)]
 pub struct LinearCodeEncodeContext {

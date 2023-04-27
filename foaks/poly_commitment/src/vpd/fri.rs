@@ -21,13 +21,9 @@ pub struct CommitPhaseData {
 
 // namespace fri
 impl CommitPhaseData {
-  pub fn new() -> Self {
-    Default::default()
-  }
+  pub fn new() -> Self { Default::default() }
 
-  pub fn delete_self(&mut self) {
-    std::mem::take(self);
-  }
+  pub fn delete_self(&mut self) { std::mem::take(self); }
 }
 
 #[derive(Debug, Clone)]
@@ -122,7 +118,8 @@ pub fn request_init_commit(
 
   let now = time::Instant::now();
 
-  // let sliced_input_length_per_block = 1 << *witness_bit_length_per_slice; No usages
+  // let sliced_input_length_per_block = 1 << *witness_bit_length_per_slice; No
+  // usages
   assert!(*witness_bit_length_per_slice >= 0);
 
   let mut root_of_unity =
@@ -142,7 +139,8 @@ pub fn request_init_commit(
     );
   }
 
-  //witness_rs_codeword_interleaved[oracle_indicator].reserve(1 << (bit_len + RS_CODE_RATE));
+  //witness_rs_codeword_interleaved[oracle_indicator].reserve(1 << (bit_len +
+  // RS_CODE_RATE));
   witness_rs_codeword_interleaved[oracle_indicator] =
     vec![FieldElement::default(); 1 << (bit_len + RS_CODE_RATE)];
 
@@ -164,7 +162,8 @@ pub fn request_init_commit(
 
     root_of_unity = FieldElement::get_root_of_unity(*log_current_witness_size_per_slice).unwrap();
 
-    //witness_rs_mapping[oracle_indicator][i].reserve(1 << *log_current_witness_size_per_slice);
+    //witness_rs_mapping[oracle_indicator][i].reserve(1 <<
+    // *log_current_witness_size_per_slice);
     if witness_rs_mapping.len() == 0 {
       for _ in 0..=oracle_indicator + 1 {
         witness_rs_mapping.push(vec![]);
@@ -183,7 +182,8 @@ pub fn request_init_commit(
     }
   }
 
-  //leaf_hash[oracle_indicator].reserve(1 << (*log_current_witness_size_per_slice - 1));
+  //leaf_hash[oracle_indicator].reserve(1 << (*log_current_witness_size_per_slice
+  // - 1));
   leaf_hash[oracle_indicator] =
     vec![HashDigest::default(); 1 << (*log_current_witness_size_per_slice - 1)];
 
@@ -247,8 +247,10 @@ pub fn request_init_value_with_merkle(
 
   for i in 0..SLICE_NUMBER {
     value.push((
-      fri_ctx.witness_rs_codeword_interleaved[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 0],
-      fri_ctx.witness_rs_codeword_interleaved[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 1]
+      fri_ctx.witness_rs_codeword_interleaved[oracle_indicator]
+        [pow_0 << log_leaf_size | i << 1 | 0],
+      fri_ctx.witness_rs_codeword_interleaved[oracle_indicator]
+        [pow_0 << log_leaf_size | i << 1 | 1],
     ));
 
     assert_eq!(
