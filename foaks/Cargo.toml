@@ -7,5 +7,6 @@ members = [
     "intrinsics",
     "poly_commitment",
     "prime_field",
-		"linear_pc"
+		"linear_pc",
+		"examples"
 ]

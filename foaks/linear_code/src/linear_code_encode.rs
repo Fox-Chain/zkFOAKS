@@ -112,46 +112,43 @@ impl LinearCodeEncodeContext {
     return n + l + r;
   }
 
-  pub fn generate_random_expander(l: usize, r: usize, d: usize) -> Graph {
-    let mut ret: Graph = Graph::default();
-    ret.degree = d;
-    ret.neighbor.truncate(l);
-    ret.weight.truncate(l);
-
-    ret.r_neighbor.truncate(r);
-    ret.r_weight.truncate(r);
-
-    for i in 0..l {
-      ret.neighbor[i].truncate(d);
-      ret.weight[i].truncate(d);
-      for j in 0..d {
-        let target = rand::random::<usize>() % r;
-        // TODO
-        // let weight: FieldElement = prime_field::random();
-        let weight = FieldElement::default();
-        ret.neighbor[i][j] = target;
-        ret.r_neighbor[target].push(i);
-        ret.r_weight[target].push(weight);
-        ret.weight[i][j] = weight;
-      }
-    }
-
-    ret.l = l;
-    ret.r = r;
-    ret
-  }
-
   pub unsafe fn expander_init(&mut self, n: usize, dep: Option<usize>) -> usize {
     // random Graph
     if n <= DISTANCE_THRESHOLD as usize {
       n
     } else {
       let dep = dep.unwrap_or(0);
-      self.c[dep] = Self::generate_random_expander(n, (ALPHA * (n as f64)) as usize, CN);
+      self.c[dep] = generate_random_expander(n, (ALPHA * (n as f64)) as usize, CN);
       let l = self.expander_init((ALPHA * (n as f64)) as usize, Some(dep + 1));
       self.d[dep] =
-        Self::generate_random_expander(l, ((n as f64) * (R - 1f64) - (l as f64)) as usize, DN);
+        generate_random_expander(l, ((n as f64) * (R - 1f64) - (l as f64)) as usize, DN);
       n + l + (((n as f64) * (R - 1.0) - (l as f64)) as usize)
     }
   }
+}
+pub fn generate_random_expander(l: usize, r: usize, d: usize) -> Graph {
+  let mut ret: Graph = Graph::default();
+  ret.degree = d;
+  ret.neighbor.truncate(l);
+  ret.weight.truncate(l);
+
+  ret.r_neighbor.truncate(r);
+  ret.r_weight.truncate(r);
+
+  for i in 0..l {
+    ret.neighbor[i].truncate(d);
+    ret.weight[i].truncate(d);
+    for j in 0..d {
+      let target = rand::random::<usize>() % r;
+      let weight = FieldElement::new_random();
+      ret.neighbor[i][j] = target;
+      ret.r_neighbor[target].push(i);
+      ret.r_weight[target].push(weight);
+      ret.weight[i][j] = weight;
+    }
+  }
+
+  ret.l = l;
+  ret.r = r;
+  ret
 }
