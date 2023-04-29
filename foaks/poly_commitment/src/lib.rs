@@ -1,3 +1,4 @@
+mod test;
 mod vpd;
 
 use rand::Rng;

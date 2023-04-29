@@ -247,12 +247,14 @@ pub fn request_init_value_with_merkle(
 
   for i in 0..SLICE_NUMBER {
     value.push((
-      fri_ctx.witness_rs_codeword_interleaved[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 0],
-      fri_ctx.witness_rs_codeword_interleaved[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 1]
+      fri_ctx.witness_rs_codeword_interleaved[oracle_indicator]
+        [pow_0 << log_leaf_size | i << 1 | 0],
+      fri_ctx.witness_rs_codeword_interleaved[oracle_indicator]
+        [pow_0 << log_leaf_size | i << 1 | 1],
     ));
 
     assert_eq!(
-      pow_0 << log_leaf_size | i << 1 | 1,
+      pow_0 << log_leaf_size | i << 1, // it was: pow_0 << log_leaf_size | i << 1
       fri_ctx.witness_rs_mapping[oracle_indicator][i][pow_1]
     );
 
@@ -268,7 +270,7 @@ pub fn request_init_value_with_merkle(
   }
 
   let depth = fri_ctx.log_current_witness_size_per_slice - 1;
-  let mut com_hhash = vec![HashDigest::default(); depth];
+  let mut com_hhash = vec![HashDigest::default(); depth + 1];
 
   let mut pos = pow_0 + (1 << (fri_ctx.log_current_witness_size_per_slice - 1));
   let mut test_hash = fri_ctx.witness_merkle[oracle_indicator][pos];

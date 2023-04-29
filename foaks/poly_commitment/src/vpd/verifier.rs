@@ -1,5 +1,8 @@
 use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
+use std::mem;
+use std::thread::current;
 
+use infrastructure::my_hash::my_hash;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, RS_CODE_RATE, SLICE_NUMBER},
   my_hash::{self, HashDigest},
@@ -21,36 +24,49 @@ pub fn verify_merkle(
   assert!(merkle_path.len() >= len);
 
   let mut pow = pow;
-  let current_hash: HashDigest = *merkle_path.last().unwrap();
+  let mut current_hash: HashDigest = *merkle_path.last().unwrap();
 
+  let mut data: [HashDigest; 2] = [HashDigest::default(), HashDigest::default()];
   // don't mutate the current_hash, this is the output of the loop following
   let mut new_hash = HashDigest::new();
 
   for i in 0..(len - 1) {
-    if ((pow & i as u128) as i32).is_positive() {
-      let data: [HashDigest; 2] = [merkle_path[i], current_hash];
-      new_hash = my_hash::my_hash(data);
-    } else {
-      let data: [HashDigest; 2] = [current_hash, merkle_path[i]];
-      new_hash = my_hash::my_hash(data);
+    data = [current_hash, merkle_path[i]];
+
+    if (pow & i as u128) != 0 {
+      data = [merkle_path[i], current_hash];
     }
     pow /= 2;
+
+    //println!("[{}] {:?}", i+1, current_hash);
+    current_hash = my_hash(data);
+    println!("[{i}] {:?}", current_hash);
   }
+  println!("data[0]: {:?}\ndata[1]:{:?}", data[0], data[1]);
+
+  data = unsafe { mem::zeroed() };
+  // delete , it just for testing
+  current_hash = HashDigest {
+    h0: 124708544472041548687713145652200463269,
+    h1: 139523578951561325641486551426283469303
+  };
 
   let mut value_hash = HashDigest::new();
-
   unsafe {
     for value in values {
-      let mut data_element: [HashDigest; 2] = [
+      data = [
         hash_single_field_element(value.0),
         hash_single_field_element(value.1),
       ];
-      data_element[1] = value_hash;
-      value_hash = my_hash::my_hash(data_element);
+      println!("{:?}", data[0]);
+      data[1] = value_hash;
+      value_hash = my_hash::my_hash(data);
     }
   }
 
-  hash_digest == new_hash && merkle_path.last() == Some(&value_hash)
+  println!("value_hash: {:?}\n merkle: {:?}", value_hash, merkle_path.last());
+
+  hash_digest == current_hash && Some(&value_hash) == merkle_path.last()
 }
 
 impl FRIContext {
@@ -230,7 +246,7 @@ impl FRIContext {
       self.l_group[i] = self.l_group[i * 2];
     }
 
-    // we assume poly_commit::slice_count is (1 << SLICE_NUMBER) here 
+    // we assume poly_commit::slice_count is (1 << SLICE_NUMBER) here
     // NOTE: this assumption is solved by using slice_count from context
     let mut tmp: Vec<FieldElement> =
       vec![FieldElement::new_random(); nxt_witness_size * slice_count];

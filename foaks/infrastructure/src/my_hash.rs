@@ -1,12 +1,11 @@
-use byteorder::{BigEndian, ReadBytesExt};
-use sha3::{Digest, Sha3_256};
-use std::io::Cursor;
+use blake3::Hasher;
+use ring::digest::{Context, SHA256};
 
 /// TODO: https://doc.rust-lang.org/beta/core/arch/x86_64/struct.__m128i.html
 #[derive(Clone, Copy, Default, PartialEq, Eq, Debug)]
 pub struct HashDigest {
-  pub h0: i128,
-  pub h1: i128,
+  pub h0: u128,
+  pub h1: u128,
 }
 
 impl HashDigest {
@@ -20,24 +19,44 @@ pub fn my_hash(src: [HashDigest; 2]) -> HashDigest {
   // the original sha256_update_shani type signature is an optimised function for
   // SHA-NI instruction sets machine, this is the fallback one
   // https://www.ic.unicamp.br/~ra142685/sok-apkc.pdf
-  let mut hasher = Sha3_256::new();
+  // let mut hasher = Sha3_256::new();
+  let mut ctx = Context::new(&SHA256);
 
-  for d in src {
-    // NOTE: Big endian serialisation
-    let sixteen_u8_h = d.h0.to_be_bytes();
-    let sixteen_u8_l = d.h1.to_be_bytes();
-    hasher.update(sixteen_u8_h);
-    hasher.update(sixteen_u8_l);
-  }
+  src.iter().for_each(|h| {
+    ctx.update(&h.h0.to_be_bytes());
+    ctx.update(&h.h1.to_be_bytes());
+  });
 
-  let result = hasher.finalize();
+  let mut hash = HashDigest::new();
+  let digest = ctx.finish();
+  let digest_bytes = digest.as_ref();
+  let mut digest_u128= [0u8; 16];
 
-  // DO WE REALLY SURE SHA256 produces fixed-length output?
-  let (arr, _) = result.as_chunks::<{ 16 as usize }>();
+  digest_u128.copy_from_slice(&digest_bytes[..16]);
+  hash.h0 = u128::from_be_bytes(digest_u128);
+  digest_u128.copy_from_slice(&digest_bytes[16..]);
+  hash.h1 = u128::from_be_bytes(digest_u128);
 
-  HashDigest {
-    // NOTE: Big endian serialisation
-    h0: Cursor::new(arr[0]).read_i128::<BigEndian>().unwrap(),
-    h1: Cursor::new(arr[1]).read_i128::<BigEndian>().unwrap(),
-  }
+  hash
+}
+
+pub fn my_hash_blake(src: [HashDigest; 2]) -> HashDigest {
+  let mut hasher = Hasher::new();
+
+  src.iter().for_each(|h| {
+    hasher.update(&h.h0.to_be_bytes());
+    hasher.update(&h.h1.to_be_bytes());
+  });
+
+  let mut hash = HashDigest::new();
+  let digest = hasher.finalize();
+  let digest_bytes = digest.as_bytes();
+  let mut digest_u128= [0u8; 16];
+
+  digest_u128.copy_from_slice(&digest_bytes[..16]);
+  hash.h0 = u128::from_be_bytes(digest_u128);
+  digest_u128.copy_from_slice(&digest_bytes[16..]);
+  hash.h1 = u128::from_be_bytes(digest_u128);
+
+  hash
 }

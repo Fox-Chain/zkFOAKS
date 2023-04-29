@@ -1,21 +1,21 @@
 use prime_field::FieldElement;
-use std::mem::{size_of_val};
+use std::mem::size_of_val;
 use std::ptr::copy_nonoverlapping;
 use std::vec::Vec;
 
 use crate::my_hash::{my_hash, HashDigest};
 
 pub unsafe fn hash_single_field_element(x: FieldElement) -> HashDigest {
-    let mut data = [HashDigest::default(); 2];
-    
-    copy_nonoverlapping(
-        std::ptr::addr_of!(x) as *const i128,
-        std::ptr::addr_of_mut!(data[0].h0),
-        1,
-    );
-    assert_eq!(size_of_val(&x), size_of_val(&data[0].h0));
-    
-    my_hash(data)
+  let mut data = [HashDigest::default(); 2];
+
+  copy_nonoverlapping(
+    std::ptr::addr_of!(x) as *const u128,
+    std::ptr::addr_of_mut!(data[0].h0),
+    1,
+  );
+  assert_eq!(size_of_val(&x), size_of_val(&data[0].h0));
+
+  my_hash(data)
 }
 
 pub unsafe fn hash_double_field_element_merkle_damgard(
