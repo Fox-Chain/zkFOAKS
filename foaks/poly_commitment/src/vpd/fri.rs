@@ -45,7 +45,7 @@ impl Default for Mapping64 {
     Mapping64([EMPTY_VEC; SLICE_NUMBER])
   }
 }
-
+// Todo: Create a good init function for this
 #[derive(Default, Debug, Clone)]
 pub struct FRIContext {
   pub log_current_witness_size_per_slice: usize,
@@ -54,7 +54,7 @@ pub struct FRIContext {
   pub cpd: CommitPhaseData,
   pub fri_timer: f64,
   pub witness_merkle: [Vec<HashDigest>; 2],
-  pub witness_rs_codeword_before_arrange: [FieldElement64; 2],
+  pub witness_rs_codeword_before_arrange: Vec<Vec<Vec<FieldElement>>>,
   pub witness_rs_codeword_interleaved: [Vec<FieldElement>; 2],
   pub witness_rs_mapping: Vec<Vec<Vec<usize>>>,
   pub l_group: Vec<FieldElement>,
@@ -155,9 +155,9 @@ pub fn request_init_commit(
       FieldElement::get_root_of_unity((*witness_bit_length_per_slice).try_into().unwrap()).unwrap();
 
     if oracle_indicator == 0 {
-      witness_rs_codeword_before_arrange[0].0[i] = l_eval[i * slice_size..].to_vec();
+      witness_rs_codeword_before_arrange[0][i] = l_eval[i * slice_size..].to_vec();
     } else {
-      witness_rs_codeword_before_arrange[1].0[i] = h_eval_arr[i * slice_size..].to_vec();
+      witness_rs_codeword_before_arrange[1][i] = h_eval_arr[i * slice_size..].to_vec();
     }
 
     root_of_unity = FieldElement::get_root_of_unity(*log_current_witness_size_per_slice).unwrap();
@@ -179,6 +179,12 @@ pub fn request_init_commit(
       witness_rs_mapping[oracle_indicator][i][j] = j << log_leaf_size | (i << 1) | 0;
       witness_rs_mapping[oracle_indicator][i][j + (1 << *log_current_witness_size_per_slice) / 2] =
         j << log_leaf_size | (i << 1) | 0;
+
+      witness_rs_codeword_interleaved[oracle_indicator][(j) << log_leaf_size | (i << 1) | 0] =
+        witness_rs_codeword_before_arrange[oracle_indicator][i][j];
+      witness_rs_codeword_interleaved[oracle_indicator][(j) << log_leaf_size | (i << 1) | 1] =
+        witness_rs_codeword_before_arrange[oracle_indicator][i]
+          [j + (1 << *log_current_witness_size_per_slice) / 2];
     }
   }
 
@@ -188,21 +194,24 @@ pub fn request_init_commit(
     vec![HashDigest::default(); 1 << (*log_current_witness_size_per_slice - 1)];
 
   for i in 0..(1 << (*log_current_witness_size_per_slice - 1)) {
-    let tmp_hash = HashDigest::new();
+    let mut tmp_hash = HashDigest::new();
     let mut data = [HashDigest::new(), HashDigest::new()];
-
+    // Gian: Propose this way to do  copynonoverlapping
     let mut j = 0;
     let end = 1 << log_leaf_size;
     while j < end {
       unsafe {
-        std::ptr::copy_nonoverlapping(
-          &witness_rs_codeword_interleaved[oracle_indicator][i << log_leaf_size | j], // TODO check
-          &mut data as *mut _ as *mut HashDigest as *mut FieldElement,
-          2,
-        );
+        let x = witness_rs_codeword_interleaved[oracle_indicator][(i << log_leaf_size | j)];
+        let y = witness_rs_codeword_interleaved[oracle_indicator][(i << log_leaf_size | j) + 1];
+        let element = [x, y];
+
+        let src = std::ptr::addr_of!(element) as *const HashDigest;
+        let dst = std::ptr::addr_of_mut!(data[0]);
+        std::ptr::copy_nonoverlapping(src, dst, 2);
       }
 
       data[1] = tmp_hash;
+      tmp_hash = my_hash(data);
 
       j += 2;
     }

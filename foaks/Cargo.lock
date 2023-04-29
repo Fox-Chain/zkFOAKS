@@ -123,22 +123,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0198b9d0078e0f30dedc7acbb21c974e838fc8fae3ee170128658a98cb2c1c04"
 
 [[package]]
-name = "examples"
-version = "0.1.0"
-dependencies = [
- "ethnum",
- "linear_code",
- "linear_gkr",
- "prime_field",
-]
-
-[[package]]
 name = "fast-math"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2465292146cdfc2011350fe3b1c616ac83cf0faeedb33463ba1c332ed8948d66"
 dependencies = [
  "ieee754",
+]
+
+[[package]]
+name = "foaks"
+version = "0.1.0"
+dependencies = [
+ "ethnum",
+ "linear_code",
+ "linear_gkr",
+ "linear_pc",
+ "prime_field",
 ]
 
 [[package]]

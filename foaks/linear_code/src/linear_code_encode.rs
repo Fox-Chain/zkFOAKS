@@ -129,15 +129,15 @@ impl LinearCodeEncodeContext {
 pub fn generate_random_expander(l: usize, r: usize, d: usize) -> Graph {
   let mut ret: Graph = Graph::default();
   ret.degree = d;
-  ret.neighbor.truncate(l);
-  ret.weight.truncate(l);
+  ret.neighbor = vec![vec![]; l];
+  ret.weight = vec![vec![]; l];
 
-  ret.r_neighbor.truncate(r);
-  ret.r_weight.truncate(r);
+  ret.r_neighbor = vec![vec![]; r];
+  ret.r_weight = vec![vec![]; r];
 
   for i in 0..l {
-    ret.neighbor[i].truncate(d);
-    ret.weight[i].truncate(d);
+    ret.neighbor[i] = vec![0; d];
+    ret.weight[i] = vec![FieldElement::zero(); d];
     for j in 0..d {
       let target = rand::random::<usize>() % r;
       let weight = FieldElement::new_random();

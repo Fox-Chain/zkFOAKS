@@ -1,4 +1,4 @@
-use std::{collections::HashMap, default, mem::size_of_val, time::Instant};
+use std::{collections::HashMap, mem::size_of_val, time::Instant};
 
 use infrastructure::{
   merkle_tree::{self, create_tree},
@@ -16,7 +16,7 @@ use linear_gkr::{
 };
 use prime_field::FieldElement;
 
-//commit
+#[derive(Default)]
 pub struct LinearPC {
   encoded_codeword: Vec<Vec<FieldElement>>,
   coef: Vec<Vec<FieldElement>>,
@@ -24,11 +24,17 @@ pub struct LinearPC {
   mt: Vec<HashDigest>,
   prover: ZkProver,
   verifier: ZkVerifier,
-  lcectx: LinearCodeEncodeContext,
+  pub lce_ctx: LinearCodeEncodeContext,
   gates_count: HashMap<usize, usize>,
 }
 
 impl LinearPC {
+  pub fn init() -> Self {
+    Self {
+      lce_ctx: LinearCodeEncodeContext::init(),
+      ..Default::default()
+    }
+  }
   pub unsafe fn commit(&mut self, src: Vec<FieldElement>, n: usize) -> Vec<HashDigest> {
     let mut stash = vec![HashDigest::new(); n / COLUMN_SIZE * 2];
     self.codeword_size = vec![0; COLUMN_SIZE];
@@ -39,14 +45,13 @@ impl LinearPC {
     //new code
     for i in 0..COLUMN_SIZE {
       self.encoded_codeword[i] = vec![FieldElement::zero(); n / COLUMN_SIZE * 2];
-      self.coef[i] = vec![FieldElement::zero(); COLUMN_SIZE];
+      self.coef[i] = vec![FieldElement::zero(); n / COLUMN_SIZE];
       // Todo: Debug, could use std::ptr::copy_nonoverlapping() instead
-      self.coef[i] = (src[i * (n / COLUMN_SIZE)..]).to_vec();
-
+      self.coef[i] = (src[i * n / COLUMN_SIZE..(i + 1) * n / COLUMN_SIZE]).to_vec();
       //memset(encoded_codeword[i], 0, sizeof(prime_field::field_element) * n /
       // COLUMN_SIZE * 2);
 
-      self.codeword_size[i] = self.lcectx.encode(
+      self.codeword_size[i] = self.lce_ctx.encode(
         (src[i * (n / COLUMN_SIZE)..]).to_vec(),
         &mut self.encoded_codeword[i],
         n / COLUMN_SIZE,
@@ -64,6 +69,8 @@ impl LinearPC {
         );
       }
     }
+    println!("Pass hash_double_field_element_merkle_damgard");
+
     merkle_tree::create_tree(
       stash,
       n / COLUMN_SIZE * 2,
@@ -127,33 +134,33 @@ impl LinearPC {
     }
 
     self.verifier.aritmetic_circuit.circuit[2].src_expander_c_mempool =
-      vec![0; (CN * self.lcectx.c[0].l).try_into().unwrap()];
+      vec![0; (CN * self.lce_ctx.c[0].l).try_into().unwrap()];
     self.verifier.aritmetic_circuit.circuit[2].weight_expander_c_mempool =
-      vec![FieldElement::zero(); (CN * self.lcectx.c[0].l).try_into().unwrap()];
+      vec![FieldElement::zero(); (CN * self.lce_ctx.c[0].l).try_into().unwrap()];
     let mut c_mempool_ptr = 0;
     let mut d_mempool_ptr = 0;
-    for i in 0..self.lcectx.c[0].r {
+    for i in 0..self.lce_ctx.c[0].r {
       self.verifier.aritmetic_circuit.circuit[2].gates[i + n] = Gate::from_params(14, 0, 0);
       self.verifier.aritmetic_circuit.circuit[2].gates[i + n].parameter_length =
-        self.lcectx.c[0].r_neighbor[i].len();
+        self.lce_ctx.c[0].r_neighbor[i].len();
       //Todo: Check if this is correct
       self.verifier.aritmetic_circuit.circuit[2].gates[i + n].src =
         self.verifier.aritmetic_circuit.circuit[2].src_expander_c_mempool[c_mempool_ptr..].to_vec();
       self.verifier.aritmetic_circuit.circuit[2].gates[i + n].weight =
         self.verifier.aritmetic_circuit.circuit[2].weight_expander_c_mempool[c_mempool_ptr..]
           .to_vec();
-      c_mempool_ptr += self.lcectx.c[0].r_neighbor[i].len();
-      for j in 0..self.lcectx.c[0].r_neighbor[i].len() {
-        let l = self.lcectx.c[0].r_neighbor[i][j];
+      c_mempool_ptr += self.lce_ctx.c[0].r_neighbor[i].len();
+      for j in 0..self.lce_ctx.c[0].r_neighbor[i].len() {
+        let l = self.lce_ctx.c[0].r_neighbor[i][j];
         let r = i;
-        let weight = self.lcectx.c[0].r_weight[r][j];
+        let weight = self.lce_ctx.c[0].r_weight[r][j];
         self.verifier.aritmetic_circuit.circuit[2].gates[i + n].src[j] = l;
         self.verifier.aritmetic_circuit.circuit[2].gates[i + n].weight[j] = weight;
       }
     }
 
     let output_depth_output_size =
-      self.generate_enc_circuit(self.lcectx.c[0].r, n + self.lcectx.c[0].r, 1, 2);
+      self.generate_enc_circuit(self.lce_ctx.c[0].r, n + self.lce_ctx.c[0].r, 1, 2);
     // add final output
     let final_output_depth = output_depth_output_size.0 + 1;
     for i in 0..output_depth_output_size.1 {
@@ -163,14 +170,14 @@ impl LinearPC {
     //let d_input_offset = n; //Never used
     let output_so_far = output_depth_output_size.1;
     self.verifier.aritmetic_circuit.circuit[final_output_depth].src_expander_d_mempool =
-      vec![0; DN * self.lcectx.d[0].l];
+      vec![0; DN * self.lce_ctx.d[0].l];
     self.verifier.aritmetic_circuit.circuit[final_output_depth].weight_expander_d_mempool =
-      vec![FieldElement::zero(); DN * self.lcectx.d[0].l];
+      vec![FieldElement::zero(); DN * self.lce_ctx.d[0].l];
 
-    for i in 0..self.lcectx.d[0].r {
+    for i in 0..self.lce_ctx.d[0].r {
       self.verifier.aritmetic_circuit.circuit[final_output_depth].gates[output_so_far + i].ty = 14;
       self.verifier.aritmetic_circuit.circuit[final_output_depth].gates[output_so_far + i]
-        .parameter_length = self.lcectx.d[0].r_neighbor[i].len();
+        .parameter_length = self.lce_ctx.d[0].r_neighbor[i].len();
       self.verifier.aritmetic_circuit.circuit[final_output_depth].gates[output_so_far + i].src =
         self.verifier.aritmetic_circuit.circuit[final_output_depth].src_expander_d_mempool
           [d_mempool_ptr..]
@@ -179,12 +186,12 @@ impl LinearPC {
         self.verifier.aritmetic_circuit.circuit[final_output_depth].weight_expander_d_mempool
           [d_mempool_ptr..]
           .to_vec();
-      d_mempool_ptr += self.lcectx.d[0].r_neighbor[i].len();
-      for j in 0..self.lcectx.d[0].r_neighbor[i].len() {
+      d_mempool_ptr += self.lce_ctx.d[0].r_neighbor[i].len();
+      for j in 0..self.lce_ctx.d[0].r_neighbor[i].len() {
         self.verifier.aritmetic_circuit.circuit[final_output_depth].gates[output_so_far + i].src
-          [j] = self.lcectx.d[0].r_neighbor[i][j] + n;
+          [j] = self.lce_ctx.d[0].r_neighbor[i][j] + n;
         self.verifier.aritmetic_circuit.circuit[final_output_depth].gates[output_so_far + i]
-          .weight[j] = self.lcectx.d[0].r_weight[i][j];
+          .weight[j] = self.lce_ctx.d[0].r_weight[i][j];
       }
     }
 
@@ -192,7 +199,7 @@ impl LinearPC {
       self.verifier.aritmetic_circuit.circuit[final_output_depth + 1].gates[i] =
         Gate::from_params(10, query[i], 0);
     }
-    assert_eq!(c_mempool_ptr, CN * self.lcectx.c[0].l);
+    assert_eq!(c_mempool_ptr, CN * self.lce_ctx.c[0].l);
   }
 
   pub unsafe fn tensor_product_protocol(
@@ -203,7 +210,6 @@ impl LinearPC {
     size_r1: usize,
     n: usize,
     com_mt: Vec<HashDigest>,
-    linear_code_encode: &mut LinearCodeEncodeContext,
   ) -> (FieldElement, bool) {
     //let mut verification_time = 0.0;
     assert_eq!(size_r0 * size_r1, n);
@@ -258,7 +264,7 @@ impl LinearPC {
     //check for encode
     {
       let mut test_codeword = vec![FieldElement::zero(); (n / COLUMN_SIZE * 2).try_into().unwrap()];
-      let test_codeword_size = linear_code_encode.encode(
+      let test_codeword_size = self.lce_ctx.encode(
         combined_message.clone(),
         &mut test_codeword,
         n / COLUMN_SIZE,
@@ -384,12 +390,12 @@ impl LinearPC {
     // input layer
     self.gates_count.insert(0, n);
     // expander part
-    self.gates_count.insert(1, n + self.lcectx.c[0].r);
-    let output_depth_output_size = self.prepare_enc_count(self.lcectx.c[0].r, n, 1);
+    self.gates_count.insert(1, n + self.lce_ctx.c[0].r);
+    let output_depth_output_size = self.prepare_enc_count(self.lce_ctx.c[0].r, n, 1);
 
     self.gates_count.insert(
       output_depth_output_size.0 + 1,
-      n + output_depth_output_size.1 + self.lcectx.d[0].r,
+      n + output_depth_output_size.1 + self.lce_ctx.d[0].r,
     );
     self
       .gates_count
@@ -408,16 +414,16 @@ impl LinearPC {
     // output
     self.gates_count.insert(
       depth + 1,
-      output_size_so_far + input_size + self.lcectx.c[depth].r,
+      output_size_so_far + input_size + self.lce_ctx.c[depth].r,
     );
     let output_depth_output_size = self.prepare_enc_count(
-      self.lcectx.c[depth].r,
+      self.lce_ctx.c[depth].r,
       output_size_so_far + input_size,
       depth + 1,
     );
     self.gates_count.insert(
       output_depth_output_size.0 + 1,
-      output_depth_output_size.1 + self.lcectx.d[depth].r,
+      output_depth_output_size.1 + self.lce_ctx.d[depth].r,
     );
     (
       output_depth_output_size.0 + 1,
@@ -445,13 +451,13 @@ impl LinearPC {
         Gate::from_params(10, i, 0);
     }
     self.verifier.aritmetic_circuit.circuit[input_depth + 1].src_expander_c_mempool =
-      vec![0; CN * self.lcectx.c[recursion_depth].l];
+      vec![0; CN * self.lce_ctx.c[recursion_depth].l];
     self.verifier.aritmetic_circuit.circuit[input_depth + 1].weight_expander_c_mempool =
-      vec![FieldElement::zero(); CN * self.lcectx.c[recursion_depth].l];
+      vec![FieldElement::zero(); CN * self.lce_ctx.c[recursion_depth].l];
     let mut mempool_ptr = 0;
 
-    for i in 0..self.lcectx.c[recursion_depth].r {
-      let neighbor_size = self.lcectx.c[recursion_depth].r_neighbor[i].len();
+    for i in 0..self.lce_ctx.c[recursion_depth].r {
+      let neighbor_size = self.lce_ctx.c[recursion_depth].r_neighbor[i].len();
       self.verifier.aritmetic_circuit.circuit[input_depth + 1].gates[output_size_so_far + i].ty =
         14;
       self.verifier.aritmetic_circuit.circuit[input_depth + 1].gates[output_size_so_far + i]
@@ -465,19 +471,19 @@ impl LinearPC {
         .weight = self.verifier.aritmetic_circuit.circuit[input_depth + 1]
         .weight_expander_c_mempool[mempool_ptr..]
         .to_vec();
-      mempool_ptr += self.lcectx.c[recursion_depth].r_neighbor[i].len();
+      mempool_ptr += self.lce_ctx.c[recursion_depth].r_neighbor[i].len();
       let c_input_offset = output_size_so_far - input_size;
       for j in 0..neighbor_size {
         self.verifier.aritmetic_circuit.circuit[input_depth + 1].gates[output_size_so_far + i]
-          .src[j] = self.lcectx.c[recursion_depth].r_neighbor[i][j] + c_input_offset;
+          .src[j] = self.lce_ctx.c[recursion_depth].r_neighbor[i][j] + c_input_offset;
         self.verifier.aritmetic_circuit.circuit[input_depth + 1].gates[output_size_so_far + i]
-          .weight[j] = self.lcectx.c[recursion_depth].r_weight[i][j];
+          .weight[j] = self.lce_ctx.c[recursion_depth].r_weight[i][j];
       }
     }
 
     let output_depth_output_size = self.generate_enc_circuit(
-      self.lcectx.c[recursion_depth].r,
-      output_size_so_far + self.lcectx.c[recursion_depth].r,
+      self.lce_ctx.c[recursion_depth].r,
+      output_size_so_far + self.lce_ctx.c[recursion_depth].r,
       recursion_depth + 1,
       input_depth + 1,
     );
@@ -494,12 +500,12 @@ impl LinearPC {
     }
 
     self.verifier.aritmetic_circuit.circuit[final_output_depth].src_expander_d_mempool =
-      vec![0; DN * self.lcectx.d[recursion_depth].l];
+      vec![0; DN * self.lce_ctx.d[recursion_depth].l];
     self.verifier.aritmetic_circuit.circuit[final_output_depth].weight_expander_d_mempool =
-      vec![FieldElement::zero(); DN * self.lcectx.d[recursion_depth].l];
+      vec![FieldElement::zero(); DN * self.lce_ctx.d[recursion_depth].l];
 
-    for i in 0..DN * self.lcectx.d[recursion_depth].r {
-      let neighbor_size = self.lcectx.d[recursion_depth].r_neighbor[i].len();
+    for i in 0..DN * self.lce_ctx.d[recursion_depth].r {
+      let neighbor_size = self.lce_ctx.d[recursion_depth].r_neighbor[i].len();
       self.verifier.aritmetic_circuit.circuit[final_output_depth].gates[output_size_so_far + i]
         .ty = 14;
       self.verifier.aritmetic_circuit.circuit[final_output_depth].gates[output_size_so_far + i]
@@ -513,31 +519,30 @@ impl LinearPC {
         .weight = self.verifier.aritmetic_circuit.circuit[final_output_depth]
         .weight_expander_d_mempool[mempool_ptr..]
         .to_vec();
-      mempool_ptr += self.lcectx.d[recursion_depth].r_neighbor[i].len();
+      mempool_ptr += self.lce_ctx.d[recursion_depth].r_neighbor[i].len();
       for j in 0..neighbor_size {
         self.verifier.aritmetic_circuit.circuit[final_output_depth].gates[output_size_so_far + i]
-          .src[j] = self.lcectx.d[recursion_depth].r_neighbor[i][j] + d_input_offset;
+          .src[j] = self.lce_ctx.d[recursion_depth].r_neighbor[i][j] + d_input_offset;
         self.verifier.aritmetic_circuit.circuit[final_output_depth].gates[output_size_so_far + i]
-          .weight[j] = self.lcectx.d[recursion_depth].r_weight[i][j];
+          .weight[j] = self.lce_ctx.d[recursion_depth].r_weight[i][j];
       }
     }
     (
       final_output_depth,
-      output_size_so_far + self.lcectx.d[recursion_depth].r,
+      output_size_so_far + self.lce_ctx.d[recursion_depth].r,
     )
   }
 
-  fn open_and_verify(
+  pub fn open_and_verify(
     &mut self,
     x: FieldElement,
     n: usize,
     com_mt: Vec<HashDigest>,
-    linear_code_encode: &mut LinearCodeEncodeContext,
   ) -> (FieldElement, bool) {
     assert_eq!(n % COLUMN_SIZE, 0);
     //tensor product of r0 otimes r1
     let mut r0 = vec![FieldElement::zero(); COLUMN_SIZE];
-    let mut r1 = vec![FieldElement::zero(); COLUMN_SIZE];
+    let mut r1 = vec![FieldElement::zero(); n / COLUMN_SIZE];
 
     let x_n = FieldElement::fast_pow(x, (n / COLUMN_SIZE).try_into().unwrap());
     r0[0] = FieldElement::real_one();
@@ -548,17 +553,7 @@ impl LinearPC {
     for j in 1..(n / COLUMN_SIZE) {
       r1[j] = r1[j - 1] * x;
     }
-    unsafe {
-      self.tensor_product_protocol(
-        r0,
-        r1,
-        COLUMN_SIZE,
-        n / COLUMN_SIZE,
-        n,
-        com_mt,
-        linear_code_encode,
-      )
-    }
+    unsafe { self.tensor_product_protocol(r0, r1, COLUMN_SIZE, n / COLUMN_SIZE, n, com_mt) }
   }
 }
 fn smallest_pow2_larger_or_equal_to(x: usize) -> usize {

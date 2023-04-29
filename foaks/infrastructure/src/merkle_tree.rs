@@ -6,14 +6,10 @@ use crate::my_hash::{my_hash, HashDigest};
 // Todo: Debug coppy no overlapping
 pub unsafe fn hash_single_field_element(x: FieldElement) -> HashDigest {
   let mut data = [HashDigest::default(); 2];
-
-  copy_nonoverlapping(
-    std::ptr::addr_of!(x) as *const i128,
-    std::ptr::addr_of_mut!(data[0].h0),
-    1,
-  );
+  let src = std::ptr::addr_of!(x) as *const i128;
+  let dst = std::ptr::addr_of_mut!(data[0].h0);
+  copy_nonoverlapping(src, dst, 1);
   assert_eq!(size_of_val(&x), size_of_val(&data[0].h0));
-
   my_hash(data)
 }
 
@@ -25,13 +21,14 @@ pub unsafe fn hash_double_field_element_merkle_damgard(
 ) -> HashDigest {
   let mut data = [HashDigest::default(); 2];
   data[0] = prev_hash;
-  let mut element = [x, y];
-  println!("hash_double_field_element_merkle_damgard");
-  copy_nonoverlapping(
-    std::ptr::addr_of!(element) as *const HashDigest,
-    std::ptr::addr_of_mut!(data[1]),
-    size_of_val(&data[1]),
-  );
+  let element = [x, y];
+  //println!("Inside hash_double_field_element_merkle_damgard");
+  let src = std::ptr::addr_of!(element) as *const HashDigest;
+  let dst = std::ptr::addr_of_mut!(data[1]);
+  let count = element.len();
+  //print!("{} ", count);
+  copy_nonoverlapping(src, dst, count);
+
   assert_eq!(size_of_val(&data[1]), size_of_val(&element));
   my_hash(data)
 }
