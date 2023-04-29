@@ -35,6 +35,22 @@ It's a gate that output the summation of previous layer. A simple use case is ma
 1 1 0 0 1 \\ this is the output layer, it's a multiplication gate
 ```
 
+## Orion/code explain (Gian's notes)
+
+> **_NOTE:_** This are just my notes base on my understanding.
+
+# Examples and tests
+
+## Univariate Polynomial Commitment
+
+### Build
+
+```bash
+cmake .
+make linearPC
+./linearPC 16 text.txt
+```
+
 ## Vigro/linear_gkr code explain (Peter's notes)
 
 > **_NOTE:_** This are just my notes base on my understanding.
@@ -57,13 +73,9 @@ or
 cd tests/matmul
 g++ gen.cpp -o gen -O3
 ./gen 16 mat_16_circuit.txt mat_16_meta.txt
-./gen 32 mat_32_circuit.txt mat_32_meta.txt
-./gen 64 mat_64_circuit.txt mat_64_meta.txt
-./gen 128 mat_128_circuit.txt mat_128_meta.txt
-./gen 256 mat_256_circuit.txt mat_256_meta.txt
 ```
 
-To understand the matrix generation check the gen.cpp in the Original Virgo/Orion repo C/C++
+To understand the matrix generation check the gen.cpp in the Original Virgo/ repo C/C++
 
 ### Use this line to run this repo (main.rs)
 
@@ -80,4 +92,8 @@ cargo run main.rs mat_256_circuit.txt mat_256_meta.txt LOG/mat_256.txt
 
 ```bash
 cargo run main.rs lanczos2_112_N=16_circuit.txt lanczos2_112_N=16_meta.txt LOG/lanczos2_112_N=16.txt
+```
+
+```
+
 ```

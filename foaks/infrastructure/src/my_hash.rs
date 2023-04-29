@@ -14,7 +14,7 @@ impl HashDigest {
   }
 }
 
-#[inline]
+#[inline] //ToDo: Check if this is correct
 pub fn my_hash(src: [HashDigest; 2]) -> HashDigest {
   // the original sha256_update_shani type signature is an optimised function for
   // SHA-NI instruction sets machine, this is the fallback one

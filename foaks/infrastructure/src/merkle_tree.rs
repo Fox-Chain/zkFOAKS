@@ -2,6 +2,7 @@ use prime_field::FieldElement;
 use std::mem::size_of_val;
 use std::ptr::copy_nonoverlapping;
 use std::vec::Vec;
+use std::{mem::size_of_val, process::exit};
 
 use crate::my_hash::{my_hash, HashDigest};
 
@@ -18,6 +19,7 @@ pub unsafe fn hash_single_field_element(x: FieldElement) -> HashDigest {
   my_hash(data)
 }
 
+//ToDo: Debbug copy_nonoverlapping
 pub unsafe fn hash_double_field_element_merkle_damgard(
   x: FieldElement,
   y: FieldElement,
@@ -70,6 +72,8 @@ pub fn create_tree(
   current_lvl_size /= 2;
   start_idx -= current_lvl_size;
   while current_lvl_size >= 1 {
+
+    // TODO: parallel
     for i in (0..current_lvl_size).rev() {
       let mut data = [HashDigest::default(); 2];
       data[0] = dst[start_idx + current_lvl_size + i * 2];
