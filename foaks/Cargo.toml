@@ -6,5 +6,18 @@ members = [
     "linear_code",
     "intrinsics",
     "poly_commitment",
-    "prime_field"
+    "prime_field",
+		"linear_pc",
+		#"examples",
 ]
+[package]
+name = "foaks" # the name of the package
+version = "0.1.0"    # the current version, obeying semver
+edition = "2021"
+
+[dependencies]
+ethnum = "1.2.2"
+linear_gkr = { path = "./linear_gkr" }
+prime_field = { path = "./prime_field" }
+linear_code = { path = "./linear_code" }
+linear_pc = { path = "./linear_pc" }

@@ -12,18 +12,6 @@ pub struct Gate {
   pub parameter_length: usize,
 }
 
-/*impl Default for Gate {
-    fn default() -> Self {
-        Self {
-            ty: 2,
-            u: 0,
-            v: 0,
-            src: vec![],
-            weight: vec![],
-            parameter_length: 0,
-        }
-    }
-}*/
 impl Gate {
   pub fn new() -> Self {
     Self {
@@ -44,8 +32,8 @@ impl Gate {
 
 #[derive(Default, Debug, Clone)]
 pub struct Layer {
-  pub src_expander_c_mempool: Vec<i32>,
-  pub src_expander_d_mempool: Vec<i32>,
+  pub src_expander_c_mempool: Vec<usize>,
+  pub src_expander_d_mempool: Vec<usize>,
   pub weight_expander_c_mempool: Vec<FieldElement>,
   pub weight_expander_d_mempool: Vec<FieldElement>,
   pub gates: Vec<Gate>,
@@ -60,20 +48,16 @@ pub struct Layer {
 }
 
 impl Layer {
-  pub fn new() -> Self {
-    Default::default()
-  }
+  pub fn new() -> Self { Default::default() }
 }
 
 #[derive(Default, Debug, Clone)]
 pub struct LayeredCircuit {
   pub circuit: Vec<Layer>,
   pub total_depth: usize,
-  pub nputs: Vec<FieldElement>,
+  pub inputs: Vec<FieldElement>,
 }
 
 impl LayeredCircuit {
-  pub fn new() -> Self {
-    Default::default()
-  }
+  pub fn new() -> Self { Default::default() }
 }

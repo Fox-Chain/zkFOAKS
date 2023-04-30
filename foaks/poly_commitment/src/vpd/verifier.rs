@@ -54,7 +54,9 @@ pub fn verify_merkle(
 }
 
 impl FRIContext {
-  /// Request two values w^{pow0} and w^{pow1}, with merkle tree proof, where w is the root of unity and w^{pow0} and w^{pow1} are quad residue. Repeat ldt_repeat_num times, storing all result in vector.
+  /// Request two values w^{pow0} and w^{pow1}, with merkle tree proof, where w
+  /// is the root of unity and w^{pow0} and w^{pow1} are quad residue. Repeat
+  /// ldt_repeat_num times, storing all result in vector.
   pub fn request_init_value_with_merkle(
     &mut self,
     pow_0: usize,
@@ -80,10 +82,10 @@ impl FRIContext {
     let mut new_size = 0;
     for i in 0..SLICE_NUMBER {
       let element_1 =
-          self.witness_rs_codeword_interleaved[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 0];
+        self.witness_rs_codeword_interleaved[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 0];
 
       let element_2 =
-          self.witness_rs_codeword_interleaved[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 1];
+        self.witness_rs_codeword_interleaved[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 1];
 
       value.push((element_1, element_2));
 
@@ -128,8 +130,10 @@ impl FRIContext {
     (value, com_hhash)
   }
 
-  /// Request the merkle proof to lvl-th level oracle, at w^{pow}, will also return it's quad residue's proof.
-  /// returned value is unordered, meaning that one of them is the requested value and the other one is it's qual residue.
+  /// Request the merkle proof to lvl-th level oracle, at w^{pow}, will also
+  /// return it's quad residue's proof. returned value is unordered, meaning
+  /// that one of them is the requested value and the other one is it's qual
+  /// residue.
   pub fn request_step_commit(
     &mut self,
     lvl: usize,
@@ -166,7 +170,7 @@ impl FRIContext {
     let merkle_size = self.cpd.merkle_size[lvl];
     let val_hhash = self.cpd.merkle[lvl][pow_0];
     pow_0 = (self.cpd.rs_codeword_mapping[lvl][pow << LOG_SLICE_NUMBER] >> (LOG_SLICE_NUMBER + 1))
-        + merkle_size;
+      + merkle_size;
 
     while pow_0 != 1 {
       if !self.visited[lvl][pow_0 ^ 1] {
@@ -187,7 +191,7 @@ impl FRIContext {
     let nxt_witness_size = (1 << self.log_current_witness_size_per_slice) / 2;
     if self.cpd.rs_codeword[self.current_step_no].is_empty() {
       self.cpd.rs_codeword[self.current_step_no] =
-          vec![FieldElement::default(); nxt_witness_size * slice_count];
+        vec![FieldElement::default(); nxt_witness_size * slice_count];
     }
 
     //let mut previous_witness: Vec<FieldElement> = vec![];
@@ -214,15 +218,15 @@ impl FRIContext {
       let pos = usize::min(qual_res_0, qual_res_1 as usize);
 
       let inv_mu = self.l_group[((1 << self.log_current_witness_size_per_slice) - i)
-          & ((1 << self.log_current_witness_size_per_slice) - 1)];
+        & ((1 << self.log_current_witness_size_per_slice) - 1)];
 
       for j in 0..SLICE_NUMBER {
         let real_pos = previous_witness_mapping[(pos) << LOG_SLICE_NUMBER | j];
         // assert((i << LOG_SLICE_NUMBER | j) < nxt_witness_size * SLICE_COUNT);
         // we should check this since the original code has BUG comment
         self.cpd.rs_codeword[self.current_step_no][i << LOG_SLICE_NUMBER | j] = inv_2
-            * (previous_witness[real_pos] + previous_witness[real_pos | 1])
-            + inv_mu * r * (previous_witness[real_pos] - previous_witness[real_pos | 1]);
+          * (previous_witness[real_pos] + previous_witness[real_pos | 1])
+          + inv_mu * r * (previous_witness[real_pos] - previous_witness[real_pos | 1]);
       }
     }
 
@@ -233,7 +237,7 @@ impl FRIContext {
     // we assume poly_commit::slice_count is (1 << SLICE_NUMBER) here
     // NOTE: this assumption is solved by using slice_count from context
     let mut tmp: Vec<FieldElement> =
-        vec![FieldElement::new_random(); nxt_witness_size * slice_count];
+      vec![FieldElement::new_random(); nxt_witness_size * slice_count];
     self.cpd.rs_codeword_mapping[self.current_step_no] = vec![0; nxt_witness_size * slice_count];
 
     for i in 0..nxt_witness_size / 2 {
@@ -248,7 +252,7 @@ impl FRIContext {
 
         tmp[c] = self.cpd.rs_codeword[self.current_step_no][i << LOG_SLICE_NUMBER | j];
         tmp[d] = self.cpd.rs_codeword[self.current_step_no]
-            [(i + nxt_witness_size / 2) << LOG_SLICE_NUMBER | j];
+          [(i + nxt_witness_size / 2) << LOG_SLICE_NUMBER | j];
 
         assert!(a < nxt_witness_size * SLICE_NUMBER);
         assert!(b < nxt_witness_size * SLICE_NUMBER);
@@ -297,7 +301,8 @@ impl FRIContext {
     self.log_current_witness_size_per_slice -= 1;
 
     self.current_step_no += 1;
-    self.cpd.merkle[self.current_step_no - 1][1] // since we increment current_step_no up there
+    self.cpd.merkle[self.current_step_no - 1][1] // since we increment
+                                                 // current_step_no up there
   }
 
   /// Return the final rs code since it is only constant size
@@ -306,14 +311,15 @@ impl FRIContext {
   }
 
   pub fn commit_phase(&mut self, log_length: usize, slice_count: usize) -> LdtCommitment {
-    // let log_current_witness_size_per_slice_cp = self.log_current_witness_size_per_slice;
-    // assumming we already have the initial commit
+    // let log_current_witness_size_per_slice_cp =
+    // self.log_current_witness_size_per_slice; assumming we already have the
+    // initial commit
     let mut codeword_size = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
     // repeat until the codeword is constant
     let mut ret: Vec<HashDigest> =
-        vec![HashDigest::default(); log_length + RS_CODE_RATE - LOG_SLICE_NUMBER];
+      vec![HashDigest::default(); log_length + RS_CODE_RATE - LOG_SLICE_NUMBER];
     let mut randomness: Vec<FieldElement> =
-        vec![FieldElement::default(); log_length + RS_CODE_RATE - LOG_SLICE_NUMBER];
+      vec![FieldElement::default(); log_length + RS_CODE_RATE - LOG_SLICE_NUMBER];
 
     let mut ptr = 0;
     while codeword_size > 1 << RS_CODE_RATE {

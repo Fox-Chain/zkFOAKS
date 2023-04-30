@@ -1,6 +1,8 @@
-use std::borrow::Cow;
-use std::mem;
-use std::ops::{Deref, DerefMut};
+use std::{
+  borrow::Cow,
+  mem,
+  ops::{Deref, DerefMut},
+};
 
 use rayon::prelude::*;
 
@@ -70,15 +72,11 @@ unsafe impl<T> Send for UnsafeSendSyncRawPtr<T> {}
 impl<T> Deref for UnsafeSendSyncRawPtr<T> {
   type Target = *mut T;
 
-  fn deref(&self) -> &Self::Target {
-    &self.0
-  }
+  fn deref(&self) -> &Self::Target { &self.0 }
 }
 
 impl<T> DerefMut for UnsafeSendSyncRawPtr<T> {
-  fn deref_mut(&mut self) -> &mut Self::Target {
-    &mut self.0
-  }
+  fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
 }
 
 pub fn fast_fourier_transform(
@@ -139,8 +137,8 @@ pub fn fast_fourier_transform(
       let dst_cur = &dst_raw[log_coefficient & 1];
 
       // Safety:
-      // Different threads will all access the same dst[log_coefficient & 1] field element vec,
-      // but they access disjoint indices within the vec
+      // Different threads will all access the same dst[log_coefficient & 1] field
+      // element vec, but they access disjoint indices within the vec
       let dst = unsafe { &mut *(**dst_cur).cast::<Vec<FieldElement>>() };
       dst[(j << log_coefficient) | i] = coefficient;
     }
@@ -169,8 +167,9 @@ pub fn fast_fourier_transform(
       {
         (0..(blk_size / 2)).into_par_iter().for_each(|k| {
           // Safety:
-          // Different threads will all access the same cur_ptr and pre_ptr field element vecs,
-          // but they access disjoint indices within the vec so parallel access is okay
+          // Different threads will all access the same cur_ptr and pre_ptr field element
+          // vecs, but they access disjoint indices within the vec so parallel
+          // access is okay
           let cur_ptr = unsafe { &mut *(*cur_ptr_raw).cast::<Vec<FieldElement>>() };
           let pre_ptr = unsafe { &mut *(*pre_ptr_raw).cast::<Vec<FieldElement>>() };
 
@@ -200,7 +199,11 @@ pub fn inverse_fast_fourier_transform(
   dst: &mut [FieldElement],
 ) {
   if coefficient_len > order {
-    eprintln!("Got insufficient number {} of evaluations for inverse fast fourier transform. Creating polynomial of order {} instead.", coefficient_len, order);
+    eprintln!(
+      "Got insufficient number {} of evaluations for inverse fast fourier transform. Creating \
+       polynomial of order {} instead.",
+      coefficient_len, order
+    );
     coefficient_len = order;
   }
 

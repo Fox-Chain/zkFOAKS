@@ -1,12 +1,16 @@
-use crate::circuit_fast_track::LayeredCircuit;
-use crate::polynomial::{LinearPoly, QuadraticPoly};
+use crate::{
+  circuit_fast_track::LayeredCircuit,
+  polynomial::{LinearPoly, QuadraticPoly},
+};
 
 use infrastructure::constants::SIZE;
 use poly_commitment::PolyCommitProver;
 use prime_field::FieldElement;
 
-use std::mem::swap;
-use std::time::{self, SystemTime};
+use std::{
+  mem::swap,
+  time::{self, SystemTime},
+};
 
 pub fn from_string(s: &str) -> FieldElement {
   let mut ret = FieldElement::from_real(0);
@@ -34,7 +38,7 @@ pub struct ZkProver {
   pub aritmetic_circuit: LayeredCircuit,
   pub poly_prover: PolyCommitProver,
   /** @name Basic
-  	* Basic information and variables about the arithmetic circuit*/
+   * Basic information and variables about the arithmetic circuit */
   //< two random gates v_u and v_v queried by V in each layer    v_u: FieldElement,
   pub v_v: FieldElement,
   pub v_u: FieldElement,
@@ -46,7 +50,7 @@ pub struct ZkProver {
   length_v: usize,
 
   /** @name Randomness
-  	* Some randomness or values during the proof phase. */
+   * Some randomness or values during the proof phase. */
   alpha: FieldElement,
   beta: FieldElement,
 
@@ -82,7 +86,7 @@ impl ZkProver {
     }
   }
 
-  pub fn init_array(&mut self, max_bit_length: usize, aritmetic_circuit: &LayeredCircuit) {
+  pub fn init_array(&mut self, max_bit_length: usize, aritmetic_circuit: LayeredCircuit) {
     let half_length = (max_bit_length >> 1) + 1;
 
     self.ctx.gate_meet = vec![false; 15];
@@ -102,13 +106,14 @@ impl ZkProver {
     self.v_mult_add0 = vec![LinearPoly::zero(); 1 << max_bit_length];
     self.add_v_array = vec![LinearPoly::zero(); 1 << max_bit_length];
 
-    // Gian: The original repo init total_time and call get_circuit() in the main fn()
+    // Gian: The original repo init total_time and call get_circuit() in the main
+    // fn()
     self.total_time = 0.0;
     self.get_circuit(aritmetic_circuit);
   }
 
-  pub fn get_circuit(&mut self, from_verifier: &LayeredCircuit) {
-    self.aritmetic_circuit = from_verifier.clone();
+  pub fn get_circuit(&mut self, from_verifier: LayeredCircuit) {
+    self.aritmetic_circuit = from_verifier;
 
     self.ctx.inv_2 = FieldElement::from_real(2);
   }
@@ -236,13 +241,13 @@ impl ZkProver {
     self.circuit_value[self.aritmetic_circuit.total_depth - 1].clone()
   }
 
-  pub fn get_witness(&mut self, inputs: Vec<FieldElement>, _n: u32) {
-    // Do we really need this line of code?
-    //self.circuit_value[0] =
-    // Vec::with_capacity(1 << self.aritmetic_circuit.circuit[0].bit_length);
-    self.circuit_value[0] = inputs.clone();
-    // todo()
-    //self.circuit_value[0] = inputs[..n].to_vec();
+  //Todo: Improve this function with Rust features
+  pub fn get_witness(&mut self, inputs: Vec<FieldElement>, n: usize) {
+    self.circuit_value[0] =
+      vec![FieldElement::zero(); 1 << self.aritmetic_circuit.circuit[0].bit_length];
+    for i in 0..n {
+      self.circuit_value[0][i] = inputs[i];
+    }
   }
 
   pub fn sumcheck_init(
@@ -269,9 +274,8 @@ impl ZkProver {
     self.one_minus_r_0 = one_minus_r_0;
     self.one_minus_r_1 = one_minus_r_1;
   }
-  pub fn total_time(&mut self, val: f64) {
-    self.total_time = val;
-  }
+
+  pub fn total_time(&mut self, val: f64) { self.total_time = val; }
 
   pub fn sumcheck_phase1_init(&mut self) {
     let t0 = time::Instant::now();
@@ -311,7 +315,8 @@ impl ZkProver {
     let mut intermediates0 = vec![FieldElement::zero(); 1 << self.length_g];
     //let mut ptr_lock = &vec![FieldElement::zero(); 1 << self.length_g];
 
-    //let ptr_raw = UnsafeSendSyncRawPtr(&mut ptr_lock as *const _ as *mut Vec<FieldElement>);
+    //let ptr_raw = UnsafeSendSyncRawPtr(&mut ptr_lock as *const _ as *mut
+    // Vec<FieldElement>);
 
     let mut intermediates1 = vec![FieldElement::zero(); 1 << self.length_g];
 
@@ -426,7 +431,8 @@ impl ZkProver {
           //add gate
           if !self.ctx.gate_meet[self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty]
           {
-            //prletf("first meet %d gate\n", C -> circuit[self.sumcheck_layer_id].gates[i].ty);
+            //prletf("first meet %d gate\n", C ->
+            // circuit[self.sumcheck_layer_id].gates[i].ty);
             self.ctx.gate_meet
               [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty] = true;
           }
@@ -438,7 +444,8 @@ impl ZkProver {
           //mult gate
           if !self.ctx.gate_meet[self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty]
           {
-            //prletf("first meet %d gate\n", C -> circuit[self.sumcheck_layer_id].gates[i].ty);
+            //prletf("first meet %d gate\n", C ->
+            // circuit[self.sumcheck_layer_id].gates[i].ty);
             self.ctx.gate_meet
               [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty] = true;
           }
@@ -448,7 +455,8 @@ impl ZkProver {
           //sum gate
           if !self.ctx.gate_meet[self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty]
           {
-            //prletf("first meet %d gate\n", C -> circuit[self.sumcheck_layer_id].gates[i].ty);
+            //prletf("first meet %d gate\n", C ->
+            // circuit[self.sumcheck_layer_id].gates[i].ty);
             self.ctx.gate_meet
               [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty] = true;
           }
@@ -462,7 +470,8 @@ impl ZkProver {
         {
           if !self.ctx.gate_meet[self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty]
           {
-            //prletf("first meet %d gate\n", C -> circuit[self.sumcheck_layer_id].gates[i].ty);
+            //prletf("first meet %d gate\n", C ->
+            // circuit[self.sumcheck_layer_id].gates[i].ty);
             self.ctx.gate_meet
               [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty] = true;
           }
@@ -475,7 +484,8 @@ impl ZkProver {
         14 => {
           if !self.ctx.gate_meet[self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty]
           {
-            //prletf("first meet %d gate\n", C -> circuit[self.sumcheck_layer_id].gates[i].ty);
+            //prletf("first meet %d gate\n", C ->
+            // circuit[self.sumcheck_layer_id].gates[i].ty);
             self.ctx.gate_meet
               [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty] = true;
           }
@@ -493,7 +503,8 @@ impl ZkProver {
         {
           if !self.ctx.gate_meet[self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty]
           {
-            //prletf("first meet %d gate\n", C -> circuit[self.sumcheck_layer_id].gates[i].ty);
+            //prletf("first meet %d gate\n", C ->
+            // circuit[self.sumcheck_layer_id].gates[i].ty);
             self.ctx.gate_meet
               [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty] = true;
           }
@@ -504,7 +515,8 @@ impl ZkProver {
         {
           if !self.ctx.gate_meet[self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty]
           {
-            //prletf("first meet %d gate\n", C -> circuit[self.sumcheck_layer_id].gates[i].ty);
+            //prletf("first meet %d gate\n", C ->
+            // circuit[self.sumcheck_layer_id].gates[i].ty);
             self.ctx.gate_meet
               [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty] = true;
           }
@@ -516,7 +528,8 @@ impl ZkProver {
         {
           if !self.ctx.gate_meet[self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty]
           {
-            //prletf("first meet %d gate\n", C -> circuit[self.sumcheck_layer_id].gates[i].ty);
+            //prletf("first meet %d gate\n", C ->
+            // circuit[self.sumcheck_layer_id].gates[i].ty);
             self.ctx.gate_meet
               [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty] = true;
           }
@@ -528,7 +541,8 @@ impl ZkProver {
         {
           if !self.ctx.gate_meet[self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty]
           {
-            //prletf("first meet %d gate\n", C -> circuit[self.sumcheck_layer_id].gates[i].ty);
+            //prletf("first meet %d gate\n", C ->
+            // circuit[self.sumcheck_layer_id].gates[i].ty);
             self.ctx.gate_meet
               [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty] = true;
           }
@@ -541,7 +555,8 @@ impl ZkProver {
         {
           if !self.ctx.gate_meet[self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty]
           {
-            //prletf("first meet %d gate\n", C -> circuit[self.sumcheck_layer_id].gates[i].ty);
+            //prletf("first meet %d gate\n", C ->
+            // circuit[self.sumcheck_layer_id].gates[i].ty);
             self.ctx.gate_meet
               [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty] = true;
           }
@@ -552,7 +567,8 @@ impl ZkProver {
         {
           if !self.ctx.gate_meet[self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty]
           {
-            //prletf("first meet %d gate\n", C -> circuit[self.sumcheck_layer_id].gates[i].ty);
+            //prletf("first meet %d gate\n", C ->
+            // circuit[self.sumcheck_layer_id].gates[i].ty);
             self.ctx.gate_meet
               [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty] = true;
           }
@@ -564,7 +580,8 @@ impl ZkProver {
         {
           if !self.ctx.gate_meet[self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty]
           {
-            //prletf("first meet %d gate\n", C -> circuit[self.sumcheck_layer_id].gates[i].ty);
+            //prletf("first meet %d gate\n", C ->
+            // circuit[self.sumcheck_layer_id].gates[i].ty);
             self.ctx.gate_meet
               [self.aritmetic_circuit.circuit[self.sumcheck_layer_id].gates[i].ty] = true;
           }
