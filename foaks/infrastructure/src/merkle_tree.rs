@@ -53,7 +53,7 @@ pub fn create_tree(
   let mut start_idx = size_after_padding;
   let mut current_lvl_size = size_after_padding;
   // TODO: parallel
-  for i in (current_lvl_size - 1)..=0 {
+  for i in (0..current_lvl_size).rev() {
     let mut data = [HashDigest::default(); 2];
     if i < element_num {
       dst[i + start_idx] = src_data[i];

@@ -359,9 +359,9 @@ impl ZkVerifier {
 
     a_0 = alpha * a_0;
     let mut alpha_beta_sum = a_0;
-    let _direct_relay_value: FieldElement;
+    let mut direct_relay_value: FieldElement;
 
-    for i in (1..=(self.aritmetic_circuit.total_depth - 1)).rev() {
+    for i in (1..=self.aritmetic_circuit.total_depth - 1).rev() {
       let _rho = FieldElement::new_random();
 
       zk_prover.sumcheck_init(
@@ -384,7 +384,7 @@ impl ZkVerifier {
       let r_u = Self::generate_randomness(self.aritmetic_circuit.circuit[i - 1].bit_length);
       let mut r_v = Self::generate_randomness(self.aritmetic_circuit.circuit[i - 1].bit_length);
 
-      let direct_relay_value = alpha * Self::direct_relay(&mut self, i, &r_0, &r_u)
+      direct_relay_value = alpha * Self::direct_relay(&mut self, i, &r_0, &r_u)
         + beta * Self::direct_relay(&mut self, i, &r_1, &r_u);
 
       if i == 1 {
