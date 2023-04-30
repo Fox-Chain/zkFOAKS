@@ -9,9 +9,7 @@ pub struct HashDigest {
 }
 
 impl HashDigest {
-  pub fn new() -> Self {
-    HashDigest { h0: 0, h1: 0 }
-  }
+  pub fn new() -> Self { HashDigest { h0: 0, h1: 0 } }
 }
 
 #[inline] //ToDo: Check if this is correct

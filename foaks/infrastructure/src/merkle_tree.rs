@@ -1,21 +1,15 @@
 use prime_field::FieldElement;
-use std::mem::size_of_val;
-use std::ptr::copy_nonoverlapping;
-use std::vec::Vec;
-use std::{mem::size_of_val, process::exit};
+use std::{mem::size_of_val, process::exit, ptr::copy_nonoverlapping, vec::Vec};
 
 use crate::my_hash::{my_hash, HashDigest};
 
+// Todo: Debug coppy no overlapping
 pub unsafe fn hash_single_field_element(x: FieldElement) -> HashDigest {
   let mut data = [HashDigest::default(); 2];
-
-  copy_nonoverlapping(
-    std::ptr::addr_of!(x) as *const u128,
-    std::ptr::addr_of_mut!(data[0].h0),
-    1,
-  );
+  let src = std::ptr::addr_of!(x) as *const i128;
+  let dst = std::ptr::addr_of_mut!(data[0].h0);
+  copy_nonoverlapping(src, dst, 1);
   assert_eq!(size_of_val(&x), size_of_val(&data[0].h0));
-
   my_hash(data)
 }
 
@@ -27,13 +21,14 @@ pub unsafe fn hash_double_field_element_merkle_damgard(
 ) -> HashDigest {
   let mut data = [HashDigest::default(); 2];
   data[0] = prev_hash;
-  let mut element = [x, y];
-  println!("hash_double_field_element_merkle_damgard");
-  copy_nonoverlapping(
-    std::ptr::addr_of!(element) as *const HashDigest,
-    std::ptr::addr_of_mut!(data[1]),
-    size_of_val(&data[1]),
-  );
+  let element = [x, y];
+  //println!("Inside hash_double_field_element_merkle_damgard");
+  let src = std::ptr::addr_of!(element) as *const HashDigest;
+  let dst = std::ptr::addr_of_mut!(data[1]);
+  let count = element.len();
+  //print!("{} ", count);
+  copy_nonoverlapping(src, dst, count);
+
   assert_eq!(size_of_val(&data[1]), size_of_val(&element));
   my_hash(data)
 }
@@ -42,7 +37,6 @@ pub fn create_tree(
   src_data: Vec<HashDigest>,
   element_num: usize,
   dst: &mut Vec<HashDigest>,
-  //element_size_: Option<usize>,
   alloc_required_: Option<bool>,
 ) {
   // ToDo: Check this, do not need element_size_
@@ -59,7 +53,7 @@ pub fn create_tree(
   let mut start_idx = size_after_padding;
   let mut current_lvl_size = size_after_padding;
   // TODO: parallel
-  for i in (current_lvl_size - 1)..=0 {
+  for i in (0..current_lvl_size).rev() {
     let mut data = [HashDigest::default(); 2];
     if i < element_num {
       dst[i + start_idx] = src_data[i];
@@ -72,7 +66,6 @@ pub fn create_tree(
   current_lvl_size /= 2;
   start_idx -= current_lvl_size;
   while current_lvl_size >= 1 {
-
     // TODO: parallel
     for i in (0..current_lvl_size).rev() {
       let mut data = [HashDigest::default(); 2];
@@ -85,32 +78,29 @@ pub fn create_tree(
     start_idx -= current_lvl_size;
   }
 }
-
+// Gian: Propose this way to implement verify_claim()
 pub fn verify_claim(
   root_hash: HashDigest,
   tree: Vec<HashDigest>,
-  leaf_hash: &mut HashDigest,
+  mut leaf_hash: HashDigest,
   pos_element_arr: usize,
-  N: usize,
+  n: usize,
   visited: &mut Vec<bool>,
   proof_size: &mut usize,
 ) -> bool {
   // check N is power of 2
-  assert_eq!(((N as i64) & -(N as i64)), N as i64);
-  let mut pos_element = pos_element_arr + N;
+  assert_eq!(((n as i64) & -(n as i64)), n as i64);
+  let mut pos_element = pos_element_arr + n;
   let mut data = [HashDigest::default(); 2];
   while pos_element != 1 {
-    let pos_1 = pos_element & 1;
-    let pos_2 = pos_element ^ 1;
-    data[pos_1] = *leaf_hash;
-    data[pos_1 ^ 1] = tree[pos_2];
-    if !visited[pos_2] {
-      visited[pos_2] = true;
-      *proof_size += size_of_val(&leaf_hash);
+    data[pos_element & 1] = leaf_hash;
+    data[(pos_element & 1) ^ 1] = tree[pos_element ^ 1];
+    if !visited[pos_element ^ 1] {
+      visited[pos_element ^ 1] = true;
+      *proof_size = *proof_size + size_of_val(&leaf_hash);
     }
-    *leaf_hash = my_hash(data);
-    // my_hash(data, leaf_hash);
+    leaf_hash = my_hash(data);
     pos_element /= 2;
   }
-  root_hash == *leaf_hash
+  root_hash == leaf_hash
 }

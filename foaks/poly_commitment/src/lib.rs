@@ -2,25 +2,22 @@ mod test;
 mod vpd;
 
 use rand::Rng;
-use std::ffi::OsStr;
-use std::fs::File;
-use std::io::Read;
-use std::os::unix::prelude::OsStrExt;
-use std::process::Command;
-use std::time;
+use std::{ffi::OsStr, fs::File, io::Read, os::unix::prelude::OsStrExt, process::Command, time};
 
 use prime_field::FieldElement;
 
-use crate::vpd::fri::{
-  request_init_commit, request_init_value_with_merkle, request_step_commit, FRIContext, TripleVec,
+use crate::vpd::{
+  fri::{
+    request_init_commit, request_init_value_with_merkle, request_step_commit, FRIContext, TripleVec,
+  },
+  verifier::verify_merkle,
 };
-use crate::vpd::verifier::verify_merkle;
-use infrastructure::constants::*;
-use infrastructure::my_hash::HashDigest;
-use infrastructure::rs_polynomial::{
-  fast_fourier_transform, inverse_fast_fourier_transform, ScratchPad,
+use infrastructure::{
+  constants::*,
+  my_hash::HashDigest,
+  rs_polynomial::{fast_fourier_transform, inverse_fast_fourier_transform, ScratchPad},
+  utility::my_log,
 };
-use infrastructure::utility::my_log;
 
 #[derive(Default)]
 pub struct LdtCommitment {
@@ -518,7 +515,13 @@ impl PolyCommitVerifier {
 
           t0 = time::Instant::now();
 
-          let min_pow = |s0: u128, s1: u128| if s0 < s1 { s0 } else { s1 };
+          let min_pow = |s0: u128, s1: u128| {
+            if s0 < s1 {
+              s0
+            } else {
+              s1
+            }
+          };
 
           if !verify_merkle(
             merkle_tree_l,

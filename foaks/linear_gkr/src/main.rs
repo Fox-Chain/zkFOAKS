@@ -19,6 +19,5 @@ fn main() {
   let bit_length = zk_verifier.read_circuit(&paths.file_path, &paths.meta_path);
 
   let result = zk_verifier.verify(&args[4], bit_length.unwrap());
-  //let result = zk_verifier.virgo_verify(&args[4], bit_length);
   println!("Pass verification? : {}", result);
 }

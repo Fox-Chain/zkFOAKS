@@ -23,9 +23,9 @@ impl LinearPoly {
       b: FieldElement::zero(),
     }
   }
-  pub fn new(a: FieldElement, b: FieldElement) -> Self {
-    Self { a, b }
-  }
+
+  pub fn new(a: FieldElement, b: FieldElement) -> Self { Self { a, b } }
+
   // Create a monomial with no variables
   pub fn new_constant_monomial(b: FieldElement) -> Self {
     Self {
@@ -34,9 +34,7 @@ impl LinearPoly {
     }
   }
 
-  pub fn eval(&self, x: FieldElement) -> FieldElement {
-    self.a * x + self.b
-  }
+  pub fn eval(&self, x: FieldElement) -> FieldElement { self.a * x + self.b }
 }
 impl core::ops::Add for LinearPoly {
   type Output = Self;
@@ -73,13 +71,11 @@ impl QuadraticPoly {
       c: FieldElement::zero(),
     }
   }
-  pub fn new(a: FieldElement, b: FieldElement, c: FieldElement) -> Self {
-    Self { a, b, c }
-  }
+
+  pub fn new(a: FieldElement, b: FieldElement, c: FieldElement) -> Self { Self { a, b, c } }
+
   //todo: debug function
-  pub fn eval(self, x: &FieldElement) -> FieldElement {
-    (self.a * *x + self.b) * *x + self.c
-  }
+  pub fn eval(self, x: &FieldElement) -> FieldElement { (self.a * *x + self.b) * *x + self.c }
 
   pub fn mul(self, x: LinearPoly) -> CubicPoly {
     let a = self.a * x.a;
@@ -112,6 +108,7 @@ impl CubicPoly {
   pub fn new(a: FieldElement, b: FieldElement, c: FieldElement, d: FieldElement) -> Self {
     Self { a, b, c, d }
   }
+
   pub fn eval(self, x: FieldElement) -> FieldElement {
     ((self.a * x + self.b) * x + self.c) * x + self.d
   }
@@ -146,6 +143,7 @@ impl QuadruplePoly {
   ) -> Self {
     Self { a, b, c, d, e }
   }
+
   pub fn eval(self, x: FieldElement) -> FieldElement {
     (((self.a * x + self.b) * x + self.c) * x + self.d) * x + self.e
   }
