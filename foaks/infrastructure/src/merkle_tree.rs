@@ -6,7 +6,7 @@ use crate::my_hash::{my_hash, HashDigest};
 // Todo: Debug coppy no overlapping
 pub unsafe fn hash_single_field_element(x: FieldElement) -> HashDigest {
   let mut data = [HashDigest::default(); 2];
-  let src = std::ptr::addr_of!(x) as *const i128;
+  let src = std::ptr::addr_of!(x) as *const u128;
   let dst = std::ptr::addr_of_mut!(data[0].h0);
   copy_nonoverlapping(src, dst, 1);
   assert_eq!(size_of_val(&x), size_of_val(&data[0].h0));
