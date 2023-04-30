@@ -40,14 +40,14 @@ impl LinearPC {
     self.codeword_size = vec![0; COLUMN_SIZE];
     assert_eq!(n % COLUMN_SIZE, 0);
     self.encoded_codeword = vec![vec![FieldElement::zero()]; COLUMN_SIZE];
-    self.coef = vec![vec![FieldElement::zero()]; COLUMN_SIZE];
-
+    self.coef = vec![Vec::new(); COLUMN_SIZE];
+    println!("n / COLUMN_SIZE = {}", n / COLUMN_SIZE);
     //new code
     for i in 0..COLUMN_SIZE {
       self.encoded_codeword[i] = vec![FieldElement::zero(); n / COLUMN_SIZE * 2];
       self.coef[i] = vec![FieldElement::zero(); n / COLUMN_SIZE];
-      // Todo: Debug, could use std::ptr::copy_nonoverlapping() instead
-      self.coef[i] = (src[i * n / COLUMN_SIZE..(i + 1) * n / COLUMN_SIZE]).to_vec();
+      let src_slice = &src[i * n / COLUMN_SIZE..(i + 1) * n / COLUMN_SIZE];
+      self.coef[i].copy_from_slice(src_slice);
       //memset(encoded_codeword[i], 0, sizeof(prime_field::field_element) * n /
       // COLUMN_SIZE * 2);
 
@@ -254,7 +254,9 @@ impl LinearPC {
     );
 
     //prover construct the combined original message
-    let mut combined_message = vec![FieldElement::zero(); n.try_into().unwrap()];
+    let mut combined_message = vec![FieldElement::zero(); n];
+    println!("self.codeword_size[0] {}", self.codeword_size[0]);
+
     for i in 0..COLUMN_SIZE {
       for j in 0..self.codeword_size[0] {
         combined_message[j] = combined_message[j] + r0[i] * self.coef[i][j];
@@ -301,7 +303,7 @@ impl LinearPC {
       assert!(merkle_tree::verify_claim(
         com_mt[1].clone(),
         com_mt.clone(),
-        &mut column_hash,
+        column_hash,
         q,
         (n / COLUMN_SIZE * 2).try_into().unwrap(),
         &mut visited_com,
@@ -310,7 +312,7 @@ impl LinearPC {
       assert!(merkle_tree::verify_claim(
         combined_codeword_mt[1].clone(),
         combined_codeword_mt.clone(),
-        &mut merkle_tree::hash_single_field_element(combined_codeword[q]),
+        merkle_tree::hash_single_field_element(combined_codeword[q]),
         q,
         (n / COLUMN_SIZE * 2).try_into().unwrap(),
         &mut visited_combined_com,

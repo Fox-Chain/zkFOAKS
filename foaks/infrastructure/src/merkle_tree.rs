@@ -78,11 +78,11 @@ pub fn create_tree(
     start_idx -= current_lvl_size;
   }
 }
-
+// Gian: Propose this way to implement verify_claim()
 pub fn verify_claim(
   root_hash: HashDigest,
   tree: Vec<HashDigest>,
-  leaf_hash: &mut HashDigest,
+  mut leaf_hash: HashDigest,
   pos_element_arr: usize,
   n: usize,
   visited: &mut Vec<bool>,
@@ -93,15 +93,14 @@ pub fn verify_claim(
   let mut pos_element = pos_element_arr + n;
   let mut data = [HashDigest::default(); 2];
   while pos_element != 1 {
-    data[pos_element & 1] = *leaf_hash;
+    data[pos_element & 1] = leaf_hash;
     data[(pos_element & 1) ^ 1] = tree[pos_element ^ 1];
     if !visited[pos_element ^ 1] {
       visited[pos_element ^ 1] = true;
-      *proof_size += size_of_val(&leaf_hash);
+      *proof_size = *proof_size + size_of_val(&leaf_hash);
     }
-    *leaf_hash = my_hash(data);
-    // my_hash(data, leaf_hash);
+    leaf_hash = my_hash(data);
     pos_element /= 2;
   }
-  root_hash == *leaf_hash
+  root_hash == leaf_hash
 }
