@@ -114,7 +114,7 @@ pub fn request_init_commit(
   assert_eq!(1 << LOG_SLICE_NUMBER, SLICE_NUMBER);
 
   *log_current_witness_size_per_slice = bit_len + RS_CODE_RATE - LOG_SLICE_NUMBER;
-  *witness_bit_length_per_slice = (bit_len - LOG_SLICE_NUMBER).try_into().unwrap();
+  *witness_bit_length_per_slice = bit_len as i64 - LOG_SLICE_NUMBER as i64;
 
   let now = time::Instant::now();
 
@@ -147,8 +147,7 @@ pub fn request_init_commit(
   let log_leaf_size = LOG_SLICE_NUMBER + 1;
   for i in 0..SLICE_NUMBER {
     assert_eq!(
-      <usize as TryInto<i64>>::try_into(*log_current_witness_size_per_slice).unwrap()
-        - RS_CODE_RATE as i64,
+      *log_current_witness_size_per_slice as i64,
       *witness_bit_length_per_slice
     );
     root_of_unity =

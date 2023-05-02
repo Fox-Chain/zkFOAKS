@@ -38,10 +38,12 @@ impl LinearPC {
   pub unsafe fn commit(&mut self, src: Vec<FieldElement>, n: usize) -> Vec<HashDigest> {
     let mut stash = vec![HashDigest::new(); n / COLUMN_SIZE * 2];
     self.codeword_size = vec![0; COLUMN_SIZE];
-    assert_eq!(n % COLUMN_SIZE, 0);
+    assert!(n % COLUMN_SIZE == 0);
     self.encoded_codeword = vec![vec![FieldElement::zero()]; COLUMN_SIZE];
     self.coef = vec![Vec::new(); COLUMN_SIZE];
-    println!("n / COLUMN_SIZE = {}", n / COLUMN_SIZE);
+    println!("n: {}", n);
+
+    println!("self.coef size: {}", self.coef.len());
     //new code
     for i in 0..COLUMN_SIZE {
       self.encoded_codeword[i] = vec![FieldElement::zero(); n / COLUMN_SIZE * 2];
@@ -57,7 +59,11 @@ impl LinearPC {
         n / COLUMN_SIZE,
         Some(0),
       );
+      if i % 32 == 0 {
+        println!("self.coef[i] out loop: {}", self.coef[i].len());
+      }
     }
+    println!("self.coef[0] out loop: {}", self.coef[0].len());
 
     for i in 0..(n / COLUMN_SIZE * 2) {
       stash[i] = HashDigest::default();
@@ -95,8 +101,9 @@ impl LinearPC {
 
     self.verifier.aritmetic_circuit.inputs = vec![FieldElement::zero(); n];
     self.verifier.aritmetic_circuit.total_depth = self.gates_count.len() + 1;
+    //Refactored code, add + 1 to the size of the circuit to avoid panic
     self.verifier.aritmetic_circuit.circuit =
-      vec![Layer::default(); self.verifier.aritmetic_circuit.total_depth];
+      vec![Layer::default(); self.verifier.aritmetic_circuit.total_depth + 1];
     self.verifier.aritmetic_circuit.circuit[0].bit_length = my_log(n).unwrap();
     self.verifier.aritmetic_circuit.circuit[0].gates =
       vec![Gate::new(); 1 << self.verifier.aritmetic_circuit.circuit[0].bit_length];
@@ -255,7 +262,8 @@ impl LinearPC {
 
     //prover construct the combined original message
     let mut combined_message = vec![FieldElement::zero(); n];
-    println!("self.codeword_size[0] {}", self.codeword_size[0]);
+    println!("self.codeword_size[0]: {}", self.codeword_size[0]);
+    println!("self.coef[127].len(): {}", self.coef[127].len());
 
     for i in 0..COLUMN_SIZE {
       for j in 0..self.codeword_size[0] {

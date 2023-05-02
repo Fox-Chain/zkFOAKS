@@ -90,7 +90,7 @@ impl ZkVerifier {
       process::exit(1);
     }
 
-    self.aritmetic_circuit.circuit = vec![Layer::new(); d + 1];
+    self.aritmetic_circuit.circuit = vec![Layer::default(); d + 1];
     self.aritmetic_circuit.total_depth = d + 1;
 
     let mut max_bit_length: Option<usize> = None;
