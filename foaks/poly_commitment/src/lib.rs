@@ -173,6 +173,7 @@ impl PolyCommitProver {
     fri_ctx.virtual_oracle_witness =
       vec![FieldElement::default(); self.ctx.slice_size * self.ctx.slice_count];
     fri_ctx.virtual_oracle_witness_mapping = vec![0; self.ctx.slice_size * self.ctx.slice_count];
+    fri_ctx.witness_rs_codeword_before_arrange = vec![vec![vec![FieldElement::default(); SLICE_NUMBER];2]];
 
     self.ctx.q_eval_len = self.ctx.l_eval_len;
     self.ctx.q_eval = vec![FieldElement::default(); self.ctx.q_eval_len];

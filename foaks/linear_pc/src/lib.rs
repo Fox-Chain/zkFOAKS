@@ -38,7 +38,7 @@ impl LinearPC {
   pub unsafe fn commit(&mut self, src: Vec<FieldElement>, n: usize) -> Vec<HashDigest> {
     let mut stash = vec![HashDigest::new(); n / COLUMN_SIZE * 2];
     self.codeword_size = vec![0; COLUMN_SIZE];
-    assert!(n % COLUMN_SIZE == 0);
+    assert_eq!(n % COLUMN_SIZE, 0);
     self.encoded_codeword = vec![vec![FieldElement::zero()]; COLUMN_SIZE];
     self.coef = vec![Vec::new(); COLUMN_SIZE];
     println!("n: {}", n);
@@ -54,13 +54,13 @@ impl LinearPC {
       // COLUMN_SIZE * 2);
 
       self.codeword_size[i] = self.lce_ctx.encode(
-        (src[i * (n / COLUMN_SIZE)..]).to_vec(),
+        (src[i * n / COLUMN_SIZE..]).to_vec(),
         &mut self.encoded_codeword[i],
         n / COLUMN_SIZE,
         Some(0),
       );
       if i % 32 == 0 {
-        println!("self.coef[i] out loop: {}", self.coef[i].len());
+        println!("self.coef[{i}] out loop: {}", self.coef[i].len());
       }
     }
     println!("self.coef[0] out loop: {}", self.coef[0].len());
@@ -77,7 +77,7 @@ impl LinearPC {
     }
     println!("Pass hash_double_field_element_merkle_damgard");
 
-    merkle_tree::create_tree(
+    create_tree(
       stash,
       n / COLUMN_SIZE * 2,
       &mut self.mt,
@@ -226,7 +226,7 @@ impl LinearPC {
 
     let mut proof_size = 0;
     // Todo: check log2
-    let query_count = (-128.0 / (fast_math::log2(1f32 - TARGET_DISTANCE))) as usize;
+    let query_count = (-128f32 / (1f32 - 0.07f32).log2()) as usize;
     println!("Query count: {}", query_count);
     println!("Column size: {}", COLUMN_SIZE);
     println!("Number of merkle pathes: {}", query_count);
@@ -267,6 +267,7 @@ impl LinearPC {
 
     for i in 0..COLUMN_SIZE {
       for j in 0..self.codeword_size[0] {
+        if self.coef[i].len() <= j { continue; } // We realized that beyond 512 the C++ code multiply garbage values
         combined_message[j] = combined_message[j] + r0[i] * self.coef[i][j];
       }
     }
@@ -514,7 +515,7 @@ impl LinearPC {
     self.verifier.aritmetic_circuit.circuit[final_output_depth].weight_expander_d_mempool =
       vec![FieldElement::zero(); DN * self.lce_ctx.d[recursion_depth].l];
 
-    for i in 0..DN * self.lce_ctx.d[recursion_depth].r {
+    for i in 0..self.lce_ctx.d[recursion_depth].r {
       let neighbor_size = self.lce_ctx.d[recursion_depth].r_neighbor[i].len();
       self.verifier.aritmetic_circuit.circuit[final_output_depth].gates[output_size_so_far + i]
         .ty = 14;

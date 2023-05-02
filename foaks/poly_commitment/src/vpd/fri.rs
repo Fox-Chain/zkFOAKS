@@ -147,7 +147,7 @@ pub fn request_init_commit(
   let log_leaf_size = LOG_SLICE_NUMBER + 1;
   for i in 0..SLICE_NUMBER {
     assert_eq!(
-      *log_current_witness_size_per_slice as i64,
+      (*log_current_witness_size_per_slice - RS_CODE_RATE) as i64,
       *witness_bit_length_per_slice
     );
     root_of_unity =
