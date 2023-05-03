@@ -146,7 +146,7 @@ impl PolyCommitProver {
     println!("FFT Prepare time: {} ms", elapsed_time.as_millis());
 
     if self.fri_ctx.is_none() {
-      self.fri_ctx = Some(FRIContext::default());
+      self.fri_ctx = Some(FRIContext::new());
     }
 
     let ret =
@@ -168,12 +168,11 @@ impl PolyCommitProver {
   ) -> HashDigest {
     let mut t0 = time::Instant::now();
     assert!(self.ctx.pre_prepare_executed);
-    let mut default_fri_ctx = FRIContext::default();
+    let mut default_fri_ctx = FRIContext::new();
     let mut fri_ctx = self.fri_ctx.as_mut().unwrap_or(&mut default_fri_ctx);
     fri_ctx.virtual_oracle_witness =
       vec![FieldElement::default(); self.ctx.slice_size * self.ctx.slice_count];
     fri_ctx.virtual_oracle_witness_mapping = vec![0; self.ctx.slice_size * self.ctx.slice_count];
-    fri_ctx.witness_rs_codeword_before_arrange = vec![vec![vec![FieldElement::default(); SLICE_NUMBER];2]];
 
     self.ctx.q_eval_len = self.ctx.l_eval_len;
     self.ctx.q_eval = vec![FieldElement::default(); self.ctx.q_eval_len];
@@ -347,9 +346,9 @@ impl PolyCommitProver {
 
     let mut time_span = t0.elapsed().as_secs_f64();
     self.total_time_pc_p += time_span;
-    println!("PostGKR FFT time {}", ftt_time);
-    println!("PostGKR remap time {}", re_mapping_time);
-    println!("PostGKR prepare time {}", time_span);
+    println!("PostGKR FFT time: {}", ftt_time);
+    println!("PostGKR remap time: {}", re_mapping_time);
+    println!("PostGKR prepare time: 0 {}", time_span);
 
     t0 = time::Instant::now();
     let ret = request_init_commit(&mut fri_ctx, &self.ctx, r_0_len, 1);

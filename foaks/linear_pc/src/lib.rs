@@ -41,9 +41,8 @@ impl LinearPC {
     assert_eq!(n % COLUMN_SIZE, 0);
     self.encoded_codeword = vec![vec![FieldElement::zero()]; COLUMN_SIZE];
     self.coef = vec![Vec::new(); COLUMN_SIZE];
-    println!("n: {}", n);
-
-    println!("self.coef size: {}", self.coef.len());
+    // println!("n: {}", n);
+    // println!("self.coef size: {}", self.coef.len());
     //new code
     for i in 0..COLUMN_SIZE {
       self.encoded_codeword[i] = vec![FieldElement::zero(); n / COLUMN_SIZE * 2];
@@ -59,11 +58,8 @@ impl LinearPC {
         n / COLUMN_SIZE,
         Some(0),
       );
-      if i % 32 == 0 {
-        println!("self.coef[{i}] out loop: {}", self.coef[i].len());
-      }
     }
-    println!("self.coef[0] out loop: {}", self.coef[0].len());
+    //   println!("self.coef[0] out loop: {}", self.coef[0].len());
 
     for i in 0..(n / COLUMN_SIZE * 2) {
       stash[i] = HashDigest::default();
@@ -75,7 +71,7 @@ impl LinearPC {
         );
       }
     }
-    println!("Pass hash_double_field_element_merkle_damgard");
+    // println!("Pass hash_double_field_element_merkle_damgard");
 
     create_tree(
       stash,
@@ -262,12 +258,14 @@ impl LinearPC {
 
     //prover construct the combined original message
     let mut combined_message = vec![FieldElement::zero(); n];
-    println!("self.codeword_size[0]: {}", self.codeword_size[0]);
-    println!("self.coef[127].len(): {}", self.coef[127].len());
+    // println!("self.codeword_size[0]: {}", self.codeword_size[0]);
+    // println!("self.coef[127].len(): {}", self.coef[127].len());
 
     for i in 0..COLUMN_SIZE {
       for j in 0..self.codeword_size[0] {
-        if self.coef[i].len() <= j { continue; } // We realized that beyond 512 the C++ code multiply garbage values
+        if self.coef[i].len() <= j {
+          continue;
+        } // We realized that beyond 512 the C++ code multiply garbage values
         combined_message[j] = combined_message[j] + r0[i] * self.coef[i][j];
       }
     }

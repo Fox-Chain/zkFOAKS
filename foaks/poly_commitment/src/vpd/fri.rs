@@ -68,6 +68,18 @@ pub struct FRIContext {
   pub leaf_hash: [Vec<HashDigest>; 2],
 }
 
+impl FRIContext {
+  pub fn new() -> Self {
+    Self {
+      witness_rs_codeword_before_arrange: vec![vec![
+        vec![FieldElement::default(); 2];
+        SLICE_NUMBER
+      ]],
+      //witness_rs_mapping: vec![vec![vec![0; SLICE_NUMBER]; 2]],
+      ..Default::default()
+    }
+  }
+}
 /// Given private input, calculate the first oracle commitment
 pub fn request_init_commit(
   FRIContext {
