@@ -124,7 +124,6 @@ pub fn request_init_commit(
   *current_step_no = 0;
 
   assert_eq!(1 << LOG_SLICE_NUMBER, SLICE_NUMBER);
-
   *log_current_witness_size_per_slice = bit_len + RS_CODE_RATE - LOG_SLICE_NUMBER;
   *witness_bit_length_per_slice = bit_len as i64 - LOG_SLICE_NUMBER as i64;
 
@@ -133,7 +132,6 @@ pub fn request_init_commit(
   // let sliced_input_length_per_block = 1 << *witness_bit_length_per_slice; No
   // usages
   assert!(*witness_bit_length_per_slice >= 0);
-
   let mut root_of_unity =
     FieldElement::get_root_of_unity(*log_current_witness_size_per_slice).unwrap();
   if oracle_indicator == 0 {

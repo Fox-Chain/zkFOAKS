@@ -369,7 +369,7 @@ impl LinearPC {
     // p.get_witness(combined_message, N / column_size); Refactored inside
     // verifier.verify()
 
-    let (result, time_diff) = self.verifier.verify2(
+    let (result, time_diff) = self.verifier.verify(
       &String::from("log.txt"),
       max_bit_length.unwrap(),
       combined_message.clone(),

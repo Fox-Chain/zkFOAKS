@@ -128,6 +128,7 @@ impl PolyCommitProver {
           FieldElement::get_root_of_unity(my_log(slice_real_ele_cnt).unwrap()).unwrap(),
           &mut tmp[..],
         );
+        println!("Start FFT");
 
         fast_fourier_transform(
           &tmp[..],
@@ -182,7 +183,7 @@ impl PolyCommitProver {
     let mut re_mapping_time = 0.0;
 
     let mut ftt_t0 = time::Instant::now();
-
+    println!("Into commit_public_array");
     for i in 0..self.ctx.slice_count {
       inverse_fast_fourier_transform(
         &mut self.scratch_pad,
@@ -192,7 +193,8 @@ impl PolyCommitProver {
         FieldElement::get_root_of_unity(my_log(self.ctx.slice_real_ele_cnt).unwrap()).unwrap(),
         &mut tmp,
       );
-
+      println!("Pass inverse_fast_fourier_transform");
+      println!("Start extern FFT");
       fast_fourier_transform(
         &tmp,
         self.ctx.slice_real_ele_cnt,
@@ -202,9 +204,9 @@ impl PolyCommitProver {
         &mut self.scratch_pad.twiddle_factor,
         &mut self.scratch_pad.dst,
         &mut self.scratch_pad.twiddle_factor_size,
-      )
+      );
+      println!("Pass fast_fourier_transform");
     }
-
     ftt_time += ftt_t0.elapsed().as_secs_f64();
 
     let mut sum = FieldElement::zero();

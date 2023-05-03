@@ -118,7 +118,7 @@ pub fn fast_fourier_transform(
 
   assert_eq!(rot_mul[log_order], FieldElement::real_one());
   assert!(log_coefficient <= log_order);
-
+  println!("Pass   assert!(log_coefficient <= log_order 2);");
   let blk_sz = order / coefficient_len;
 
   let dst_raw = [
@@ -229,7 +229,8 @@ pub fn inverse_fast_fourier_transform(
   } else {
     Cow::Borrowed(evaluations)
   };
-
+  println!("sub_eval[0] {}", sub_eval[0].real);
+  println!("sub_eval[1] {}", sub_eval[1].real);
   let mut new_rou = FieldElement::real_one();
   for _ in 0..(order / coefficient_len) {
     new_rou = new_rou * root_of_unity;
@@ -265,8 +266,8 @@ pub fn inverse_fast_fourier_transform(
     tmp = tmp * tmp;
   }
   assert_eq!(inv_rou * new_rou, FieldElement::real_one());
-
   // todo: check
+  println!("Start intern FFT in inverse_fast_fourier_transform()");
   fast_fourier_transform(
     sub_eval.as_ref(),
     order,

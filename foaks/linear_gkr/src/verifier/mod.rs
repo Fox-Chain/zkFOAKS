@@ -306,7 +306,7 @@ impl ZkVerifier {
     self.beta_u_block_second_half = vec![FieldElement::zero(); 1 << second_half_len];
   }
 
-  pub fn verify(mut self, output_path: &String, bit_length: usize) -> bool {
+  pub fn verify_old(mut self, output_path: &String, bit_length: usize) -> bool {
     println!("output path: {}", output_path);
     // Initialize the prover,
     // the original repo initialize the prover in the main fn()
@@ -651,7 +651,7 @@ impl ZkVerifier {
     true
   }
 
-  pub fn verify2(
+  pub fn verify(
     &mut self,
     output_path: &String,
     bit_length: usize,
@@ -929,9 +929,9 @@ impl ZkVerifier {
       &zk_prover.circuit_value[0],
       self.aritmetic_circuit.circuit[0].bit_length,
     );
-
+    println!("Pass commit_private_array");
     self.ctx.q_eval_real =
-      vec![FieldElement::default(); 1 << self.aritmetic_circuit.circuit[0].bit_length];
+      vec![FieldElement::zero(); 1 << self.aritmetic_circuit.circuit[0].bit_length];
     self.dfs_for_public_eval(
       0usize,
       FieldElement::real_one(),
@@ -940,6 +940,7 @@ impl ZkVerifier {
       self.aritmetic_circuit.circuit[0].bit_length,
       0,
     );
+    println!("Start commit_public_array");
 
     let merkle_root_h = zk_prover.poly_prover.commit_public_array(
       &self.ctx.q_eval_real,
@@ -947,6 +948,7 @@ impl ZkVerifier {
       alpha_beta_sum,
       &mut all_sum,
     );
+    println!("Pass commit_public_array");
 
     self.proof_size += 2 * mem::size_of::<HashDigest>();
     self.vpd_randomness = r_0.clone();
