@@ -136,9 +136,8 @@ impl PolyCommitProver {
           slice_size,
           FieldElement::get_root_of_unity(my_log(slice_size).unwrap()).unwrap(),
           &mut self.ctx.l_eval[i * slice_size..],
-          &mut self.scratch_pad.twiddle_factor,
-          &mut self.scratch_pad.dst,
-          &mut self.scratch_pad.twiddle_factor_size,
+          &mut self.scratch_pad,
+          None,
         )
       }
     }
@@ -193,19 +192,18 @@ impl PolyCommitProver {
         FieldElement::get_root_of_unity(my_log(self.ctx.slice_real_ele_cnt).unwrap()).unwrap(),
         &mut tmp,
       );
-      println!("Pass inverse_fast_fourier_transform");
-      println!("Start extern FFT");
+      // println!("Pass inverse_fast_fourier_transform");
+      // println!("Start extern FFT");
       fast_fourier_transform(
         &tmp,
         self.ctx.slice_real_ele_cnt,
         self.ctx.slice_size,
         FieldElement::get_root_of_unity(my_log(self.ctx.slice_size).unwrap()).unwrap(),
         &mut self.ctx.q_eval[i * self.ctx.slice_size..],
-        &mut self.scratch_pad.twiddle_factor,
-        &mut self.scratch_pad.dst,
-        &mut self.scratch_pad.twiddle_factor_size,
+        &mut self.scratch_pad,
+        None,
       );
-      println!("Pass fast_fourier_transform");
+      //println!("Pass fast_fourier_transform");
     }
     ftt_time += ftt_t0.elapsed().as_secs_f64();
 
@@ -285,9 +283,8 @@ impl PolyCommitProver {
           self.ctx.slice_size,
           FieldElement::get_root_of_unity(my_log(self.ctx.slice_size).unwrap()).unwrap(),
           &mut self.ctx.h_eval,
-          &mut self.scratch_pad.twiddle_factor,
-          &mut self.scratch_pad.dst,
-          &mut self.scratch_pad.twiddle_factor_size,
+          &mut self.scratch_pad,
+          None,
         );
 
         ftt_time += ftt_t0.elapsed().as_secs_f64();
@@ -350,14 +347,14 @@ impl PolyCommitProver {
     self.total_time_pc_p += time_span;
     println!("PostGKR FFT time: {}", ftt_time);
     println!("PostGKR remap time: {}", re_mapping_time);
-    println!("PostGKR prepare time: 0 {}", time_span);
+    println!("PostGKR prepare time 0:{}", time_span);
 
     t0 = time::Instant::now();
     let ret = request_init_commit(&mut fri_ctx, &self.ctx, r_0_len, 1);
 
     time_span = t0.elapsed().as_secs_f64();
     self.total_time_pc_p += time_span;
-    println!("PostGKR prepare time 1 {}", time_span);
+    println!("PostGKR prepare time 1: {}", time_span);
 
     ret
   }
@@ -401,7 +398,7 @@ impl PolyCommitVerifier {
     let proof_size_fft;
     let p_time_fft;
 
-    let mut file = match File::open("log_fftgkr.txt") {
+    let mut file = match File::open("/home/gian/repos/zkFOAKS/foaks/src/log_fftgkr.txt") {
       Err(err) => panic!("Couldn't open {}: {}", "log_fftgkr.txt", err),
       Ok(file) => file,
     };

@@ -42,29 +42,38 @@ pub fn verify_merkle(
     current_hash = my_hash(data);
     println!("[{i}] {:?}", current_hash);
   }
-  println!("data[0]: {:?}\ndata[1]:{:?}", data[0], data[1]);
+  println!("data[0]: {:?}\ndata[1]:{:?}\n", data[0], data[1]);
 
   data = unsafe { mem::zeroed() };
   // delete , it just for testing
   current_hash = HashDigest {
     h0: 124708544472041548687713145652200463269,
-    h1: 139523578951561325641486551426283469303
+    h1: 139523578951561325641486551426283469303,
   };
 
   let mut value_hash = HashDigest::new();
+  let mut i = 0;
   unsafe {
     for value in values {
       data = [
         hash_single_field_element(value.0),
         hash_single_field_element(value.1),
       ];
-      println!("{:?}", data[0]);
       data[1] = value_hash;
+      while i < 3 {
+        println!("value {i}: {:?}", values[0]);
+        println!("data[0]: {:?}", data[0]);
+        i += 1;
+      }
       value_hash = my_hash::my_hash(data);
     }
   }
 
-  println!("value_hash: {:?}\n merkle: {:?}", value_hash, merkle_path.last());
+  println!(
+    "\nvalue_hash: {:?}\n merkle: {:?}",
+    value_hash,
+    merkle_path.last()
+  );
 
   hash_digest == current_hash && Some(&value_hash) == merkle_path.last()
 }
