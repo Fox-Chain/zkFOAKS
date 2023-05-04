@@ -40,9 +40,9 @@ pub fn verify_merkle(
 
     //println!("[{}] {:?}", i+1, current_hash);
     current_hash = my_hash(data);
-    println!("[{i}] {:?}", current_hash);
+    //println!("[{i}] {:?}", current_hash);
   }
-  println!("data[0]: {:?}\ndata[1]:{:?}\n", data[0], data[1]);
+  //println!("data[0]: {:?}\ndata[1]:{:?}\n", data[0], data[1]);
 
   data = unsafe { mem::zeroed() };
   // delete , it just for testing
@@ -69,11 +69,11 @@ pub fn verify_merkle(
     }
   }
 
-  println!(
-    "\nvalue_hash: {:?}\n merkle: {:?}",
-    value_hash,
-    merkle_path.last()
-  );
+  // println!(
+  //   "\nvalue_hash: {:?}\n merkle: {:?}",
+  //   value_hash,
+  //   merkle_path.last()
+  // );
 
   hash_digest == current_hash && Some(&value_hash) == merkle_path.last()
 }

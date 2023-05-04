@@ -152,6 +152,8 @@ pub fn request_init_commit(
     vec![FieldElement::default(); 1 << (bit_len + RS_CODE_RATE)];
 
   let log_leaf_size = LOG_SLICE_NUMBER + 1;
+  println!("l_eval {:?}", l_eval[0]);
+  //println!("h_eval_arr {:?}", h_eval_arr[0]); TODO find the cause why this is not initialized anywhere
   for i in 0..SLICE_NUMBER {
     assert_eq!(
       (*log_current_witness_size_per_slice - RS_CODE_RATE) as i64,
@@ -268,8 +270,13 @@ pub fn request_init_value_with_merkle(
         [pow_0 << log_leaf_size | i << 1 | 1],
     ));
 
+    /**
+    it was `pow_0 << log_leaf_size | i << 1 | 1` but this makes the number be added by 1,
+    As C++ returns the number calculated in the left part of this expression `70 << 7 | 0 << 1 | 1 == 3` the assert pass
+    but in Rust the equals is actually evaluated.
+     */
     assert_eq!(
-      pow_0 << log_leaf_size | i << 1, // it was: pow_0 << log_leaf_size | i << 1
+      pow_0 << log_leaf_size | i << 1,
       fri_ctx.witness_rs_mapping[oracle_indicator][i][pow_1]
     );
 
@@ -314,6 +321,7 @@ pub fn request_init_value_with_merkle(
     assert_eq!(test_hash, fri_ctx.witness_merkle[oracle_indicator][pos]);
   }
 
+  println!("{:?} {:?}", value[0], com_hhash[0]);
   assert_eq!(pos, 1);
   (value, com_hhash)
 }

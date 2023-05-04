@@ -2,7 +2,7 @@ mod test;
 mod vpd;
 
 use rand::Rng;
-use std::{ffi::OsStr, fs::File, io::Read, os::unix::prelude::OsStrExt, process::Command, time};
+use std::{env, ffi::OsStr, fs::File, io::Read, os::unix::prelude::OsStrExt, process::Command, time};
 
 use prime_field::FieldElement;
 
@@ -398,7 +398,7 @@ impl PolyCommitVerifier {
     let proof_size_fft;
     let p_time_fft;
 
-    let mut file = match File::open("/home/gian/repos/zkFOAKS/foaks/src/log_fftgkr.txt") {
+    let mut file = match File::open(env::current_dir().unwrap().join("src").join("log_fftgkr.txt")) {
       Err(err) => panic!("Couldn't open {}: {}", "log_fftgkr.txt", err),
       Ok(file) => file,
     };
@@ -509,6 +509,7 @@ impl PolyCommitVerifier {
             1,
             fri_ctx,
           );
+          //println!("alpha_h {:?}", alpha_h);
 
           proof_size += new_size;
 

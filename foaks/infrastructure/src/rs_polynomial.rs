@@ -158,6 +158,7 @@ pub fn fast_fourier_transform(
       }
     }
   }
+
   for i in 0..order {
     result[i] = scratch_pad.dst[0][i];
   }
