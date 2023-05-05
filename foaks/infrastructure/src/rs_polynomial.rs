@@ -139,8 +139,8 @@ pub fn fast_fourier_transform(
         let cur = dep & 1;
         let pre = cur ^ 1;
         //Todo: check this
-        let mut cur_ptr = scratch_pad.dst[cur].clone();
         let pre_ptr = scratch_pad.dst[pre].clone();
+        let cur_ptr = &mut scratch_pad.dst[cur];
         let gap = (twiddle_size / order) * (1 << (dep));
         assert_eq!(twiddle_size % order, 0);
         {
@@ -162,6 +162,11 @@ pub fn fast_fourier_transform(
   for i in 0..order {
     result[i] = scratch_pad.dst[0][i];
   }
+  println!("scratch_pad.dst[0][0]: {}", scratch_pad.dst[0][0].real);
+  println!(
+    "scratch_pad.dst[0][order-1]: {}",
+    scratch_pad.dst[0][order - 1].real
+  );
 }
 
 pub fn inverse_fast_fourier_transform(

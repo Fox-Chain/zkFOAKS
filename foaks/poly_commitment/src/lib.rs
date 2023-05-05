@@ -2,7 +2,9 @@ mod test;
 mod vpd;
 
 use rand::Rng;
-use std::{env, ffi::OsStr, fs::File, io::Read, os::unix::prelude::OsStrExt, process::Command, time};
+use std::{
+  env, ffi::OsStr, fs::File, io::Read, os::unix::prelude::OsStrExt, process::Command, time,
+};
 
 use prime_field::FieldElement;
 
@@ -90,9 +92,7 @@ impl PolyCommitProver {
     let l_eval_len = slice_count * slice_size;
     self.ctx.l_eval_len = l_eval_len;
 
-    //let l_eval = &mut self.ctx.l_eval;
     self.ctx.l_eval = vec![FieldElement::zero(); l_eval_len];
-    //l_eval.reserve(l_eval_len);
 
     let mut tmp = Vec::<FieldElement>::with_capacity(slice_real_ele_cnt);
 
@@ -109,17 +109,22 @@ impl PolyCommitProver {
 
       for j in 0..slice_real_ele_cnt {
         if private_array[i * slice_real_ele_cnt + j] == zero {
+          println!("j: {} continue", j);
           continue;
         }
         all_zero = false;
+        println!("j: {} break", j);
         break;
       }
 
       if all_zero {
+        println!("all zero");
         for j in 0..slice_size {
           self.ctx.l_eval[i * slice_size + j] = zero;
         }
       } else {
+        println!("Start IFFT in commit_private_array");
+
         inverse_fast_fourier_transform(
           &mut self.scratch_pad,
           &private_array[i * slice_real_ele_cnt..],
@@ -128,7 +133,7 @@ impl PolyCommitProver {
           FieldElement::get_root_of_unity(my_log(slice_real_ele_cnt).unwrap()).unwrap(),
           &mut tmp[..],
         );
-        println!("Start FFT");
+        println!("Start FFT in commit_private_array");
 
         fast_fourier_transform(
           &tmp[..],
@@ -141,6 +146,8 @@ impl PolyCommitProver {
         )
       }
     }
+    println!("self.ctx.l_eval[0] {}", self.ctx.l_eval[0].real);
+    println!("self.ctx.l_eval[1] {}", self.ctx.l_eval[1].real);
 
     let elapsed_time = now.elapsed();
     println!("FFT Prepare time: {} ms", elapsed_time.as_millis());
@@ -398,7 +405,12 @@ impl PolyCommitVerifier {
     let proof_size_fft;
     let p_time_fft;
 
-    let mut file = match File::open(env::current_dir().unwrap().join("src").join("log_fftgkr.txt")) {
+    let mut file = match File::open(
+      env::current_dir()
+        .unwrap()
+        .join("src")
+        .join("log_fftgkr.txt"),
+    ) {
       Err(err) => panic!("Couldn't open {}: {}", "log_fftgkr.txt", err),
       Ok(file) => file,
     };

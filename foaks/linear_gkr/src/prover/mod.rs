@@ -145,7 +145,6 @@ impl ZkProver {
 
   pub fn evaluate(&mut self) -> Vec<FieldElement> {
     let t0 = time::Instant::now();
-
     // Gian: Below code was commented in the original Orion repo,
     // here we need it, otherwise program panics!
     // Todo: Debug
@@ -158,7 +157,7 @@ impl ZkProver {
       assert!(ty == 3 || ty == 2);
     }
     assert!(self.aritmetic_circuit.total_depth < 1000000);
-
+    // Gian: Set circuit_value[0] to random values?
     self.circuit_value[0] =
       vec![FieldElement::zero(); 1 << self.aritmetic_circuit.circuit[0].bit_length];
     for i in 1..(self.aritmetic_circuit.total_depth) {
