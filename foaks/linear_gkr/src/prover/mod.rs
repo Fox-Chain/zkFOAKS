@@ -1,6 +1,7 @@
 use crate::{
   circuit_fast_track::LayeredCircuit,
   polynomial::{LinearPoly, QuadraticPoly},
+  verifier::generate_randomness,
 };
 
 use infrastructure::constants::SIZE;
@@ -61,7 +62,7 @@ pub struct ZkProver {
   one_minus_r_1: Vec<FieldElement>,
 
   pub add_v_array: Vec<LinearPoly>,
-  pub v_mult_add0: Vec<LinearPoly>,
+  pub v_mult_add: Vec<LinearPoly>,
   pub beta_g_r0_fhalf: Vec<FieldElement>,
   beta_g_r0_shalf: Vec<FieldElement>,
   beta_g_r1_fhalf: Vec<FieldElement>,
@@ -103,7 +104,7 @@ impl ZkProver {
     self.beta_u_fhalf = vec![FieldElement::zero(); 1 << half_length];
     self.beta_u_shalf = vec![FieldElement::zero(); 1 << half_length];
     self.add_mult_sum = vec![LinearPoly::zero(); 1 << max_bit_length];
-    self.v_mult_add0 = vec![LinearPoly::zero(); 1 << max_bit_length];
+    self.v_mult_add = vec![LinearPoly::zero(); 1 << max_bit_length];
     self.add_v_array = vec![LinearPoly::zero(); 1 << max_bit_length];
 
     // Gian: The original repo init total_time and call get_circuit() in the main
@@ -158,8 +159,7 @@ impl ZkProver {
     // Gian: Below code was commented in the original Orion C++ repo,
     // here we need it, otherwise program panics!
     // Todo: Debug
-    self.circuit_value[0] =
-      vec![FieldElement::zero(); 1 << self.aritmetic_circuit.circuit[0].bit_length];
+    self.circuit_value[0] = generate_randomness(1 << self.aritmetic_circuit.circuit[0].bit_length);
     for i in 1..(self.aritmetic_circuit.total_depth) {
       self.circuit_value[i] =
         vec![FieldElement::zero(); 1 << self.aritmetic_circuit.circuit[i].bit_length];
@@ -282,7 +282,7 @@ impl ZkProver {
     let zero = FieldElement::zero();
     for i in 0..self.total_uv {
       //todo! linear_poly != FieldElement
-      self.v_mult_add0[i] =
+      self.v_mult_add[i] =
         LinearPoly::new_single_input(self.circuit_value[self.sumcheck_layer_id - 1][i]);
 
       //self.v_mult_add[i] = self.circuit_value[self.sumcheck_layer_id - 1][i];
@@ -612,8 +612,8 @@ impl ZkProver {
       let g_zero = i << 1;
       let g_one = i << 1 | 1;
       if current_bit == 0 {
-        self.ctx.v_mult_add_new[i].b = self.v_mult_add0[g_zero].b;
-        self.ctx.v_mult_add_new[i].a = self.v_mult_add0[g_one].b - self.ctx.v_mult_add_new[i].b;
+        self.ctx.v_mult_add_new[i].b = self.v_mult_add[g_zero].b;
+        self.ctx.v_mult_add_new[i].a = self.v_mult_add[g_one].b - self.ctx.v_mult_add_new[i].b;
 
         self.ctx.add_v_array_new[i].b = self.add_v_array[g_zero].b;
         self.ctx.add_v_array_new[i].a = self.add_v_array[g_one].b - self.ctx.add_v_array_new[i].b;
@@ -623,9 +623,9 @@ impl ZkProver {
           self.add_mult_sum[g_one].b - self.ctx.add_mult_sum_new[i].b;
       } else {
         self.ctx.v_mult_add_new[i].b =
-          self.v_mult_add0[g_zero].a * previous_random + self.v_mult_add0[g_zero].b;
-        self.ctx.v_mult_add_new[i].a = self.v_mult_add0[g_one].a * previous_random
-          + self.v_mult_add0[g_one].b
+          self.v_mult_add[g_zero].a * previous_random + self.v_mult_add[g_zero].b;
+        self.ctx.v_mult_add_new[i].a = self.v_mult_add[g_one].a * previous_random
+          + self.v_mult_add[g_one].b
           - self.ctx.v_mult_add_new[i].b;
 
         self.ctx.add_v_array_new[i].b =
@@ -642,22 +642,27 @@ impl ZkProver {
       }
     }
 
-    swap(&mut self.v_mult_add0, &mut self.ctx.v_mult_add_new);
+    swap(&mut self.v_mult_add, &mut self.ctx.v_mult_add_new);
     swap(&mut self.add_v_array, &mut self.ctx.add_v_array_new);
     swap(&mut self.add_mult_sum, &mut self.ctx.add_mult_sum_new);
 
+    println!("self.ctx.v_mult_add[0] {:?}", self.v_mult_add[0]);
+    println!("self.ctx.add_v_array[0] {:?}", self.add_v_array[0]);
+    println!("self.ctx.add_mult_sum[0] {:?}", self.add_mult_sum[0]);
+
+    panic!();
     //parallel addition tree
     //todo
     //#pragma omp parallel for
     for i in 0..(self.total_uv >> 1) {
-      self.ctx.rets_prev[i].a = self.add_mult_sum[i].a * self.v_mult_add0[i].a;
-      self.ctx.rets_prev[i].b = self.add_mult_sum[i].a * self.v_mult_add0[i].b
-        + self.add_mult_sum[i].b * self.v_mult_add0[i].a
+      self.ctx.rets_prev[i].a = self.add_mult_sum[i].a * self.v_mult_add[i].a;
+      self.ctx.rets_prev[i].b = self.add_mult_sum[i].a * self.v_mult_add[i].b
+        + self.add_mult_sum[i].b * self.v_mult_add[i].a
         + self.add_v_array[i].a;
       self.ctx.rets_prev[i].c =
-        self.add_mult_sum[i].b * self.v_mult_add0[i].b + self.add_v_array[i].b;
+        self.add_mult_sum[i].b * self.v_mult_add[i].b + self.add_v_array[i].b;
     }
-
+    //println!("self.ctx.rets_prev[0] {:?}", self.ctx.rets_prev[0]);
     let tot = self.total_uv >> 1;
     let mut iter = 1;
     while (1 << iter) <= (self.total_uv >> 1) {
@@ -668,6 +673,7 @@ impl ZkProver {
       }
       //todo
       //#pragma omp barrier
+      //println!("self.ctx.rets_cur[0] {:?}", self.ctx.rets_cur[0]);
       swap(&mut self.ctx.rets_prev, &mut self.ctx.rets_cur);
       iter += 1;
     }
@@ -688,7 +694,7 @@ impl ZkProver {
     one_minus_r_u: Vec<FieldElement>,
   ) {
     let _t0 = SystemTime::now();
-    self.v_u = self.v_mult_add0[0].eval(previous_random);
+    self.v_u = self.v_mult_add[0].eval(previous_random);
 
     let first_half = self.length_u >> 1;
     let second_half = self.length_u - first_half;
@@ -725,7 +731,7 @@ impl ZkProver {
       self.add_v_array[i].b = zero;
       //todo! linear_poly != FieldElement
       //self.v_mult_add[i] = self.circuit_value[self.sumcheck_layer_id - 1][i];
-      self.v_mult_add0[i] =
+      self.v_mult_add[i] =
         LinearPoly::new_single_input(self.circuit_value[self.sumcheck_layer_id - 1][i]);
     }
 
@@ -967,8 +973,8 @@ impl ZkProver {
       let g_one = i << 1 | 1;
 
       if current_bit == 0 {
-        self.ctx.v_mult_add_new[i].b = self.v_mult_add0[g_zero].b;
-        self.ctx.v_mult_add_new[i].a = self.v_mult_add0[g_one].b - self.ctx.v_mult_add_new[i].b;
+        self.ctx.v_mult_add_new[i].b = self.v_mult_add[g_zero].b;
+        self.ctx.v_mult_add_new[i].a = self.v_mult_add[g_one].b - self.ctx.v_mult_add_new[i].b;
 
         self.ctx.add_v_array_new[i].b = self.add_v_array[g_zero].b;
         self.ctx.add_v_array_new[i].a = self.add_v_array[g_one].b - self.ctx.add_v_array_new[i].b;
@@ -978,9 +984,9 @@ impl ZkProver {
           self.add_mult_sum[g_one].b - self.ctx.add_mult_sum_new[i].b;
       } else {
         self.ctx.v_mult_add_new[i].b =
-          self.v_mult_add0[g_zero].a * previous_random + self.v_mult_add0[g_zero].b;
-        self.ctx.v_mult_add_new[i].a = self.v_mult_add0[g_one].a * previous_random
-          + self.v_mult_add0[g_one].b
+          self.v_mult_add[g_zero].a * previous_random + self.v_mult_add[g_zero].b;
+        self.ctx.v_mult_add_new[i].a = self.v_mult_add[g_one].a * previous_random
+          + self.v_mult_add[g_one].b
           - self.ctx.v_mult_add_new[i].b;
 
         self.ctx.add_v_array_new[i].b =
@@ -995,14 +1001,14 @@ impl ZkProver {
           + self.add_mult_sum[g_one].b
           - self.ctx.add_mult_sum_new[i].b;
       }
-      ret.a = ret.a + self.add_mult_sum[i].a * self.v_mult_add0[i].a;
+      ret.a = ret.a + self.add_mult_sum[i].a * self.v_mult_add[i].a;
       ret.b = ret.b
-        + self.add_mult_sum[i].a * self.v_mult_add0[i].b
-        + self.add_mult_sum[i].b * self.v_mult_add0[i].a
+        + self.add_mult_sum[i].a * self.v_mult_add[i].b
+        + self.add_mult_sum[i].b * self.v_mult_add[i].a
         + self.add_v_array[i].a;
-      ret.c = ret.c + self.add_mult_sum[i].b * self.v_mult_add0[i].b + self.add_v_array[i].b;
+      ret.c = ret.c + self.add_mult_sum[i].b * self.v_mult_add[i].b + self.add_v_array[i].b;
     }
-    swap(&mut self.v_mult_add0, &mut self.ctx.v_mult_add_new);
+    swap(&mut self.v_mult_add, &mut self.ctx.v_mult_add_new);
     swap(&mut self.add_v_array, &mut self.ctx.add_v_array_new);
     swap(&mut self.add_mult_sum, &mut self.ctx.add_mult_sum_new);
 
@@ -1010,12 +1016,12 @@ impl ZkProver {
     //todo
     //#pragma omp parallel for
     for i in 0..(self.total_uv >> 1) {
-      self.ctx.rets_prev[i].a = self.add_mult_sum[i].a * self.v_mult_add0[i].a;
-      self.ctx.rets_prev[i].b = self.add_mult_sum[i].a * self.v_mult_add0[i].b
-        + self.add_mult_sum[i].b * self.v_mult_add0[i].a
+      self.ctx.rets_prev[i].a = self.add_mult_sum[i].a * self.v_mult_add[i].a;
+      self.ctx.rets_prev[i].b = self.add_mult_sum[i].a * self.v_mult_add[i].b
+        + self.add_mult_sum[i].b * self.v_mult_add[i].a
         + self.add_v_array[i].a;
       self.ctx.rets_prev[i].c =
-        self.add_mult_sum[i].b * self.v_mult_add0[i].b + self.add_v_array[i].b;
+        self.add_mult_sum[i].b * self.v_mult_add[i].b + self.add_v_array[i].b;
     }
 
     let tot = self.total_uv >> 1;
@@ -1045,7 +1051,7 @@ impl ZkProver {
     &mut self,
     previous_random: FieldElement,
   ) -> (FieldElement, FieldElement) {
-    self.v_v = self.v_mult_add0[0].eval(previous_random);
+    self.v_v = self.v_mult_add[0].eval(previous_random);
     (self.v_u, self.v_v)
   }
 

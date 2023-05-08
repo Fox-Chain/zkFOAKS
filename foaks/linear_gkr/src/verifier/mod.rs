@@ -681,6 +681,7 @@ impl ZkVerifier {
     //self.prover.unwrap().proof_init();
 
     let result = zk_prover.evaluate();
+    println!("result[0].real: {:?}", result[0].real);
     let mut alpha = FieldElement::real_one();
     let mut beta = FieldElement::zero();
 
@@ -688,8 +689,8 @@ impl ZkVerifier {
     // later
     let capacity =
       self.aritmetic_circuit.circuit[self.aritmetic_circuit.total_depth - 1].bit_length;
-    let mut r_0 = Self::generate_randomness(capacity);
-    let mut r_1 = Self::generate_randomness(capacity);
+    let mut r_0 = generate_randomness(capacity);
+    let mut r_1 = generate_randomness(capacity);
     let mut one_minus_r_0 = vec![FieldElement::zero(); capacity];
     let mut one_minus_r_1 = vec![FieldElement::zero(); capacity];
 
@@ -723,8 +724,8 @@ impl ZkVerifier {
         self.aritmetic_circuit.circuit[i].bit_length,
         self.aritmetic_circuit.circuit[i - 1].bit_length,
         self.aritmetic_circuit.circuit[i - 1].bit_length,
-        alpha.clone(),
-        beta.clone(),
+        alpha,
+        beta,
         r_0.clone(),
         r_1.clone(),
         one_minus_r_0.clone(),
@@ -735,8 +736,8 @@ impl ZkVerifier {
 
       let mut previous_random = FieldElement::from_real(0);
       //next level random
-      let r_u = Self::generate_randomness(self.aritmetic_circuit.circuit[i - 1].bit_length);
-      let mut r_v = Self::generate_randomness(self.aritmetic_circuit.circuit[i - 1].bit_length);
+      let r_u = generate_randomness(self.aritmetic_circuit.circuit[i - 1].bit_length);
+      let mut r_v = generate_randomness(self.aritmetic_circuit.circuit[i - 1].bit_length);
 
       let direct_relay_value =
         alpha * self.direct_relay(i, &r_0, &r_u) + beta * self.direct_relay(i, &r_1, &r_u);
@@ -749,11 +750,11 @@ impl ZkVerifier {
 
       //V should test the maskR for two points, V does random linear combination of
       // these points first
-      let _random_combine = Self::generate_randomness(1)[0];
+      let _random_combine = generate_randomness(1)[0];
 
       //Every time all one test to V, V needs to do a linear combination for
       // security.
-      let _linear_combine = Self::generate_randomness(1)[0]; // mem leak
+      let _linear_combine = generate_randomness(1)[0]; // mem leak
 
       let mut one_minus_r_u =
         vec![FieldElement::zero(); self.aritmetic_circuit.circuit[i - 1].bit_length];
@@ -769,12 +770,20 @@ impl ZkVerifier {
 
       for j in 0..(self.aritmetic_circuit.circuit[i - 1].bit_length) {
         let poly = zk_prover.sumcheck_phase1_update(previous_random, j);
-
+        println!("poly: {:?}", poly);
+        // let a = FieldElement::new(1415090970581488410, 2194315079658929560);
+        // let b = FieldElement::new(1357655670859519352, 1659090533285084075);
+        // let c = FieldElement::new(1915408552428519463, 1110325544321843789);
+        // let poly_sample = QuadraticPoly::new(a, b, c);
         self.proof_size += mem::size_of::<QuadraticPoly>();
         previous_random = r_u[j];
         //todo: Debug eval() fn
-        if poly.eval(&FieldElement::zero()) + poly.eval(&FieldElement::real_one()) != alpha_beta_sum
-        {
+        let eval_zero = poly.eval(&FieldElement::zero());
+        let eval_one = poly.eval(&FieldElement::real_one());
+        println!("eval_zero: {}", eval_zero.real);
+        println!("eval_one: {}", eval_one.real);
+        println!("alpha_beta_sum: {}", alpha_beta_sum.real);
+        if eval_zero + eval_one != alpha_beta_sum {
           //todo: Improve error handling
           eprintln!(
             "Verification fail, phase1, circuit {}, current bit {}",
@@ -820,7 +829,7 @@ impl ZkVerifier {
           //i, j
           //);
         }
-        alpha_beta_sum = poly.eval(&r_v[j]) + direct_relay_value * zk_prover.v_u;
+        alpha_beta_sum = poly.eval(&r_v[j].clone()) + direct_relay_value * zk_prover.v_u;
       }
       //Add one more round for maskR
       //quadratic_poly poly p->sumcheck_finalroundR(previous_random, C.current[i -
@@ -902,8 +911,8 @@ impl ZkVerifier {
         eprintln!("Verification fail, semi final, circuit level {}", i,);
         return (false, 0.0);
       }
-      let tmp_alpha = Self::generate_randomness(1);
-      let tmp_beta = Self::generate_randomness(1);
+      let tmp_alpha = generate_randomness(1);
+      let tmp_beta = generate_randomness(1);
       alpha = tmp_alpha[0];
       beta = tmp_beta[0];
 
@@ -1195,16 +1204,6 @@ impl ZkVerifier {
         pos << 1 | 1,
       );
     }
-  }
-
-  pub fn generate_randomness(size: usize) -> Vec<FieldElement> {
-    let k = size;
-    let mut ret = vec![FieldElement::zero(); k];
-
-    for i in 0..k {
-      ret[i] = FieldElement::new_random();
-    }
-    ret
   }
 
   pub fn direct_relay(
@@ -1937,4 +1936,14 @@ impl ZkVerifier {
 
   //Never used, original code is all commented in Orion, empty in Virgo
   pub fn self_inner_product_test() {} //Never used, implemented only in Virgo, empty in Orion
+}
+
+pub fn generate_randomness(size: usize) -> Vec<FieldElement> {
+  let k = size;
+  let mut ret = vec![FieldElement::zero(); k];
+
+  for i in 0..k {
+    ret[i] = FieldElement::new_random();
+  }
+  ret
 }
