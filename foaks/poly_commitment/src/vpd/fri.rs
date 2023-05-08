@@ -321,7 +321,7 @@ pub fn request_init_value_with_merkle(
     assert_eq!(test_hash, fri_ctx.witness_merkle[oracle_indicator][pos]);
   }
 
-  println!("{:?} {:?}", value[0], com_hhash[0]);
+  println!("324 -> {:?} {:?}", value[0], com_hhash[0]);
   assert_eq!(pos, 1);
   (value, com_hhash)
 }

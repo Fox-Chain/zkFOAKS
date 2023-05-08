@@ -309,6 +309,15 @@ impl ZkProver {
       }
     }
 
+    for i in 0.._second_half {
+      for j in 0..1 << i {
+        self.beta_g_r0_fhalf[j | (1 << i)] = self.beta_g_r0_fhalf[j] * self.r_0[i + first_half];
+        self.beta_g_r0_fhalf[j] = self.beta_g_r0_fhalf[j] * self.one_minus_r_0[i + first_half];
+        self.beta_g_r1_fhalf[j | (1 << i)] = self.beta_g_r1_fhalf[j] * self.r_1[i + first_half];
+        self.beta_g_r1_fhalf[j] = self.beta_g_r1_fhalf[j] * self.one_minus_r_1[i + first_half];
+      }
+    }
+
     let mask_fhalf = (1 << first_half) - 1;
 
     let mut intermediates0 = vec![FieldElement::zero(); 1 << self.length_g];
@@ -604,6 +613,9 @@ impl ZkProver {
     let t0 = time::Instant::now();
     let mut ret = QuadraticPoly::zero();
 
+    println!("pre self.ctx.v_mult_add[0] {:?}", self.v_mult_add[0]);
+    println!("pre self.ctx.add_v_array[0] {:?}", self.add_v_array[0]);
+    println!("pre self.ctx.add_mult_sum[0] {:?}", self.add_mult_sum[0]);
     //todo
     //#pragma omp parallel for
 
