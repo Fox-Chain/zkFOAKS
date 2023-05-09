@@ -615,11 +615,11 @@ impl ZkProver {
 
     println!("pre self.ctx.v_mult_add[0] {:?}", self.v_mult_add[0]);
     println!("pre self.ctx.add_v_array[0] {:?}", self.add_v_array[0]);
-    println!("pre self.ctx.add_mult_sum[0] {:?}", self.add_mult_sum[0]);
+    println!("pre self.ctx.add_mult_sum[0] {:?}\n", self.add_mult_sum[0]);
     //todo
     //#pragma omp parallel for
 
-    for i in 0..(self.total_uv >> 1) {
+    for i in 0..self.total_uv >> 1 {
       //prime_field::field_element zero_value, one_value; //never used
       let g_zero = i << 1;
       let g_one = i << 1 | 1;
@@ -653,6 +653,19 @@ impl ZkProver {
           - self.ctx.add_mult_sum_new[i].b;
       }
     }
+
+    println!(
+      "self.ctx.ctx.v_mult_add_new[0] {:?}",
+      self.ctx.v_mult_add_new[0]
+    );
+    println!(
+      "self.ctx.add_v_array_new[0] {:?}",
+      self.ctx.add_v_array_new[0]
+    );
+    println!(
+      "self.ctx.add_mult_sum_new[0] {:?}\n",
+      self.ctx.add_mult_sum_new[0]
+    );
 
     swap(&mut self.v_mult_add, &mut self.ctx.v_mult_add_new);
     swap(&mut self.add_v_array, &mut self.ctx.add_v_array_new);
