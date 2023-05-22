@@ -91,7 +91,7 @@ impl LinearCodeEncodeContext {
       r,
       Some(dep + 1),
     );
-    assert_eq![self.d[dep].l, l];
+    assert_eq!(self.d[dep].l, l);
     // R consumed
     r = self.d[dep].r;
     for i in 0..r {

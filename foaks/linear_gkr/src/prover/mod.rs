@@ -158,7 +158,8 @@ impl ZkProver {
     // Gian: Below code was commented in the original Orion C++ repo,
     // here we need it, otherwise program panics!
     // Todo: Debug
-    self.circuit_value[0] = generate_randomness(1 << self.aritmetic_circuit.circuit[0].bit_length);
+    // Edu: value is initialized in get_witness
+    //self.circuit_value[0] = generate_randomness(1 << self.aritmetic_circuit.circuit[0].bit_length);
     for i in 1..(self.aritmetic_circuit.total_depth) {
       self.circuit_value[i] =
         vec![FieldElement::zero(); 1 << self.aritmetic_circuit.circuit[i].bit_length];
@@ -212,7 +213,7 @@ impl ZkProver {
               + self.circuit_value[i - 1][k] * FieldElement::from_real(1u64 << (k - u));
           }
         } else if ty == 13 {
-          assert!(u == v);
+          assert_eq!(u, v);
           assert!(u < (1 << self.aritmetic_circuit.circuit[i - 1].bit_length),);
           self.circuit_value[i][g] = self.circuit_value[i - 1][u]
             * (FieldElement::from_real(1) - self.circuit_value[i - 1][v]);
@@ -231,6 +232,7 @@ impl ZkProver {
     }
 
     let time_span = t0.elapsed();
+
     println!(
       "total evaluation time: {:?} seconds",
       time_span.as_secs_f64()

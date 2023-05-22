@@ -67,7 +67,7 @@ pub fn create_tree(
   start_idx -= current_lvl_size;
   while current_lvl_size >= 1 {
     // TODO: parallel
-    for i in (0..current_lvl_size).rev() {
+    for i in 0..current_lvl_size {
       let mut data = [HashDigest::default(); 2];
       data[0] = dst[start_idx + current_lvl_size + i * 2];
       data[1] = dst[start_idx + current_lvl_size + i * 2 + 1];
