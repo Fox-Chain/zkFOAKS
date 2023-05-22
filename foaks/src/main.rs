@@ -1,6 +1,6 @@
-use std::{env, process, time::Instant};
+use std::{env, time::Instant};
 
-use linear_code::{linear_code_encode::LinearCodeEncodeContext, parameter::COLUMN_SIZE};
+use linear_code::parameter::COLUMN_SIZE;
 use linear_pc::LinearPC;
 use prime_field::FieldElement;
 

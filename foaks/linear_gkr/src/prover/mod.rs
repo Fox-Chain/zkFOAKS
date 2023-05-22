@@ -149,7 +149,6 @@ impl ZkProver {
 
     for i in 0..(1 << self.aritmetic_circuit.circuit[0].bit_length) {
       let g = i;
-      //todo: Could delete below variable, never used
       //let u = self.aritmetic_circuit.circuit[0].gates[g].u;
       let ty = self.aritmetic_circuit.circuit[0].gates[g].ty;
       assert!(ty == 3 || ty == 2);
@@ -236,7 +235,6 @@ impl ZkProver {
       "total evaluation time: {:?} seconds",
       time_span.as_secs_f64()
     );
-    //self.circuit_value.pop().unwrap()
     self.circuit_value[self.aritmetic_circuit.total_depth - 1].clone()
   }
 
@@ -283,7 +281,7 @@ impl ZkProver {
     for i in 0..self.total_uv {
       //todo! linear_poly != FieldElement
       self.v_mult_add[i] =
-        LinearPoly::new_single_input(self.circuit_value[self.sumcheck_layer_id - 1][i]);
+        LinearPoly::new_single_input(self.circuit_value[self.sumcheck_layer_id - 1][i].clone());
 
       //self.v_mult_add[i] = self.circuit_value[self.sumcheck_layer_id - 1][i];
       self.add_v_array[i].a = zero;
@@ -613,9 +611,6 @@ impl ZkProver {
     let t0 = time::Instant::now();
     let mut ret = QuadraticPoly::zero();
 
-    println!("pre self.ctx.v_mult_add[0] {:?}", self.v_mult_add[0]);
-    println!("pre self.ctx.add_v_array[0] {:?}", self.add_v_array[0]);
-    println!("pre self.ctx.add_mult_sum[0] {:?}\n", self.add_mult_sum[0]);
     //todo
     //#pragma omp parallel for
 
@@ -654,28 +649,11 @@ impl ZkProver {
       }
     }
 
-    println!(
-      "self.ctx.ctx.v_mult_add_new[0] {:?}",
-      self.ctx.v_mult_add_new[0]
-    );
-    println!(
-      "self.ctx.add_v_array_new[0] {:?}",
-      self.ctx.add_v_array_new[0]
-    );
-    println!(
-      "self.ctx.add_mult_sum_new[0] {:?}\n",
-      self.ctx.add_mult_sum_new[0]
-    );
-
     swap(&mut self.v_mult_add, &mut self.ctx.v_mult_add_new);
     swap(&mut self.add_v_array, &mut self.ctx.add_v_array_new);
     swap(&mut self.add_mult_sum, &mut self.ctx.add_mult_sum_new);
 
-    println!("self.ctx.v_mult_add[0] {:?}", self.v_mult_add[0]);
-    println!("self.ctx.add_v_array[0] {:?}", self.add_v_array[0]);
-    println!("self.ctx.add_mult_sum[0] {:?}", self.add_mult_sum[0]);
-
-    panic!();
+    //panic!();
     //parallel addition tree
     //todo
     //#pragma omp parallel for

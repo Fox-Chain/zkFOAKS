@@ -1,6 +1,6 @@
 use crate::parameter::DISTANCE_THRESHOLD;
 use prime_field::FieldElement;
-use std::{collections::HashMap, vec::Vec};
+use std::vec::Vec;
 
 use crate::parameter::*;
 

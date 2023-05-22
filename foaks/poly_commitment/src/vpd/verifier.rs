@@ -1,6 +1,5 @@
 use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
 use std::mem;
-use std::thread::current;
 
 use infrastructure::my_hash::my_hash;
 use infrastructure::{
@@ -8,7 +7,7 @@ use infrastructure::{
   my_hash::{self, HashDigest},
 };
 
-use crate::{LdtCommitment, PolyCommitContext};
+use crate::LdtCommitment;
 use prime_field::FieldElement;
 
 use crate::vpd::fri::FRIContext;

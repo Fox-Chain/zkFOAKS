@@ -1,10 +1,7 @@
 use std::{
-  borrow::Cow,
   mem,
   ops::{Deref, DerefMut},
 };
-
-use rayon::prelude::*;
 
 use crate::utility::my_log;
 use prime_field::FieldElement;

@@ -1,7 +1,6 @@
 mod test;
 mod vpd;
 
-use rand::Rng;
 use std::{
   env, ffi::OsStr, fs::File, io::Read, os::unix::prelude::OsStrExt, process::Command, time,
 };

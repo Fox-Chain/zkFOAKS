@@ -1,5 +1,5 @@
 use prime_field::FieldElement;
-use std::{mem::size_of_val, process::exit, ptr::copy_nonoverlapping, vec::Vec};
+use std::{mem::size_of_val, ptr::copy_nonoverlapping, vec::Vec};
 
 use crate::my_hash::{my_hash, HashDigest};
 
