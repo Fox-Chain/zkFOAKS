@@ -1,7 +1,7 @@
 use crate::{
   circuit_fast_track::LayeredCircuit,
   polynomial::{LinearPoly, QuadraticPoly},
-  verifier::generate_randomness,
+  verifier::{generate_randomness, read_vec_fe_file},
 };
 
 use infrastructure::constants::SIZE;
@@ -151,22 +151,20 @@ impl ZkProver {
       let g = i;
       //let u = self.aritmetic_circuit.circuit[0].gates[g].u;
       let ty = self.aritmetic_circuit.circuit[0].gates[g].ty;
+      println!("i: 0, g = {}, ty = {} ", i, ty);
+
       assert!(ty == 3 || ty == 2);
     }
     assert!(self.aritmetic_circuit.total_depth < 1000000);
-    // Gian: Set circuit_value[0] to random values?
-    // Gian: Below code was commented in the original Orion C++ repo,
-    // here we need it, otherwise program panics!
-    // Todo: Debug
-    // Edu: value is initialized in get_witness
-    //self.circuit_value[0] = generate_randomness(1 << self.aritmetic_circuit.circuit[0].bit_length);
+
     for i in 1..(self.aritmetic_circuit.total_depth) {
       self.circuit_value[i] =
         vec![FieldElement::zero(); 1 << self.aritmetic_circuit.circuit[i].bit_length];
 
       for j in 0..(1 << self.aritmetic_circuit.circuit[i].bit_length) {
         let g = j;
-        let ty: usize = self.aritmetic_circuit.circuit[i].gates[g].ty;
+        let ty = self.aritmetic_circuit.circuit[i].gates[g].ty;
+        println!("i: {}, g = {}, ty = {}", i, g, ty);
         let u = self.aritmetic_circuit.circuit[i].gates[g].u;
         let v = self.aritmetic_circuit.circuit[i].gates[g].v;
 
@@ -228,6 +226,9 @@ impl ZkProver {
         } else {
           assert!(false);
         }
+        if i > 3 {
+          panic!();
+        }
       }
     }
 
@@ -242,10 +243,13 @@ impl ZkProver {
 
   //Todo: Improve this function with Rust features
   pub fn get_witness(&mut self, inputs: Vec<FieldElement>, n: usize) {
+    let res = read_vec_fe_file("witness.txt");
     self.circuit_value[0] =
       vec![FieldElement::zero(); 1 << self.aritmetic_circuit.circuit[0].bit_length];
     for i in 0..n {
-      self.circuit_value[0][i] = inputs[i];
+      // Tempary change. Use res insted of inputs
+      self.circuit_value[0][i] = res[i];
+      // self.circuit_value[0][i] = inputs[i];
     }
   }
 

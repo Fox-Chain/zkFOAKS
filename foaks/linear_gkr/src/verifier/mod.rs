@@ -338,7 +338,7 @@ impl ZkVerifier {
     // Todo: Fix evaluate();
     let result = zk_prover.evaluate();
     // For now read data from Orion C++ generated result value
-    //let result = read_evaluate_file();
+    //let result = read_vec_fe_file("evaluate");
     let mut alpha = FieldElement::real_one();
     let mut beta = FieldElement::zero();
 
@@ -1597,8 +1597,8 @@ pub fn generate_randomness(size: usize) -> Vec<FieldElement> {
   ret
 }
 
-pub fn read_evaluate_file() -> Vec<FieldElement> {
-  let result_content = read_to_string("evaluate.txt").unwrap();
+pub fn read_vec_fe_file(path: &str) -> Vec<FieldElement> {
+  let result_content = read_to_string(path).unwrap();
   let result_lines = result_content.lines();
   //let mut result = Vec::new();
 
