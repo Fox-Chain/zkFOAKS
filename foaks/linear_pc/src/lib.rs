@@ -1,4 +1,4 @@
-use std::{collections::HashMap, mem::size_of_val, time::Instant};
+use std::{collections::HashMap, fs::read_to_string, mem::size_of_val, time::Instant};
 
 use infrastructure::{
   merkle_tree::{self, create_tree},
@@ -133,7 +133,7 @@ impl LinearPC {
     }
     //Todo: improve gate_types::input with constant values
     for i in 0..n {
-      self.verifier.aritmetic_circuit.circuit[2].gates[i] = Gate::from_params(10, 0, 0);
+      self.verifier.aritmetic_circuit.circuit[2].gates[i] = Gate::from_params(10, i, 0);
     }
 
     self.verifier.aritmetic_circuit.circuit[2].src_expander_c_mempool =
@@ -146,7 +146,7 @@ impl LinearPC {
       self.verifier.aritmetic_circuit.circuit[2].gates[i + n] = Gate::from_params(14, 0, 0);
       self.verifier.aritmetic_circuit.circuit[2].gates[i + n].parameter_length =
         self.lce_ctx.c[0].r_neighbor[i].len();
-      //Todo: Check if this is correct
+      //Todo: Check if this is correct for Edu
       self.verifier.aritmetic_circuit.circuit[2].gates[i + n].src =
         self.verifier.aritmetic_circuit.circuit[2].src_expander_c_mempool[c_mempool_ptr..].to_vec();
       self.verifier.aritmetic_circuit.circuit[2].gates[i + n].weight =
@@ -197,7 +197,6 @@ impl LinearPC {
           .weight[j] = self.lce_ctx.d[0].r_weight[i][j];
       }
     }
-
     for i in 0..query_count {
       self.verifier.aritmetic_circuit.circuit[final_output_depth + 1].gates[i] =
         Gate::from_params(10, query[i], 0);
@@ -343,9 +342,11 @@ impl LinearPC {
 
     // verifier samples query
     let mut q = vec![0; query_count.try_into().unwrap()];
-    for i in 0..query_count {
-      q[i] = rand::random::<usize>() % self.codeword_size[0];
-    }
+    // Gian: Temporary change: Read q from Orion C++ for testing
+    // for i in 0..query_count {
+    //   q[i] = rand::random::<usize>() % self.codeword_size[0];
+    // }
+    q = read_random_file("q.txt");
     // generate circuit
 
     self.generate_circuit(
@@ -590,3 +591,18 @@ fn smallest_pow2_larger_or_equal_to(x: usize) -> usize {
 // 	CustomLinearComb = 14,
 // 	Input = 3isize
 // }
+
+pub fn read_random_file(path: &str) -> Vec<usize> {
+  let result_content = read_to_string(path).unwrap();
+  let result_lines = result_content.lines();
+  //let mut result = Vec::new();
+
+  result_lines
+    .into_iter()
+    .map(|x| {
+      let mut line = x.split_whitespace();
+      let ran = line.next().unwrap().parse().unwrap();
+      ran
+    })
+    .collect()
+}

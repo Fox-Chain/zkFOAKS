@@ -151,8 +151,10 @@ impl ZkProver {
       let g = i;
       //let u = self.aritmetic_circuit.circuit[0].gates[g].u;
       let ty = self.aritmetic_circuit.circuit[0].gates[g].ty;
-      println!("i: 0, g = {}, ty = {} ", i, ty);
-
+      // println!(
+      //   "ty:{ty}	circuit_value[0][{g}].real:{}, img:{}",
+      //   self.circuit_value[0][g].real, self.circuit_value[0][g].img
+      // );
       assert!(ty == 3 || ty == 2);
     }
     assert!(self.aritmetic_circuit.total_depth < 1000000);
@@ -164,7 +166,7 @@ impl ZkProver {
       for j in 0..(1 << self.aritmetic_circuit.circuit[i].bit_length) {
         let g = j;
         let ty = self.aritmetic_circuit.circuit[i].gates[g].ty;
-        println!("i: {}, g = {}, ty = {}", i, g, ty);
+        // println!("i: {}, g = {}, ty = {}", i, g, ty);
         let u = self.aritmetic_circuit.circuit[i].gates[g].u;
         let v = self.aritmetic_circuit.circuit[i].gates[g].v;
 
@@ -180,8 +182,10 @@ impl ZkProver {
         } else if ty == 3 {
           // It suppose to be input gate, it just read the 'u' input, what about 'v' input
           self.circuit_value[i][g] = FieldElement::from_real(u as u64);
+          //println!("i: 0, g = {}, ty = {} ", i, ty);
         } else if ty == 4 {
-          self.circuit_value[i][g] = self.circuit_value[i - 1][u];
+          //println!("i: 0, g = {}, ty = {} ", i, ty);
+          self.circuit_value[i][g] = self.circuit_value[i - 1][u].clone();
         } else if ty == 5 {
           self.circuit_value[i][g] = FieldElement::from_real(0);
           for k in u..v {
@@ -202,7 +206,7 @@ impl ZkProver {
           let y = self.circuit_value[i - 1][v];
           self.circuit_value[i][g] = y - x * y;
         } else if ty == 10 {
-          self.circuit_value[i][g] = self.circuit_value[i - 1][u];
+          self.circuit_value[i][g] = self.circuit_value[i - 1][u].clone();
         } else if ty == 12 {
           self.circuit_value[i][g] = FieldElement::from_real(0);
           assert!(v - u + 1 <= 60);
@@ -219,6 +223,12 @@ impl ZkProver {
           self.circuit_value[i][g] = FieldElement::from_real(0);
           for k in 0..self.aritmetic_circuit.circuit[i].gates[g].parameter_length {
             let weight = self.aritmetic_circuit.circuit[i].gates[g].weight[k];
+            if k < 3 && g < 130 {
+              println!(
+                "\ti:{i}, g:{g}, weight.real:{}, img:{}",
+                weight.real, weight.img
+              );
+            }
             let idx = self.aritmetic_circuit.circuit[i].gates[g].src[k];
             self.circuit_value[i][g] =
               self.circuit_value[i][g] + self.circuit_value[i - 1][idx] * weight;
@@ -226,8 +236,11 @@ impl ZkProver {
         } else {
           assert!(false);
         }
-        if i > 3 {
-          panic!();
+        if i == 2 && g < 130 {
+          println!(
+            "ty:{ty}, u:{u},	circuit_value[{i}][{g}].real:{}, img:{}",
+            self.circuit_value[i][g].real, self.circuit_value[i][g].img
+          );
         }
       }
     }
