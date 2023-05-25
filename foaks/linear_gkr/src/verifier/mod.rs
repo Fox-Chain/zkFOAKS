@@ -670,7 +670,7 @@ impl ZkVerifier {
     let sample_t0 = Instant::now();
     for i in 0..query_count {
       assert_eq!(
-        zk_prover.circuit_value[zk_prover.aritmetic_circuit.total_depth - 1][i],
+        zk_prover.circuit_value[zk_prover.a_c.total_depth - 1][i],
         combined_codeword[q[i]],
       );
     }
