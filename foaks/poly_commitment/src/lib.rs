@@ -1,6 +1,6 @@
 mod test;
 mod vpd;
-
+#[allow(unused)]
 use std::{
   env, ffi::OsStr, fs::File, io::Read, os::unix::prelude::OsStrExt, process::Command, time,
 };

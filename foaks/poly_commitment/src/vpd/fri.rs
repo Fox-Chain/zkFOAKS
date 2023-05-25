@@ -1,5 +1,4 @@
-use std::{mem::size_of, time, usize, vec};
-
+#[allow(unused)]
 use crate::PolyCommitContext;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, MAX_BIT_LENGTH, MAX_FRI_DEPTH, RS_CODE_RATE, SLICE_NUMBER},
@@ -7,6 +6,7 @@ use infrastructure::{
   my_hash::{my_hash, HashDigest},
 };
 use prime_field::FieldElement;
+use std::{mem::size_of, time, usize, vec};
 
 pub type TripleVec<'a> = (Vec<(FieldElement, FieldElement)>, Vec<HashDigest>);
 

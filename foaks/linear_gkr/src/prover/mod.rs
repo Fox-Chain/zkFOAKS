@@ -3,7 +3,7 @@ use crate::{
   polynomial::{LinearPoly, QuadraticPoly},
   verifier::read_vec_fe_file,
 };
-
+#[allow(unused)]
 use infrastructure::constants::SIZE;
 use poly_commitment::PolyCommitProver;
 use prime_field::FieldElement;
@@ -235,12 +235,12 @@ impl ZkProver {
         } else {
           assert!(false);
         }
-        // if i == 2 && g < 130 {
-        //   println!(
-        //     "ty:{ty}, u:{u},	circuit_value[{i}][{g}].real:{}, img:{}",
-        //     self.circuit_value[i][g].real, self.circuit_value[i][g].img
-        //   );
-        // }
+        if i < 7 {
+          println!(
+            "ty:{ty}, u:{u},	circuit_value[{i}][{g}].real:{}, img:{}",
+            self.circuit_value[i][g].real, self.circuit_value[i][g].img
+          );
+        }
       }
     }
 

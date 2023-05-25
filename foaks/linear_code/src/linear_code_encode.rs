@@ -1,12 +1,12 @@
 use crate::parameter::DISTANCE_THRESHOLD;
+#[allow(unused)]
+use crate::parameter::*;
 use prime_field::FieldElement;
 use std::{
   fs::read_to_string,
   str::{Lines, Split},
   vec::Vec,
 };
-
-use crate::parameter::*;
 
 #[derive(Default, Clone)]
 pub struct Graph {
@@ -139,7 +139,7 @@ pub fn generate_random_expander(l: usize, r: usize, d: usize) -> Graph {
   ret.r_neighbor = vec![vec![]; r];
   ret.r_weight = vec![vec![]; r];
 
-  // Comment this block of code for now. For testing purpose we use data from Orion C++
+  //Comment this block of code for now. For testing purpose we use data from Orion C++
 
   // for i in 0..l {
   //   ret.neighbor[i] = vec![0; d];
@@ -153,7 +153,7 @@ pub fn generate_random_expander(l: usize, r: usize, d: usize) -> Graph {
   //     ret.weight[i][j] = weight;
   //   }
   // }
-  // Improve this for later, hardocoded 10
+  //Improve this for later, hardocoded 10
   if d == 10 {
     ret.neighbor = read_neighbor_graph_file("c_neighbor.txt");
     ret.r_neighbor = read_neighbor_graph_file("c_r_neighbor.txt");

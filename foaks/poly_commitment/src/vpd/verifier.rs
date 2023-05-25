@@ -1,11 +1,11 @@
 use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
-use std::mem;
-
+#[allow(unused)]
 use infrastructure::my_hash::my_hash;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, RS_CODE_RATE, SLICE_NUMBER},
   my_hash::{self, HashDigest},
 };
+use std::mem;
 
 use crate::LdtCommitment;
 use prime_field::FieldElement;

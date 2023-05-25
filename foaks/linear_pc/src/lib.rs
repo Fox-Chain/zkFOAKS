@@ -1,5 +1,4 @@
-use std::{collections::HashMap, fs::read_to_string, time::Instant};
-
+#[allow(unused)]
 use infrastructure::{
   merkle_tree::{self, create_tree},
   my_hash::HashDigest,
@@ -15,6 +14,7 @@ use linear_gkr::{
   verifier::ZkVerifier,
 };
 use prime_field::FieldElement;
+use std::{collections::HashMap, fs::read_to_string, time::Instant};
 
 #[derive(Default)]
 pub struct LinearPC {
@@ -152,7 +152,7 @@ impl LinearPC {
         let r = i;
         let weight = self.lce_ctx.c[0].r_weight[r][j];
         println!(
-          "i:2, g;{}, j:{}, weight.real:{}, weight.real:{}, ",
+          "i:2, g;{}, j:{}, weight.real:{}, weight.img:{}, ",
           i + n,
           j,
           weight.real,

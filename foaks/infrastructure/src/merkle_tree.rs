@@ -1,7 +1,7 @@
+#[allow(unused)]
+use crate::my_hash::{my_hash, HashDigest};
 use prime_field::FieldElement;
 use std::{mem::size_of_val, ptr::copy_nonoverlapping, vec::Vec};
-
-use crate::my_hash::{my_hash, HashDigest};
 
 // Todo: Debug coppy no overlapping
 pub unsafe fn hash_single_field_element(x: FieldElement) -> HashDigest {
