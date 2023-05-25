@@ -1,7 +1,7 @@
 use crate::{
   circuit_fast_track::LayeredCircuit,
   polynomial::{LinearPoly, QuadraticPoly},
-  verifier::{generate_randomness, read_vec_fe_file},
+  verifier::read_vec_fe_file,
 };
 
 use infrastructure::constants::SIZE;
