@@ -8,7 +8,8 @@ use prime_field::FieldElement;
 enum Error {
   ParseParamsError,
 }
-
+#[allow(unused)]
+#[feature(iter_next_chunk)]
 fn main() -> Result<(), Error> {
   let args: Vec<String> = env::args().collect();
   let lg_n = match args.iter().nth(1) {

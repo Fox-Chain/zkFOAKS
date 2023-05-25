@@ -151,6 +151,13 @@ impl LinearPC {
         let l = self.lce_ctx.c[0].r_neighbor[i][j];
         let r = i;
         let weight = self.lce_ctx.c[0].r_weight[r][j];
+        println!(
+          "i:2, g;{}, j:{}, weight.real:{}, weight.real:{}, ",
+          i + n,
+          j,
+          weight.real,
+          weight.img
+        );
         self.verifier.a_c.circuit[2].gates[i + n].src[j] = l;
         self.verifier.a_c.circuit[2].gates[i + n].weight[j] = weight;
       }

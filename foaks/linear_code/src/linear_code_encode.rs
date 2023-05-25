@@ -1,6 +1,10 @@
 use crate::parameter::DISTANCE_THRESHOLD;
 use prime_field::FieldElement;
-use std::vec::Vec;
+use std::{
+  fs::read_to_string,
+  str::{Lines, Split},
+  vec::Vec,
+};
 
 use crate::parameter::*;
 
@@ -76,7 +80,7 @@ impl LinearCodeEncodeContext {
       self.scratch[1][dep][j] = FieldElement::zero();
     }
     //expander mult
-    for i in 0..(n) {
+    for i in 0..n {
       let val = src[i];
       for d in 0..self.c[dep].degree {
         let target = self.c[dep].neighbor[i][d];
@@ -135,20 +139,71 @@ pub fn generate_random_expander(l: usize, r: usize, d: usize) -> Graph {
   ret.r_neighbor = vec![vec![]; r];
   ret.r_weight = vec![vec![]; r];
 
-  for i in 0..l {
-    ret.neighbor[i] = vec![0; d];
-    ret.weight[i] = vec![FieldElement::zero(); d];
-    for j in 0..d {
-      let target = rand::random::<usize>() % r;
-      let weight = FieldElement::new_random();
-      ret.neighbor[i][j] = target;
-      ret.r_neighbor[target].push(i);
-      ret.r_weight[target].push(weight);
-      ret.weight[i][j] = weight;
-    }
-  }
+  // Comment this block of code for now. For testing purpose we use data from Orion C++
 
+  // for i in 0..l {
+  //   ret.neighbor[i] = vec![0; d];
+  //   ret.weight[i] = vec![FieldElement::zero(); d];
+  //   for j in 0..d {
+  //     let target = rand::random::<usize>() % r;
+  //     let weight = FieldElement::new_random();
+  //     ret.neighbor[i][j] = target;
+  //     ret.r_neighbor[target].push(i);
+  //     ret.r_weight[target].push(weight);
+  //     ret.weight[i][j] = weight;
+  //   }
+  // }
+  // Improve this for later, hardocoded 10
+  if d == 10 {
+    ret.neighbor = read_neighbor_graph_file("c_neighbor.txt");
+    ret.r_neighbor = read_neighbor_graph_file("c_r_neighbor.txt");
+    ret.r_weight = read_weight_graph_file("c_r_weight.txt");
+    ret.weight = read_weight_graph_file("c_weight.txt");
+  } else {
+    ret.neighbor = read_neighbor_graph_file("d_neighbor.txt");
+    ret.r_neighbor = read_neighbor_graph_file("d_r_neighbor.txt");
+    ret.r_weight = read_weight_graph_file("d_r_weight.txt");
+    ret.weight = read_weight_graph_file("d_weight.txt");
+  }
   ret.l = l;
   ret.r = r;
   ret
+}
+pub fn read_weight_graph_file(path: &str) -> Vec<Vec<FieldElement>> {
+  let result_content = read_to_string(path).unwrap();
+  let result_lines = result_content.lines();
+  let res: Vec<Vec<FieldElement>> = result_lines
+    .into_iter()
+    .map(|x| {
+      let mut vec = Vec::new();
+      let mut block_line = x.split_whitespace();
+      let size = block_line.clone().count();
+      for _i in 0..size / 2 {
+        let real: u64 = block_line.next().unwrap().parse().unwrap();
+        let img: u64 = block_line.next().unwrap().parse().unwrap();
+        vec.push(FieldElement::new(real, img));
+      }
+      vec
+    })
+    .collect();
+  res
+}
+
+pub fn read_neighbor_graph_file(path: &str) -> Vec<Vec<usize>> {
+  let result_content = read_to_string(path).unwrap();
+  let result_lines = result_content.lines();
+  let res: Vec<Vec<usize>> = result_lines
+    .into_iter()
+    .map(|x| {
+      let mut vec = Vec::new();
+      let mut block_line = x.split_whitespace();
+      let size = block_line.clone().count();
+      for _i in 0..size {
+        let elem: usize = block_line.next().unwrap().parse().unwrap();
+        vec.push(elem);
+      }
+      vec
+    })
+    .collect();
+  res
 }
