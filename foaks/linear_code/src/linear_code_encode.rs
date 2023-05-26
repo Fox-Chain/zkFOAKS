@@ -102,7 +102,7 @@ impl LinearCodeEncodeContext {
       self.scratch[0][dep][n + l + i] = FieldElement::from_real(0);
     }
     for i in 0..l {
-      let ref val = src[i];
+      let ref val = self.scratch[0][dep][n+i].clone();
       for d in 0..self.d[dep].degree {
         let target = self.d[dep].neighbor[i][d];
         self.scratch[0][dep][n + l + target] =
@@ -124,8 +124,7 @@ impl LinearCodeEncodeContext {
       let dep = dep.unwrap_or(0);
       self.c[dep] = generate_random_expander(n, (ALPHA * (n as f64)) as usize, CN);
       let l = self.expander_init((ALPHA * (n as f64)) as usize, Some(dep + 1));
-      self.d[dep] =
-        generate_random_expander(l, ((n as f64) * (R - 1f64) - (l as f64)) as usize, DN);
+      self.d[dep] = generate_random_expander(l, ((n as f64) * (R - 1f64) - (l as f64)) as usize, DN);
       n + l + (((n as f64) * (R - 1.0) - (l as f64)) as usize)
     }
   }
