@@ -151,13 +151,13 @@ impl LinearPC {
         let l = self.lce_ctx.c[0].r_neighbor[i][j];
         let r = i;
         let weight = self.lce_ctx.c[0].r_weight[r][j];
-        println!(
-          "i:2, g;{}, j:{}, weight.real:{}, weight.img:{}, ",
-          i + n,
-          j,
-          weight.real,
-          weight.img
-        );
+        // println!(
+        //   "i:2, g;{}, j:{}, weight.real:{}, weight.img:{}, ",
+        //   i + n,
+        //   j,
+        //   weight.real,
+        //   weight.img
+        // );
         self.verifier.a_c.circuit[2].gates[i + n].src[j] = l;
         self.verifier.a_c.circuit[2].gates[i + n].weight[j] = weight;
       }
@@ -465,6 +465,12 @@ impl LinearPC {
 
     for i in 0..self.lce_ctx.c[recursion_depth].r {
       let neighbor_size = self.lce_ctx.c[recursion_depth].r_neighbor[i].len();
+      println!(
+        "input_depth +1: {}, output_size_so_far + i: {}, j neighbor_size: {}",
+        input_depth + 1,
+        output_size_so_far + i,
+        neighbor_size,
+      );
       self.verifier.a_c.circuit[input_depth + 1].gates[output_size_so_far + i].ty = 14;
       self.verifier.a_c.circuit[input_depth + 1].gates[output_size_so_far + i].parameter_length =
         neighbor_size;

@@ -118,7 +118,7 @@ impl LinearCodeEncodeContext {
 
   pub unsafe fn expander_init(&mut self, n: usize, dep: Option<usize>) -> usize {
     // random Graph
-    if n <= DISTANCE_THRESHOLD as usize {
+    if n <= DISTANCE_THRESHOLD {
       n
     } else {
       let dep = dep.unwrap_or(0);
@@ -154,16 +154,22 @@ pub fn generate_random_expander(l: usize, r: usize, d: usize) -> Graph {
   //   }
   // }
   //Improve this for later, hardocoded 10
-  if d == 10 {
-    ret.neighbor = read_neighbor_graph_file("c_neighbor.txt");
-    ret.r_neighbor = read_neighbor_graph_file("c_r_neighbor.txt");
-    ret.r_weight = read_weight_graph_file("c_r_weight.txt");
-    ret.weight = read_weight_graph_file("c_weight.txt");
+  if l == 128 {
+    ret.neighbor = read_neighbor_graph_file("c_0_neighbor.txt");
+    ret.r_neighbor = read_neighbor_graph_file("c_0_r_neighbor.txt");
+    ret.r_weight = read_weight_graph_file("c_0_r_weight.txt");
+    ret.weight = read_weight_graph_file("c_0_weight.txt");
+  } else if l == 30 {
+    ret.neighbor = read_neighbor_graph_file("c_1_neighbor.txt");
+    ret.r_neighbor = read_neighbor_graph_file("c_1_r_neighbor.txt");
+    ret.r_weight = read_weight_graph_file("c_1_r_weight.txt");
+    ret.weight = read_weight_graph_file("c_1_weight.txt");
+  } else if l == 7 {
+    //todo for Edu leer d_0_.....
+    todo!();
   } else {
-    ret.neighbor = read_neighbor_graph_file("d_neighbor.txt");
-    ret.r_neighbor = read_neighbor_graph_file("d_r_neighbor.txt");
-    ret.r_weight = read_weight_graph_file("d_r_weight.txt");
-    ret.weight = read_weight_graph_file("d_weight.txt");
+    //todo for Edu leer d_1_.....
+    todo!();
   }
   ret.l = l;
   ret.r = r;
