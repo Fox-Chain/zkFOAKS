@@ -165,10 +165,10 @@ pub fn generate_random_expander(l: usize, r: usize, d: usize) -> Graph {
     ret.r_weight = read_weight_graph_file("c_1_r_weight.txt");
     ret.weight = read_weight_graph_file("c_1_weight.txt");
   } else if l == 7 {
-    //todo for Edu leer d_0_.....
-    todo!();
-  } else {
     //todo for Edu leer d_1_.....
+    todo!();
+  } else if l == 51 {
+    //todo for Edu leer d_0_.....
     todo!();
   }
   ret.l = l;
