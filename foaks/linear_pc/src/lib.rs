@@ -16,6 +16,8 @@ use linear_gkr::{
 use prime_field::FieldElement;
 use std::{collections::HashMap, fs::read_to_string, time::Instant};
 
+mod test;
+
 #[derive(Default)]
 pub struct LinearPC {
   encoded_codeword: Vec<Vec<FieldElement>>,
@@ -53,7 +55,7 @@ impl LinearPC {
       // COLUMN_SIZE * 2);
 
       self.codeword_size[i] = self.lce_ctx.encode(
-        (src[i * n / COLUMN_SIZE..(i + 1) * n / COLUMN_SIZE]).to_vec(),
+        (src[i * n / COLUMN_SIZE..]).to_vec(),
         &mut self.encoded_codeword[i],
         n / COLUMN_SIZE,
         Some(0),
