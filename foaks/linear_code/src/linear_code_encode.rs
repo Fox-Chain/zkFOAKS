@@ -165,11 +165,15 @@ pub fn generate_random_expander(l: usize, r: usize, d: usize) -> Graph {
     ret.r_weight = read_weight_graph_file("c_1_r_weight.txt");
     ret.weight = read_weight_graph_file("c_1_weight.txt");
   } else if l == 7 {
-    //todo for Edu leer d_1_.....
-    todo!();
+    ret.neighbor = read_neighbor_graph_file("d_1_neighbor.txt");
+    ret.r_neighbor = read_neighbor_graph_file("d_1_r_neighbor.txt");
+    ret.r_weight = read_weight_graph_file("d_1_r_weight.txt");
+    ret.weight = read_weight_graph_file("d_1_weight.txt");
   } else if l == 51 {
-    //todo for Edu leer d_0_.....
-    todo!();
+    ret.neighbor = read_neighbor_graph_file("d_0_neighbor.txt");
+    ret.r_neighbor = read_neighbor_graph_file("d_0_r_neighbor.txt");
+    ret.r_weight = read_weight_graph_file("d_0_r_weight.txt");
+    ret.weight = read_weight_graph_file("d_0_weight.txt");
   }
   ret.l = l;
   ret.r = r;
