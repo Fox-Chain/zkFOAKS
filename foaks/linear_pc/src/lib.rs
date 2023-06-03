@@ -465,12 +465,12 @@ impl LinearPC {
 
     for i in 0..self.lce_ctx.c[recursion_depth].r {
       let neighbor_size = self.lce_ctx.c[recursion_depth].r_neighbor[i].len();
-      println!(
-        "input_depth +1: {}, output_size_so_far + i: {}, j neighbor_size: {}",
-        input_depth + 1,
-        output_size_so_far + i,
-        neighbor_size,
-      );
+      // println!(
+      //   "input_depth +1: {}, output_size_so_far + i: {}, j neighbor_size: {}",
+      //   input_depth + 1,
+      //   output_size_so_far + i,
+      //   neighbor_size,
+      // );
       self.verifier.a_c.circuit[input_depth + 1].gates[output_size_so_far + i].ty = 14;
       self.verifier.a_c.circuit[input_depth + 1].gates[output_size_so_far + i].parameter_length =
         neighbor_size;

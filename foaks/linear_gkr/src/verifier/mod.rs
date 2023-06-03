@@ -309,7 +309,7 @@ impl ZkVerifier {
     combined_codeword: Vec<FieldElement>,
     q: Vec<usize>,
   ) -> (bool, f64) {
-    println!("output path: {}", output_path);
+    //println!("output path: {}", output_path);
     // Initialize the prover,
     // the original repo initialize the prover in the main fn()
     let mut zk_prover = ZkProver::new();
