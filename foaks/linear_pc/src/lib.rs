@@ -340,7 +340,7 @@ impl LinearPC {
 
     // verifier samples query
     let mut q = vec![0; query_count.try_into().unwrap()];
-    // Gian: Temporary change: Read q from Orion C++ for testing
+    // TODO Gian: Temporary change: Read q from Orion C++ for testing
     // for i in 0..query_count {
     //   q[i] = rand::random::<usize>() % self.codeword_size[0];
     // }

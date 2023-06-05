@@ -1,4 +1,5 @@
 use std::{env, time::Instant};
+use std::fs::read_to_string;
 
 use linear_code::parameter::COLUMN_SIZE;
 use linear_pc::LinearPC;
@@ -19,11 +20,12 @@ fn main() -> Result<(), Error> {
   let n = 1 << lg_n;
   let mut linear_pc = LinearPC::init();
   unsafe { linear_pc.lce_ctx.expander_init(n / COLUMN_SIZE, None) };
-  let mut coefs = vec![FieldElement::zero(); n];
+  let mut coefs = read_array_field_element("coefs.txt");
+  //let mut coefs = vec![FieldElement::zero(); n];
 
-  for i in 0..n {
-    coefs[i] = FieldElement::new_random()
-  }
+  // for i in 0..n {
+  //   coefs[i] = FieldElement::new_random()
+  // }
   let commit_t0 = Instant::now();
   let h = unsafe { linear_pc.commit(coefs, n) };
   let commit_time_diff = commit_t0.elapsed();
@@ -34,4 +36,18 @@ fn main() -> Result<(), Error> {
   println!("Open time: {}", open_time_diff.as_secs_f64());
   println!("{}", if result.1 { "succ" } else { "fail" });
   Ok(())
+}
+
+fn read_array_field_element(path: &str) -> Vec<FieldElement> {
+  let result_content = read_to_string(path).unwrap();
+  let result_lines = result_content.lines();
+
+  result_lines.into_iter().map(|r| {
+    let mut elements = r.split_whitespace();
+
+    FieldElement::new(
+      elements.next().unwrap().parse::<u64>().unwrap(),
+      elements.next().unwrap().parse::<u64>().unwrap()
+    )
+  }).collect()
 }

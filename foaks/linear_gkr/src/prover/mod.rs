@@ -222,12 +222,12 @@ impl ZkProver {
           self.circuit_value[i][g] = FieldElement::from_real(0);
           for k in 0..self.a_c.circuit[i].gates[g].parameter_length {
             let weight = self.a_c.circuit[i].gates[g].weight[k];
-            // if k < 3 && g < 130 {
-            //   println!(
-            //     "\ti:{i}, g:{g}, weight.real:{}, img:{}",
-            //     weight.real, weight.img
-            //   );
-            // }
+            if i==3 && g == 158 {
+              println!(
+                "\tu:{u} v:{v} i:{i}, g:{g}, weight.real:{}, img:{}",
+                weight.real, weight.img
+              );
+            }
             let idx = self.a_c.circuit[i].gates[g].src[k];
             self.circuit_value[i][g] =
               self.circuit_value[i][g] + self.circuit_value[i - 1][idx] * weight;
@@ -235,12 +235,12 @@ impl ZkProver {
         } else {
           assert!(false);
         }
-        if i < 7 {
-          println!(
-            "ty:{ty}, u:{u},	circuit_value[{i}][{g}].real:{}, img:{}",
-            self.circuit_value[i][g].real, self.circuit_value[i][g].img
-          );
-        }
+        // if i < 7 {
+        //   println!(
+        //     "ty:{ty}, u:{u},	circuit_value[{i}][{g}].real:{}, img:{}",
+        //     self.circuit_value[i][g].real, self.circuit_value[i][g].img
+        //   );
+        // }
       }
     }
 
