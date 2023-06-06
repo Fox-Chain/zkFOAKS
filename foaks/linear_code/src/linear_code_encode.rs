@@ -155,25 +155,25 @@ pub fn generate_random_expander(l: usize, r: usize, d: usize) -> Graph {
   // }
   //Improve this for later, hardocoded 10
   if l == 128 {
-    ret.neighbor = read_neighbor_graph_file("c_0_neighbor.txt");
-    ret.r_neighbor = read_neighbor_graph_file("c_0_r_neighbor.txt");
-    ret.r_weight = read_weight_graph_file("c_0_r_weight.txt");
-    ret.weight = read_weight_graph_file("c_0_weight.txt");
+    ret.neighbor = read_neighbor_graph_file("c++files/c_0_neighbor.txt");
+    ret.r_neighbor = read_neighbor_graph_file("c++files/c_0_r_neighbor.txt");
+    ret.r_weight = read_weight_graph_file("c++files/c_0_r_weight.txt");
+    ret.weight = read_weight_graph_file("c++files/c_0_weight.txt");
   } else if l == 30 {
-    ret.neighbor = read_neighbor_graph_file("c_1_neighbor.txt");
-    ret.r_neighbor = read_neighbor_graph_file("c_1_r_neighbor.txt");
-    ret.r_weight = read_weight_graph_file("c_1_r_weight.txt");
-    ret.weight = read_weight_graph_file("c_1_weight.txt");
+    ret.neighbor = read_neighbor_graph_file("c++files/c_1_neighbor.txt");
+    ret.r_neighbor = read_neighbor_graph_file("c++files/c_1_r_neighbor.txt");
+    ret.r_weight = read_weight_graph_file("c++files/c_1_r_weight.txt");
+    ret.weight = read_weight_graph_file("c++files/c_1_weight.txt");
   } else if l == 7 {
-    ret.neighbor = read_neighbor_graph_file("d_1_neighbor.txt");
-    ret.r_neighbor = read_neighbor_graph_file("d_1_r_neighbor.txt");
-    ret.r_weight = read_weight_graph_file("d_1_r_weight.txt");
-    ret.weight = read_weight_graph_file("d_1_weight.txt");
+    ret.neighbor = read_neighbor_graph_file("c++files/d_1_neighbor.txt");
+    ret.r_neighbor = read_neighbor_graph_file("c++files/d_1_r_neighbor.txt");
+    ret.r_weight = read_weight_graph_file("c++files/d_1_r_weight.txt");
+    ret.weight = read_weight_graph_file("c++files/d_1_weight.txt");
   } else if l == 51 {
-    ret.neighbor = read_neighbor_graph_file("d_0_neighbor.txt");
-    ret.r_neighbor = read_neighbor_graph_file("d_0_r_neighbor.txt");
-    ret.r_weight = read_weight_graph_file("d_0_r_weight.txt");
-    ret.weight = read_weight_graph_file("d_0_weight.txt");
+    ret.neighbor = read_neighbor_graph_file("c++files/d_0_neighbor.txt");
+    ret.r_neighbor = read_neighbor_graph_file("c++files/d_0_r_neighbor.txt");
+    ret.r_weight = read_weight_graph_file("c++files/d_0_r_weight.txt");
+    ret.weight = read_weight_graph_file("c++files/d_0_weight.txt");
   }
   ret.l = l;
   ret.r = r;

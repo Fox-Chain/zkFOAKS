@@ -340,7 +340,7 @@ impl LinearPC {
 
     // verifier samples query
     let mut q = vec![0; query_count.try_into().unwrap()];
-    // TODO Gian: Temporary change: Read q from Orion C++ for testing
+    // TODO Gian: Temporary change: Read q from Orion C++ for testing, later we have to use random provied by rust
     // for i in 0..query_count {
     //   q[i] = rand::random::<usize>() % self.codeword_size[0];
     // }
@@ -465,12 +465,6 @@ impl LinearPC {
 
     for i in 0..self.lce_ctx.c[recursion_depth].r {
       let neighbor_size = self.lce_ctx.c[recursion_depth].r_neighbor[i].len();
-      // println!(
-      //   "input_depth +1: {}, output_size_so_far + i: {}, j neighbor_size: {}",
-      //   input_depth + 1,
-      //   output_size_so_far + i,
-      //   neighbor_size,
-      // );
       self.verifier.a_c.circuit[input_depth + 1].gates[output_size_so_far + i].ty = 14;
       self.verifier.a_c.circuit[input_depth + 1].gates[output_size_so_far + i].parameter_length =
         neighbor_size;

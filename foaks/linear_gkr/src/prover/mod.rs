@@ -161,7 +161,7 @@ impl ZkProver {
 
     for i in 1..(self.a_c.total_depth) {
       self.circuit_value[i] = vec![FieldElement::zero(); 1 << self.a_c.circuit[i].bit_length];
-
+println!("1 << self.a_c.circuit[i].bit_length:{}", 1 << self.a_c.circuit[i].bit_length);
       for j in 0..(1 << self.a_c.circuit[i].bit_length) {
         let g = j;
         let ty = self.a_c.circuit[i].gates[g].ty;
@@ -222,9 +222,9 @@ impl ZkProver {
           self.circuit_value[i][g] = FieldElement::from_real(0);
           for k in 0..self.a_c.circuit[i].gates[g].parameter_length {
             let weight = self.a_c.circuit[i].gates[g].weight[k];
-            if i==3 && g == 158 {
+            if i==3 || i==4{
               println!(
-                "\tu:{u} v:{v} i:{i}, g:{g}, weight.real:{}, img:{}",
+                "\ti:{i}, g:{g}, k:{k}, weight.real:{}, img:{}",
                 weight.real, weight.img
               );
             }
