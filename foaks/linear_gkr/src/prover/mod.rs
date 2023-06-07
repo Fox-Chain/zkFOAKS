@@ -1,16 +1,17 @@
-use crate::{
-  circuit_fast_track::LayeredCircuit,
-  polynomial::{LinearPoly, QuadraticPoly},
-  verifier::read_vec_fe_file,
+use std::{
+  mem::swap,
+  time::{self, SystemTime},
 };
+
 #[allow(unused)]
 use infrastructure::constants::SIZE;
 use poly_commitment::PolyCommitProver;
 use prime_field::FieldElement;
 
-use std::{
-  mem::swap,
-  time::{self, SystemTime},
+use crate::{
+  circuit_fast_track::LayeredCircuit,
+  polynomial::{LinearPoly, QuadraticPoly},
+  verifier::read_vec_fe_file,
 };
 
 pub fn from_string(s: &str) -> FieldElement {
@@ -222,7 +223,7 @@ println!("1 << self.a_c.circuit[i].bit_length:{}", 1 << self.a_c.circuit[i].bit_
           self.circuit_value[i][g] = FieldElement::from_real(0);
           for k in 0..self.a_c.circuit[i].gates[g].parameter_length {
             let weight = self.a_c.circuit[i].gates[g].weight[k];
-            if i==3 || i==4{
+            if i >= 3 {
               println!(
                 "\ti:{i}, g:{g}, k:{k}, weight.real:{}, img:{}",
                 weight.real, weight.img

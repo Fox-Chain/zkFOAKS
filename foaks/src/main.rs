@@ -20,7 +20,7 @@ fn main() -> Result<(), Error> {
   let n = 1 << lg_n;
   let mut linear_pc = LinearPC::init();
   unsafe { linear_pc.lce_ctx.expander_init(n / COLUMN_SIZE, None) };
-  let mut coefs = read_array_field_element("coefs.txt");
+  let mut coefs = read_array_field_element("c++files/coefs.txt");
   //let mut coefs = vec![FieldElement::zero(); n];
 
   // for i in 0..n {

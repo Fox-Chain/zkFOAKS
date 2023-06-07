@@ -1,3 +1,5 @@
+use std::{collections::HashMap, fs::read_to_string, time::Instant};
+
 #[allow(unused)]
 use infrastructure::{
   merkle_tree::{self, create_tree},
@@ -14,7 +16,6 @@ use linear_gkr::{
   verifier::ZkVerifier,
 };
 use prime_field::FieldElement;
-use std::{collections::HashMap, fs::read_to_string, time::Instant};
 
 #[derive(Default)]
 pub struct LinearPC {
@@ -181,6 +182,11 @@ impl LinearPC {
       self.verifier.a_c.circuit[final_output_depth].gates[output_so_far + i].ty = 14;
       self.verifier.a_c.circuit[final_output_depth].gates[output_so_far + i].parameter_length =
         self.lce_ctx.d[0].r_neighbor[i].len();
+
+      if final_output_depth >= 3 && (output_so_far + i) >= 158 {
+        println!("i: {}, g: {},  self.lce_ctx.d[0].r_neighbor[{i}].len(): {}", final_output_depth, output_so_far + i, self.lce_ctx.d[0].r_neighbor[i].len());
+      }
+
       self.verifier.a_c.circuit[final_output_depth].gates[output_so_far + i].src =
         self.verifier.a_c.circuit[final_output_depth].src_expander_d_mempool[d_mempool_ptr..]
           .to_vec();
@@ -468,6 +474,11 @@ impl LinearPC {
       self.verifier.a_c.circuit[input_depth + 1].gates[output_size_so_far + i].ty = 14;
       self.verifier.a_c.circuit[input_depth + 1].gates[output_size_so_far + i].parameter_length =
         neighbor_size;
+
+      if (input_depth + 1) >= 3 && (output_size_so_far + i) >= 158 {
+        println!("478 neighbor_size {i}: {}, i: {}, g: {}", neighbor_size, input_depth + 1, output_size_so_far + i);
+      }
+
       //Todo: check if this is correct
       self.verifier.a_c.circuit[input_depth + 1].gates[output_size_so_far + i].src =
         self.verifier.a_c.circuit[input_depth + 1].src_expander_c_mempool[mempool_ptr..].to_vec();
@@ -511,6 +522,11 @@ impl LinearPC {
       self.verifier.a_c.circuit[final_output_depth].gates[output_size_so_far + i].ty = 14;
       self.verifier.a_c.circuit[final_output_depth].gates[output_size_so_far + i]
         .parameter_length = neighbor_size;
+
+      if final_output_depth >= 3 && (output_size_so_far + i) >= 158 {
+        println!("526 neighbor_size {i}: {}, i: {final_output_depth}, g: {}", neighbor_size, output_size_so_far + i);
+      }
+
       //Todo: check if this is correct
       self.verifier.a_c.circuit[final_output_depth].gates[output_size_so_far + i].src =
         self.verifier.a_c.circuit[final_output_depth].src_expander_d_mempool[mempool_ptr..]
