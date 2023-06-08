@@ -183,10 +183,6 @@ impl LinearPC {
       self.verifier.a_c.circuit[final_output_depth].gates[output_so_far + i].parameter_length =
         self.lce_ctx.d[0].r_neighbor[i].len();
 
-      if final_output_depth >= 3 && (output_so_far + i) >= 158 {
-        println!("i: {}, g: {},  self.lce_ctx.d[0].r_neighbor[{i}].len(): {}", final_output_depth, output_so_far + i, self.lce_ctx.d[0].r_neighbor[i].len());
-      }
-
       self.verifier.a_c.circuit[final_output_depth].gates[output_so_far + i].src =
         self.verifier.a_c.circuit[final_output_depth].src_expander_d_mempool[d_mempool_ptr..]
           .to_vec();

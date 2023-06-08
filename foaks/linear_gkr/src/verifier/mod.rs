@@ -1,17 +1,17 @@
-use infrastructure::{
-  constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
-  rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
-};
 use std::{fs, fs::read_to_string, process, time::Instant};
-
-use infrastructure::my_hash::HashDigest;
-use poly_commitment::PolyCommitVerifier;
-use prime_field::FieldElement;
 use std::{
   fs::File,
   io::{Error, Write},
   mem, time,
 };
+
+use infrastructure::{
+  constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
+  rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
+};
+use infrastructure::my_hash::HashDigest;
+use poly_commitment::PolyCommitVerifier;
+use prime_field::FieldElement;
 
 use crate::{
   circuit_fast_track::{Gate, Layer, LayeredCircuit},
@@ -338,10 +338,39 @@ impl ZkVerifier {
     //	random_oracle oracle; // Orion just declare the variable but dont use it
     // later
     let capacity = self.a_c.circuit[self.a_c.total_depth - 1].bit_length;
-    let mut r_0 = generate_randomness(capacity);
-    let mut r_1 = generate_randomness(capacity);
-    let mut one_minus_r_0 = vec![FieldElement::zero(); capacity];
-    let mut one_minus_r_1 = vec![FieldElement::zero(); capacity];
+    //let mut r_0 = generate_randomness(capacity);
+    //let mut r_1 = generate_randomness(capacity);
+
+    // Values extracted from C++ r_0.txt, r_1.txt
+    let mut r_0 = vec![
+      FieldElement::new(1295282939, 1519611747),
+      FieldElement::new(565034012, 1898575994),
+      FieldElement::new(239123822, 1283202478),
+      FieldElement::new(1487119302, 676568365),
+      FieldElement::new(1686079993, 698127655),
+      FieldElement::new(1667178087, 1050708339),
+      FieldElement::new(2044725476, 320324893),
+      FieldElement::new(117745275, 1603165248),
+      FieldElement::new(313357634, 1272974217),
+      FieldElement::new(1266866546, 1041986953),
+      FieldElement::new(1088561576,  368111599)
+    ];
+    let mut r_1 = vec![
+      FieldElement::new(1879022150, 1123913731),
+      FieldElement::new(995779937, 1005913971),
+      FieldElement::new(1020979477, 744133267),
+      FieldElement::new(2034586784, 857316601),
+      FieldElement::new(1244830025, 1182386075),
+      FieldElement::new(229444700, 1809864038),
+      FieldElement::new(933478422, 468568523),
+      FieldElement::new(945582868, 273114076),
+      FieldElement::new(1145136888, 484179213),
+      FieldElement::new(971241731, 664831327),
+      FieldElement::new(1534887552, 868483560),
+    ];
+
+    let mut one_minus_r_0 = Vec::with_capacity(capacity);
+    let mut one_minus_r_1 = Vec::with_capacity(capacity);
 
     for i in 0..capacity {
       one_minus_r_0.push(FieldElement::real_one() - r_0[i]);
