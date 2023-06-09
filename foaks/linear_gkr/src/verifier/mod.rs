@@ -1,3 +1,4 @@
+use std::fmt::format;
 use std::{fs, fs::read_to_string, process, time::Instant};
 use std::{
   fs::File,
@@ -392,10 +393,11 @@ impl ZkVerifier {
 
     a_0 = alpha * a_0;
     let mut alpha_beta_sum = a_0;
-    let _direct_relay_value: FieldElement;
+    let mut direct_relay_value: FieldElement;
 
     for i in (1..=(self.a_c.total_depth - 1)).rev() {
-      let _rho = FieldElement::new_random();
+      // never used
+			//let rho = FieldElement::new_random();
 
       zk_prover.sumcheck_init(
         i,
@@ -413,11 +415,17 @@ impl ZkVerifier {
       zk_prover.sumcheck_phase1_init();
 
       let mut previous_random = FieldElement::from_real(0);
-      //next level random
-      let r_u = generate_randomness(self.a_c.circuit[i - 1].bit_length);
-      let mut r_v = generate_randomness(self.a_c.circuit[i - 1].bit_length);
+			let r_u_file = format!("c++files/r_u_{}.txt",i );
+			let r_v_file = format!("c++files/r_v_{}.txt",i);
 
-      let direct_relay_value =
+      //next level random
+      // let r_u = generate_randomness(self.a_c.circuit[i - 1].bit_length);
+      // let mut r_v = generate_randomness(self.a_c.circuit[i - 1].bit_length);
+
+			let r_u = read_vec_fe_file(&r_u_file);
+      let mut r_v = read_vec_fe_file(&r_v_file);
+
+      direct_relay_value =
         alpha * self.direct_relay(i, &r_0, &r_u) + beta * self.direct_relay(i, &r_1, &r_u);
 
       if i == 1 {
@@ -451,6 +459,8 @@ impl ZkVerifier {
         //todo: Debug eval() fn
         let eval_zero = poly.eval(&FieldElement::zero());
         let eval_one = poly.eval(&FieldElement::real_one());
+				println!("j:{}, i:{}, alpha_beta_sum.real:{}, img{}" , j, i, alpha_beta_sum.real, alpha_beta_sum.img);
+
         if eval_zero + eval_one != alpha_beta_sum {
           //todo: Improve error handling
           eprintln!(
@@ -460,7 +470,7 @@ impl ZkVerifier {
           return (false, 0.0);
         } else {
           //println!(
-          //  "Verification fail, phase1, circuit {}, current bit {}",
+          //  "Verification pass, phase1, circuit {}, current bit {}",
           //i, j
           //);
         }
@@ -1598,7 +1608,6 @@ pub fn generate_randomness(size: usize) -> Vec<FieldElement> {
 pub fn read_vec_fe_file(path: &str) -> Vec<FieldElement> {
   let result_content = read_to_string(path).unwrap();
   let result_lines = result_content.lines();
-  //let mut result = Vec::new();
 
   let res: Vec<FieldElement> = result_lines
     .into_iter()
@@ -1611,3 +1620,4 @@ pub fn read_vec_fe_file(path: &str) -> Vec<FieldElement> {
     .collect();
   res
 }
+

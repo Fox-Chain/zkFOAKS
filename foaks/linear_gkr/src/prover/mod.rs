@@ -236,7 +236,7 @@ impl ZkProver {
         } else {
           assert!(false);
         }
-        // if i < 7 {
+        // if i > 4 {
         //   println!(
         //     "ty:{ty}, u:{u},	circuit_value[{i}][{g}].real:{}, img:{}",
         //     self.circuit_value[i][g].real, self.circuit_value[i][g].img

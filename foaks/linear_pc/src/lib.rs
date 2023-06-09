@@ -471,9 +471,10 @@ impl LinearPC {
       self.verifier.a_c.circuit[input_depth + 1].gates[output_size_so_far + i].parameter_length =
         neighbor_size;
 
-      if (input_depth + 1) >= 3 && (output_size_so_far + i) >= 158 {
-        println!("478 neighbor_size {i}: {}, i: {}, g: {}", neighbor_size, input_depth + 1, output_size_so_far + i);
-      }
+			// For testing
+      // if (input_depth + 1) >= 3 && (output_size_so_far + i) >= 158 {
+      //   println!("478 neighbor_size {i}: {}, i: {}, g: {}", neighbor_size, input_depth + 1, output_size_so_far + i);
+      // }
 
       //Todo: check if this is correct
       self.verifier.a_c.circuit[input_depth + 1].gates[output_size_so_far + i].src =
@@ -519,9 +520,10 @@ impl LinearPC {
       self.verifier.a_c.circuit[final_output_depth].gates[output_size_so_far + i]
         .parameter_length = neighbor_size;
 
-      if final_output_depth >= 3 && (output_size_so_far + i) >= 158 {
-        println!("526 neighbor_size {i}: {}, i: {final_output_depth}, g: {}", neighbor_size, output_size_so_far + i);
-      }
+			// For testing
+      // if final_output_depth >= 3 && (output_size_so_far + i) >= 158 {
+      //   println!("526 neighbor_size {i}: {}, i: {final_output_depth}, g: {}", neighbor_size, output_size_so_far + i);
+      // }
 
       //Todo: check if this is correct
       self.verifier.a_c.circuit[final_output_depth].gates[output_size_so_far + i].src =
