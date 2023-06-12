@@ -3,8 +3,9 @@ use std::{
   ops::{Deref, DerefMut},
 };
 
-use crate::utility::my_log;
 use prime_field::FieldElement;
+
+use crate::utility::my_log;
 
 const MAX_ORDER: usize = 28;
 
@@ -159,11 +160,11 @@ pub fn fast_fourier_transform(
   for i in 0..order {
     result[i] = scratch_pad.dst[0][i];
   }
-  println!("scratch_pad.dst[0][0]: {}", scratch_pad.dst[0][0].real);
-  println!(
-    "scratch_pad.dst[0][order-1]: {}",
-    scratch_pad.dst[0][order - 1].real
-  );
+  // println!("scratch_pad.dst[0][0]: {}", scratch_pad.dst[0][0].real);
+  // println!(
+  //   "scratch_pad.dst[0][order-1]: {}",
+  //   scratch_pad.dst[0][order - 1].real
+  // );
 }
 
 pub fn inverse_fast_fourier_transform(

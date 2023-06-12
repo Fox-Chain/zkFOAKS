@@ -30,7 +30,8 @@ fn main() -> Result<(), Error> {
   let h = unsafe { linear_pc.commit(coefs, n) };
   let commit_time_diff = commit_t0.elapsed();
   let open_t0 = Instant::now();
-  let result = linear_pc.open_and_verify(FieldElement::new_random(), n, h);
+  // todo: change random
+  let result = linear_pc.open_and_verify(FieldElement::new(1231184716, 414754966), n, h);
   let open_time_diff = open_t0.elapsed();
   println!("Commit time: {}", commit_time_diff.as_secs_f64());
   println!("Open time: {}", open_time_diff.as_secs_f64());

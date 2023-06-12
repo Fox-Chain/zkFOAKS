@@ -1,16 +1,16 @@
-use std::fmt::format;
 use std::{fs, fs::read_to_string, process, time::Instant};
 use std::{
   fs::File,
   io::{Error, Write},
   mem, time,
 };
+use std::fmt::format;
 
-use infrastructure::my_hash::HashDigest;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
   rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
 };
+use infrastructure::my_hash::HashDigest;
 use poly_commitment::PolyCommitVerifier;
 use prime_field::FieldElement;
 
@@ -459,10 +459,10 @@ impl ZkVerifier {
         //todo: Debug eval() fn
         let eval_zero = poly.eval(&FieldElement::zero());
         let eval_one = poly.eval(&FieldElement::real_one());
-        println!(
-          "j:{}, i:{}, alpha_beta_sum.real:{}, img{}",
-          j, i, alpha_beta_sum.real, alpha_beta_sum.img
-        );
+        // println!(
+        //   "j:{}, i:{}, alpha_beta_sum.real:{}, img{}",
+        //   j, i, alpha_beta_sum.real, alpha_beta_sum.img
+        // );
 
         if eval_zero + eval_one != alpha_beta_sum {
           //todo: Improve error handling

@@ -327,10 +327,10 @@ impl ZkProver {
 
     for i in 0.._second_half {
       for j in 0..1 << i {
-        self.beta_g_r0_fhalf[j | (1 << i)] = self.beta_g_r0_fhalf[j] * self.r_0[i + first_half];
-        self.beta_g_r0_fhalf[j] = self.beta_g_r0_fhalf[j] * self.one_minus_r_0[i + first_half];
-        self.beta_g_r1_fhalf[j | (1 << i)] = self.beta_g_r1_fhalf[j] * self.r_1[i + first_half];
-        self.beta_g_r1_fhalf[j] = self.beta_g_r1_fhalf[j] * self.one_minus_r_1[i + first_half];
+        self.beta_g_r0_shalf[j | (1 << i)] = self.beta_g_r0_shalf[j] * self.r_0[i + first_half];
+        self.beta_g_r0_shalf[j] = self.beta_g_r0_shalf[j] * self.one_minus_r_0[i + first_half];
+        self.beta_g_r1_shalf[j | (1 << i)] = self.beta_g_r1_shalf[j] * self.r_1[i + first_half];
+        self.beta_g_r1_shalf[j] = self.beta_g_r1_shalf[j] * self.one_minus_r_1[i + first_half];
       }
     }
 
