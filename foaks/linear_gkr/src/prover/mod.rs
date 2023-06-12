@@ -162,7 +162,7 @@ impl ZkProver {
 
     for i in 1..(self.a_c.total_depth) {
       self.circuit_value[i] = vec![FieldElement::zero(); 1 << self.a_c.circuit[i].bit_length];
-        //println!("1 << self.a_c.circuit[i].bit_length:{}", 1 << self.a_c.circuit[i].bit_length);
+      //println!("1 << self.a_c.circuit[i].bit_length:{}", 1 << self.a_c.circuit[i].bit_length);
       for j in 0..(1 << self.a_c.circuit[i].bit_length) {
         let g = j;
         let ty = self.a_c.circuit[i].gates[g].ty;
@@ -337,39 +337,32 @@ impl ZkProver {
     let mask_fhalf = (1 << first_half) - 1;
 
     let mut intermediates0 = vec![FieldElement::zero(); 1 << self.length_g];
-    //let mut ptr_lock = &vec![FieldElement::zero(); 1 << self.length_g];
-
-    //let ptr_raw = UnsafeSendSyncRawPtr(&mut ptr_lock as *const _ as *mut
-    // Vec<FieldElement>);
-
     let mut intermediates1 = vec![FieldElement::zero(); 1 << self.length_g];
 
     //todo
     //	#pragma omp parallel for
-    //let intermediates0 = unsafe { &mut *(*ptr_raw).cast::<Vec<FieldElement>>() };
-    //let intermediates1 = unsafe { &mut *(*ptr_raw).cast::<Vec<FieldElement>>() };
 
     //intermediates0._iter_mut().for_each(|element| {
     for i in 0..(1 << self.length_g) {
       let u = self.a_c.circuit[self.sumcheck_layer_id].gates[i].u;
       let v = self.a_c.circuit[self.sumcheck_layer_id].gates[i].v;
-
-      match self.a_c.circuit[self.sumcheck_layer_id].gates[i].ty {
+      let ty = self.a_c.circuit[self.sumcheck_layer_id].gates[i].ty;
+      println!("i:{}, u:{}, v:{}, ty:{}", i, u, v, ty);
+      match ty {
         0 => {
           //add gate
           let tmp = self.beta_g_r0_fhalf[i & mask_fhalf] * self.beta_g_r0_shalf[i >> first_half]
             + self.beta_g_r1_fhalf[i & mask_fhalf] * self.beta_g_r1_shalf[i >> first_half];
-          //intermediates0[i] = self.circuit_value[self.sumcheck_layer_id - 1][v] * tmp;
           intermediates0[i] = self.circuit_value[self.sumcheck_layer_id - 1][v] * tmp;
           intermediates1[i] = tmp;
         }
+        2 => {}
         1 => {
           //mult gate
           let tmp = self.beta_g_r0_fhalf[i & mask_fhalf] * self.beta_g_r0_shalf[i >> first_half]
             + self.beta_g_r1_fhalf[i & mask_fhalf] * self.beta_g_r1_shalf[i >> first_half];
           intermediates0[i] = self.circuit_value[self.sumcheck_layer_id - 1][v] * tmp;
         }
-        2 => {}
         5 => {
           //sum gate
           let tmp = self.beta_g_r0_fhalf[i & mask_fhalf] * self.beta_g_r0_shalf[i >> first_half]
@@ -427,9 +420,21 @@ impl ZkProver {
         }
         10 => {
           //relay gate
-          let tmp = self.beta_g_r0_fhalf[i & mask_fhalf] * self.beta_g_r0_shalf[i >> first_half]
-            + self.beta_g_r1_fhalf[i & mask_fhalf] * self.beta_g_r1_shalf[i >> first_half];
+          let a = self.beta_g_r0_fhalf[i & mask_fhalf];
+          let b = self.beta_g_r0_shalf[i >> first_half];
+          let c = self.beta_g_r1_fhalf[i & mask_fhalf];
+          let d = self.beta_g_r1_shalf[i >> first_half];
+          println!(
+            "a.real:{}, b.real:{}, c.real:{}, d.real:{}",
+            a.real, b.real, c.real, d.real
+          );
+          println!(
+            "a.img:{}, b.img:{}, c.img:{}, d.img:{}",
+            a.img, b.img, c.img, d.img
+          );
+          let tmp = a * b + c * d;
           intermediates0[i] = tmp;
+          println!("tmp.real:{}, img:{}", tmp.real, tmp.img);
         }
         14 => {
           //custom comb

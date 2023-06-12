@@ -6,11 +6,11 @@ use std::{
   mem, time,
 };
 
+use infrastructure::my_hash::HashDigest;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
   rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
 };
-use infrastructure::my_hash::HashDigest;
 use poly_commitment::PolyCommitVerifier;
 use prime_field::FieldElement;
 
@@ -354,7 +354,7 @@ impl ZkVerifier {
       FieldElement::new(117745275, 1603165248),
       FieldElement::new(313357634, 1272974217),
       FieldElement::new(1266866546, 1041986953),
-      FieldElement::new(1088561576,  368111599)
+      FieldElement::new(1088561576, 368111599),
     ];
     let mut r_1 = vec![
       FieldElement::new(1879022150, 1123913731),
@@ -397,7 +397,7 @@ impl ZkVerifier {
 
     for i in (1..=(self.a_c.total_depth - 1)).rev() {
       // never used
-			//let rho = FieldElement::new_random();
+      //let rho = FieldElement::new_random();
 
       zk_prover.sumcheck_init(
         i,
@@ -415,14 +415,14 @@ impl ZkVerifier {
       zk_prover.sumcheck_phase1_init();
 
       let mut previous_random = FieldElement::from_real(0);
-			let r_u_file = format!("c++files/r_u_{}.txt",i );
-			let r_v_file = format!("c++files/r_v_{}.txt",i);
+      let r_u_file = format!("c++files/r_u_{}.txt", i);
+      let r_v_file = format!("c++files/r_v_{}.txt", i);
 
       //next level random
       // let r_u = generate_randomness(self.a_c.circuit[i - 1].bit_length);
       // let mut r_v = generate_randomness(self.a_c.circuit[i - 1].bit_length);
 
-			let r_u = read_vec_fe_file(&r_u_file);
+      let r_u = read_vec_fe_file(&r_u_file);
       let mut r_v = read_vec_fe_file(&r_v_file);
 
       direct_relay_value =
@@ -459,7 +459,10 @@ impl ZkVerifier {
         //todo: Debug eval() fn
         let eval_zero = poly.eval(&FieldElement::zero());
         let eval_one = poly.eval(&FieldElement::real_one());
-				println!("j:{}, i:{}, alpha_beta_sum.real:{}, img{}" , j, i, alpha_beta_sum.real, alpha_beta_sum.img);
+        println!(
+          "j:{}, i:{}, alpha_beta_sum.real:{}, img{}",
+          j, i, alpha_beta_sum.real, alpha_beta_sum.img
+        );
 
         if eval_zero + eval_one != alpha_beta_sum {
           //todo: Improve error handling
@@ -1620,4 +1623,3 @@ pub fn read_vec_fe_file(path: &str) -> Vec<FieldElement> {
     .collect();
   res
 }
-
