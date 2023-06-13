@@ -13,7 +13,7 @@ use prime_field::FieldElement;
 
 use crate::vpd::{
   fri::{
-    FRIContext, request_init_commit, request_init_value_with_merkle, request_step_commit, TripleVec,
+    request_init_commit, request_init_value_with_merkle, request_step_commit, FRIContext, TripleVec,
   },
   verifier::verify_merkle,
 };
@@ -109,21 +109,21 @@ impl PolyCommitProver {
 
       for j in 0..slice_real_ele_cnt {
         if private_array[i * slice_real_ele_cnt + j] == zero {
-          println!("j: {} continue", j);
+          //println!("j: {} continue", j);
           continue;
         }
         all_zero = false;
-        println!("j: {} break", j);
+        //println!("j: {} break", j);
         break;
       }
 
       if all_zero {
-        println!("all zero");
+        //println!("all zero");
         for j in 0..slice_size {
           self.ctx.l_eval[i * slice_size + j] = zero;
         }
       } else {
-        println!("Start IFFT in commit_private_array");
+        //println!("Start IFFT in commit_private_array");
 
         inverse_fast_fourier_transform(
           &mut self.scratch_pad,
@@ -133,7 +133,7 @@ impl PolyCommitProver {
           FieldElement::get_root_of_unity(my_log(slice_real_ele_cnt).unwrap()).unwrap(),
           &mut tmp[..],
         );
-        println!("Start FFT in commit_private_array");
+        //println!("Start FFT in commit_private_array");
 
         fast_fourier_transform(
           &tmp[..],
@@ -146,8 +146,8 @@ impl PolyCommitProver {
         )
       }
     }
-    println!("self.ctx.l_eval[0] {}", self.ctx.l_eval[0].real);
-    println!("self.ctx.l_eval[1] {}", self.ctx.l_eval[1].real);
+    // println!("self.ctx.l_eval[0] {}", self.ctx.l_eval[0].real);
+    // println!("self.ctx.l_eval[1] {}", self.ctx.l_eval[1].real);
 
     let elapsed_time = now.elapsed();
     println!("FFT Prepare time: {} ms", elapsed_time.as_millis());
@@ -189,7 +189,7 @@ impl PolyCommitProver {
     let mut re_mapping_time = 0.0;
 
     let mut ftt_t0 = time::Instant::now();
-    println!("Into commit_public_array");
+    //println!("Into commit_public_array");
     for i in 0..self.ctx.slice_count {
       inverse_fast_fourier_transform(
         &mut self.scratch_pad,
@@ -402,8 +402,8 @@ impl PolyCommitVerifier {
       .expect("Failed to execute command");
 
     let v_time_fft;
-    let proof_size_fft;
     let p_time_fft;
+    let proof_size_fft;
 
     let mut file = match File::open(
       env::current_dir()
@@ -425,9 +425,9 @@ impl PolyCommitVerifier {
     proof_size_fft = iter.next().unwrap().parse::<usize>().unwrap();
     p_time_fft = iter.next().unwrap().parse::<f64>().unwrap();
 
-    v_time += v_time_fft as f64;
+    v_time += v_time_fft;
+    p_time += p_time_fft;
     proof_size += proof_size_fft;
-    p_time += p_time_fft as f64;
 
     let com = self.pc_prover.commit_phase(log_length);
     let coef_slice_size = 1 << (log_length - LOG_SLICE_NUMBER);
@@ -455,12 +455,16 @@ impl PolyCommitVerifier {
       let mut equ_beta: bool;
       assert!(log_length - LOG_SLICE_NUMBER > 0);
       let mut pow: u128 = 0;
+      //let mut max: u128 = 0;
 
       for i in 0..log_length - LOG_SLICE_NUMBER {
         t0 = time::Instant::now();
 
         if i == 0 {
-          pow = rand::random::<u128>() % (1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i));
+          //max = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i);
+          // Use fixed value for testing, hardcode here pow = 26
+          //pow = rand::random::<u128>() % max;
+          pow = 26;
           while pow < (1 << (log_length - LOG_SLICE_NUMBER - i)) || pow % 2 == 1 {
             pow =
               rand::random::<u128>() % (1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i));
@@ -484,7 +488,7 @@ impl PolyCommitVerifier {
         s0 = root_of_unity.fast_pow(s0_pow);
         s1 = root_of_unity.fast_pow(s1_pow);
 
-        let indicator;
+        let mut indicator;
 
         if i != 0 {
           assert!(s1 == pre_y || s0 == pre_y);
@@ -542,6 +546,7 @@ impl PolyCommitVerifier {
             min_pow(s0_pow, s1_pow),
             &alpha_l.0,
           ) {
+            println!("verify_merkle failed alpha_l.0");
             return false;
           }
 

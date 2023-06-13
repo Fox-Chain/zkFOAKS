@@ -1,16 +1,16 @@
+use std::fmt::format;
 use std::{fs, fs::read_to_string, process, time::Instant};
 use std::{
   fs::File,
   io::{Error, Write},
   mem, time,
 };
-use std::fmt::format;
 
+use infrastructure::my_hash::HashDigest;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
   rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
 };
-use infrastructure::my_hash::HashDigest;
 use poly_commitment::PolyCommitVerifier;
 use prime_field::FieldElement;
 
@@ -611,18 +611,18 @@ impl ZkVerifier {
     println!("GKR Prove Time: {}", zk_prover.total_time);
     let mut all_sum = vec![FieldElement::zero(); SLICE_NUMBER];
     println!("GKR witness size: {}", 1 << self.a_c.circuit[0].bit_length);
-    println!(
-      "zk_prover.circuit_value[0][0]: {}",
-      zk_prover.circuit_value[0][0].real
-    );
-    println!(
-      "zk_prover.circuit_value[0][1]: {}",
-      zk_prover.circuit_value[0][1].real
-    );
+    // println!(
+    //   "zk_prover.circuit_value[0][0]: {}",
+    //   zk_prover.circuit_value[0][0].real
+    // );
+    // println!(
+    //   "zk_prover.circuit_value[0][1]: {}",
+    //   zk_prover.circuit_value[0][1].real
+    // );
     let merkle_root_l = zk_prover
       .poly_prover
       .commit_private_array(&zk_prover.circuit_value[0], self.a_c.circuit[0].bit_length);
-    println!("Pass commit_private_array");
+    //println!("Pass commit_private_array");
     self.ctx.q_eval_real = vec![FieldElement::zero(); 1 << self.a_c.circuit[0].bit_length];
     self.dfs_for_public_eval(
       0usize,
@@ -632,7 +632,7 @@ impl ZkVerifier {
       self.a_c.circuit[0].bit_length,
       0,
     );
-    println!("Start commit_public_array");
+    //println!("Start commit_public_array");
 
     let merkle_root_h = zk_prover.poly_prover.commit_public_array(
       &self.ctx.q_eval_real,
@@ -640,7 +640,7 @@ impl ZkVerifier {
       alpha_beta_sum,
       &mut all_sum,
     );
-    println!("Pass commit_public_array");
+    //println!("Pass commit_public_array");
 
     self.proof_size += 2 * mem::size_of::<HashDigest>();
     self.vpd_randomness = r_0.clone();

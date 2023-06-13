@@ -347,7 +347,7 @@ impl ZkProver {
       let u = self.a_c.circuit[self.sumcheck_layer_id].gates[i].u;
       let v = self.a_c.circuit[self.sumcheck_layer_id].gates[i].v;
       let ty = self.a_c.circuit[self.sumcheck_layer_id].gates[i].ty;
-      println!("i:{}, u:{}, v:{}, ty:{}", i, u, v, ty);
+      //println!("i:{}, u:{}, v:{}, ty:{}", i, u, v, ty);
       match ty {
         0 => {
           //add gate
@@ -424,17 +424,17 @@ impl ZkProver {
           let b = self.beta_g_r0_shalf[i >> first_half];
           let c = self.beta_g_r1_fhalf[i & mask_fhalf];
           let d = self.beta_g_r1_shalf[i >> first_half];
-          println!(
-            "a.real:{}, b.real:{}, c.real:{}, d.real:{}",
-            a.real, b.real, c.real, d.real
-          );
-          println!(
-            "a.img:{}, b.img:{}, c.img:{}, d.img:{}",
-            a.img, b.img, c.img, d.img
-          );
+          // println!(
+          //   "a.real:{}, b.real:{}, c.real:{}, d.real:{}",
+          //   a.real, b.real, c.real, d.real
+          // );
+          // println!(
+          //   "a.img:{}, b.img:{}, c.img:{}, d.img:{}",
+          //   a.img, b.img, c.img, d.img
+          //);
           let tmp = a * b + c * d;
           intermediates0[i] = tmp;
-          println!("tmp.real:{}, img:{}", tmp.real, tmp.img);
+          //println!("tmp.real:{}, img:{}", tmp.real, tmp.img);
         }
         14 => {
           //custom comb

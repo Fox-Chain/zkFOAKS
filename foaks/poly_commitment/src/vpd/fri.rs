@@ -152,7 +152,7 @@ pub fn request_init_commit(
     vec![FieldElement::default(); 1 << (bit_len + RS_CODE_RATE)];
 
   let log_leaf_size = LOG_SLICE_NUMBER + 1;
-  println!("l_eval {:?}", l_eval[0]);
+  //println!("l_eval {:?}", l_eval[0]);
   //println!("h_eval_arr {:?}", h_eval_arr[0]); TODO find the cause why this is not initialized anywhere
   for i in 0..SLICE_NUMBER {
     assert_eq!(
@@ -321,7 +321,7 @@ pub fn request_init_value_with_merkle(
     assert_eq!(test_hash, fri_ctx.witness_merkle[oracle_indicator][pos]);
   }
 
-  println!("324 -> {:?} {:?}", value[0], com_hhash[0]);
+  //println!("324 -> {:?} {:?}", value[0], com_hhash[0]);
   assert_eq!(pos, 1);
   (value, com_hhash)
 }

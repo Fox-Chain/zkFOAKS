@@ -23,6 +23,19 @@ pub fn verify_merkle(
   assert!(merkle_path.len() >= len);
 
   let mut pow = pow;
+  //Todo: Print hash_digest, merkle_path
+  println!("len: {}, pow: {}", len, pow);
+  for i in 0..values.len() {
+    println!(
+      "values[{}].0.real:{}, img:{}",
+      i, values[i].0.real, values[i].0.img
+    );
+    println!(
+      "values[{}].1.real:{}, img:{}",
+      i, values[i].1.real, values[i].1.img
+    );
+  }
+  //panic!("stop here");
   let mut current_hash: HashDigest = *merkle_path.last().unwrap();
 
   let mut data: [HashDigest; 2] = [HashDigest::default(), HashDigest::default()];
