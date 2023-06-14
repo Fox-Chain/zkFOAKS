@@ -74,6 +74,10 @@ impl LinearPC {
     }
     // println!("Pass hash_double_field_element_merkle_damgard");
 
+    println!("\nCOMMIT {}", n / COLUMN_SIZE * 2);
+    println!("{} {:?}", stash.len(), stash);
+    println!("COMMIT {:?}", self.mt);
+
     create_tree(
       stash,
       n / COLUMN_SIZE * 2,

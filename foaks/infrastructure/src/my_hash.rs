@@ -10,6 +10,13 @@ pub struct HashDigest {
 
 impl HashDigest {
   pub fn new() -> Self { HashDigest { h0: 0, h1: 0 } }
+
+  pub fn print_from_c(h0: &str, h1: &str) {
+    println!("{:?}", HashDigest {
+      h0: u128::from_str_radix(h0, 16).unwrap(),
+      h1: u128::from_str_radix(h1, 16).unwrap(),
+    });
+  }
 }
 
 #[inline] //ToDo: Check if this is correct

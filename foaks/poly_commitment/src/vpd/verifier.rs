@@ -1,15 +1,15 @@
-use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
-#[allow(unused)]
-use infrastructure::my_hash::my_hash;
+use std::mem;
+
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, RS_CODE_RATE, SLICE_NUMBER},
   my_hash::{self, HashDigest},
 };
-use std::mem;
-
-use crate::LdtCommitment;
+use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
+#[allow(unused)]
+use infrastructure::my_hash::my_hash;
 use prime_field::FieldElement;
 
+use crate::LdtCommitment;
 use crate::vpd::fri::FRIContext;
 
 pub fn verify_merkle(
@@ -24,6 +24,13 @@ pub fn verify_merkle(
 
   let mut pow = pow;
   //Todo: Print hash_digest, merkle_path
+
+  println!("hash: {:?}", hash_digest);
+
+  for i in 0..merkle_path.len() {
+    println!("merkle {i}: {:?}", merkle_path[i]);
+  }
+
   println!("len: {}, pow: {}", len, pow);
   for i in 0..values.len() {
     println!(
