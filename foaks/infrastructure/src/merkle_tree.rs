@@ -1,7 +1,11 @@
 #[allow(unused)]
 use crate::my_hash::{my_hash, HashDigest};
 use prime_field::FieldElement;
-use std::{mem::size_of_val, ptr::copy_nonoverlapping, vec::Vec};
+use std::{
+  mem::{size_of, size_of_val},
+  ptr::copy_nonoverlapping,
+  vec::Vec,
+};
 
 // Todo: Debug coppy no overlapping
 pub unsafe fn hash_single_field_element(x: FieldElement) -> HashDigest {
@@ -25,11 +29,11 @@ pub unsafe fn hash_double_field_element_merkle_damgard(
   //println!("Inside hash_double_field_element_merkle_damgard");
   let src = std::ptr::addr_of!(element) as *const HashDigest;
   let dst = std::ptr::addr_of_mut!(data[1]);
-  let count = element.len();
+  let count = 1;
   //print!("{} ", count);
   copy_nonoverlapping(src, dst, count);
 
-  assert_eq!(size_of_val(&data[1]), size_of_val(&element));
+  assert_eq!(size_of::<HashDigest>(), 2 * size_of::<FieldElement>());
   my_hash(data)
 }
 

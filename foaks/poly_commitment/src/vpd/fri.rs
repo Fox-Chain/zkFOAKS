@@ -215,7 +215,7 @@ pub fn request_init_commit(
 
         let src = std::ptr::addr_of!(element) as *const HashDigest;
         let dst = std::ptr::addr_of_mut!(data[0]);
-        std::ptr::copy_nonoverlapping(src, dst, 2);
+        std::ptr::copy_nonoverlapping(src, dst, 1);
       }
 
       data[1] = tmp_hash;

@@ -12,10 +12,17 @@ impl HashDigest {
   pub fn new() -> Self { HashDigest { h0: 0, h1: 0 } }
 
   pub fn print_from_c(h0: &str, h1: &str) {
-    println!("{:?}", HashDigest {
-      h0: u128::from_str_radix(h0, 16).unwrap(),
-      h1: u128::from_str_radix(h1, 16).unwrap(),
-    });
+    println!(
+      "{:?}",
+      HashDigest {
+        h0: u128::from_str_radix(h0, 16).unwrap(),
+        h1: u128::from_str_radix(h1, 16).unwrap(),
+      }
+    );
+  }
+
+  pub fn print2(&self) {
+    println!("{:x}{:x}", self.h0, self.h1);
   }
 }
 
@@ -35,7 +42,7 @@ pub fn my_hash(src: [HashDigest; 2]) -> HashDigest {
   let mut hash = HashDigest::new();
   let digest = ctx.finish();
   let digest_bytes = digest.as_ref();
-  let mut digest_u128= [0u8; 16];
+  let mut digest_u128 = [0u8; 16];
 
   digest_u128.copy_from_slice(&digest_bytes[..16]);
   hash.h0 = u128::from_be_bytes(digest_u128);
@@ -56,7 +63,7 @@ pub fn my_hash_blake(src: [HashDigest; 2]) -> HashDigest {
   let mut hash = HashDigest::new();
   let digest = hasher.finalize();
   let digest_bytes = digest.as_bytes();
-  let mut digest_u128= [0u8; 16];
+  let mut digest_u128 = [0u8; 16];
 
   digest_u128.copy_from_slice(&digest_bytes[..16]);
   hash.h0 = u128::from_be_bytes(digest_u128);

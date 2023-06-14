@@ -1,16 +1,16 @@
 use std::mem;
 
+use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
+#[allow(unused)]
+use infrastructure::my_hash::my_hash;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, RS_CODE_RATE, SLICE_NUMBER},
   my_hash::{self, HashDigest},
 };
-use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
-#[allow(unused)]
-use infrastructure::my_hash::my_hash;
 use prime_field::FieldElement;
 
-use crate::LdtCommitment;
 use crate::vpd::fri::FRIContext;
+use crate::LdtCommitment;
 
 pub fn verify_merkle(
   hash_digest: HashDigest,
@@ -25,34 +25,33 @@ pub fn verify_merkle(
   let mut pow = pow;
   //Todo: Print hash_digest, merkle_path
 
-  println!("hash: {:?}", hash_digest);
+  // println!("hash: {:?}", hash_digest);
 
-  for i in 0..merkle_path.len() {
-    println!("merkle {i}: {:?}", merkle_path[i]);
-  }
+  // for i in 0..merkle_path.len() {
+  //   println!("merkle {i}: {:?}", merkle_path[i]);
+  // }
 
-  println!("len: {}, pow: {}", len, pow);
-  for i in 0..values.len() {
-    println!(
-      "values[{}].0.real:{}, img:{}",
-      i, values[i].0.real, values[i].0.img
-    );
-    println!(
-      "values[{}].1.real:{}, img:{}",
-      i, values[i].1.real, values[i].1.img
-    );
-  }
+  // println!("len: {}, pow: {}", len, pow);
+  // for i in 0..values.len() {
+  //   println!(
+  //     "values[{}].0.real:{}, img:{}",
+  //     i, values[i].0.real, values[i].0.img
+  //   );
+  //   println!(
+  //     "values[{}].1.real:{}, img:{}",
+  //     i, values[i].1.real, values[i].1.img
+  //   );
+  // }
   //panic!("stop here");
   let mut current_hash: HashDigest = *merkle_path.last().unwrap();
 
   let mut data: [HashDigest; 2] = [HashDigest::default(), HashDigest::default()];
   // don't mutate the current_hash, this is the output of the loop following
-  let mut new_hash = HashDigest::new();
 
   for i in 0..(len - 1) {
     data = [current_hash, merkle_path[i]];
 
-    if (pow & i as u128) != 0 {
+    if (pow & 1_u128) != 0 {
       data = [merkle_path[i], current_hash];
     }
     pow /= 2;
@@ -65,25 +64,20 @@ pub fn verify_merkle(
 
   data = unsafe { mem::zeroed() };
   // delete , it just for testing
-  current_hash = HashDigest {
-    h0: 124708544472041548687713145652200463269,
-    h1: 139523578951561325641486551426283469303,
-  };
+  // current_hash = HashDigest {
+  //   h0: 124708544472041548687713145652200463269,
+  //   h1: 139523578951561325641486551426283469303,
+  // };
 
   let mut value_hash = HashDigest::new();
-  let mut i = 0;
+  //let mut i = 0;
   unsafe {
     for value in values {
-      data = [
-        hash_single_field_element(value.0),
-        hash_single_field_element(value.1),
-      ];
+      let data_ele = [value.0, value.1];
+      let src = std::ptr::addr_of!(data_ele) as *const HashDigest;
+      let dst = std::ptr::addr_of_mut!(data[0]);
+      std::ptr::copy_nonoverlapping(src, dst, 1);
       data[1] = value_hash;
-      while i < 3 {
-        println!("value {i}: {:?}", values[0]);
-        println!("data[0]: {:?}", data[0]);
-        i += 1;
-      }
       value_hash = my_hash::my_hash(data);
     }
   }

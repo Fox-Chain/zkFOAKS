@@ -546,9 +546,9 @@ impl PolyCommitVerifier {
             min_pow(s0_pow, s1_pow),
             &alpha_l.0,
           ) {
-            println!("verify_merkle failed alpha_l.0");
             return false;
           }
+          println!("pass verify_merkle 1");
 
           if !verify_merkle(
             merkle_tree_h,
