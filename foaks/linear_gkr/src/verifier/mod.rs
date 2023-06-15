@@ -1,16 +1,16 @@
-use std::fmt::format;
 use std::{fs, fs::read_to_string, process, time::Instant};
 use std::{
   fs::File,
   io::{Error, Write},
   mem, time,
 };
+use std::fmt::format;
 
-use infrastructure::my_hash::HashDigest;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
   rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
 };
+use infrastructure::my_hash::HashDigest;
 use poly_commitment::PolyCommitVerifier;
 use prime_field::FieldElement;
 
@@ -377,7 +377,7 @@ impl ZkVerifier {
       one_minus_r_0.push(FieldElement::real_one() - r_0[i]);
       one_minus_r_1.push(FieldElement::real_one() - r_1[i]);
     }
-    let t_a = time::Instant::now();
+    let t_a = Instant::now();
 
     println!("Calc V_output(r)");
     let mut a_0 = zk_prover.v_res(
@@ -521,7 +521,7 @@ impl ZkVerifier {
       let v_u = final_claims.0;
       let v_v = final_claims.1;
 
-      let predicates_calc = time::Instant::now();
+      let predicates_calc = Instant::now();
       self.beta_init(
         i,
         alpha,
@@ -664,8 +664,7 @@ impl ZkVerifier {
       self.proof_size,
       zk_prover.total_time,
       merkle_root_l,
-      merkle_root_h,
-      &mut zk_prover.poly_prover.fri_ctx.unwrap(),
+      merkle_root_h
     );
 
     zk_prover.poly_prover.total_time_pc_p += self.poly_verifier.pc_prover.total_time_pc_p;

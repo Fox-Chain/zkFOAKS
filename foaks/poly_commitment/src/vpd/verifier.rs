@@ -1,16 +1,17 @@
 use std::mem;
+use std::time::Instant;
 
-use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
-#[allow(unused)]
-use infrastructure::my_hash::my_hash;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, RS_CODE_RATE, SLICE_NUMBER},
   my_hash::{self, HashDigest},
 };
+use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
+#[allow(unused)]
+use infrastructure::my_hash::my_hash;
 use prime_field::FieldElement;
 
-use crate::vpd::fri::FRIContext;
 use crate::LdtCommitment;
+use crate::vpd::fri::FRIContext;
 
 pub fn verify_merkle(
   hash_digest: HashDigest,
@@ -133,7 +134,7 @@ impl FRIContext {
       if !self.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 1] {
         self.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 1] = true;
       }
-      new_size += std::mem::size_of::<FieldElement>();
+      new_size += mem::size_of::<FieldElement>();
     }
 
     let depth = self.log_current_witness_size_per_slice - 1;
@@ -147,7 +148,7 @@ impl FRIContext {
 
     for i in 0..depth {
       if !self.visited_init[oracle_indicator][pos ^ 1] {
-        new_size += std::mem::size_of::<HashDigest>();
+        new_size += mem::size_of::<HashDigest>();
       }
       self.visited_init[oracle_indicator][pos] = true;
       self.visited_init[oracle_indicator][pos ^ 1] = true;
@@ -201,7 +202,7 @@ impl FRIContext {
 
     // this can be compressed into one by random linear combination
     if !visited_element {
-      new_size += std::mem::size_of::<FieldElement>();
+      new_size += mem::size_of::<FieldElement>();
     }
 
     let mut com_hhash: Vec<HashDigest> = vec![];
@@ -212,7 +213,7 @@ impl FRIContext {
 
     while pow_0 != 1 {
       if !self.visited[lvl][pow_0 ^ 1] {
-        new_size += std::mem::size_of::<HashDigest>();
+        new_size += mem::size_of::<HashDigest>();
         self.visited[lvl][pow_0 ^ 1] = true;
         self.visited[lvl][pow_0] = true;
       }
@@ -246,7 +247,7 @@ impl FRIContext {
       ),
     };
 
-    let inv_2 = FieldElement::default().inverse();
+    let inv_2 = FieldElement::from_real(2).inverse();
 
     let log_leaf_size = LOG_SLICE_NUMBER + 1;
 
@@ -349,9 +350,9 @@ impl FRIContext {
   }
 
   pub fn commit_phase(&mut self, log_length: usize, slice_count: usize) -> LdtCommitment {
-    // let log_current_witness_size_per_slice_cp =
-    // self.log_current_witness_size_per_slice; assumming we already have the
-    // initial commit
+    let t0 = Instant::now();
+
+    let log_current_witness_size_per_slice_cp = self.log_current_witness_size_per_slice;
     let mut codeword_size = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
     // repeat until the codeword is constant
     let mut ret: Vec<HashDigest> =
@@ -368,11 +369,17 @@ impl FRIContext {
       ptr += 1;
     }
 
-    LdtCommitment {
+    self.log_current_witness_size_per_slice = log_current_witness_size_per_slice_cp;
+
+    let com = LdtCommitment {
       commitment_hash: ret,
       final_rs_code: self.commit_phase_final(),
       randomness,
       mx_depth: ptr,
-    }
+    };
+
+    println!("FRI commit time {}", t0.elapsed().as_secs_f64());
+
+    com
   }
 }

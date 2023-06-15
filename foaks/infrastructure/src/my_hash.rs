@@ -11,18 +11,14 @@ pub struct HashDigest {
 impl HashDigest {
   pub fn new() -> Self { HashDigest { h0: 0, h1: 0 } }
 
-  pub fn print_from_c(h0: &str, h1: &str) {
-    println!(
-      "{:?}",
-      HashDigest {
-        h0: u128::from_str_radix(h0, 16).unwrap(),
-        h1: u128::from_str_radix(h1, 16).unwrap(),
-      }
-    );
-  }
-
-  pub fn print2(&self) {
-    println!("{:x}{:x}", self.h0, self.h1);
+  /// C++ represents u128 as two hex u64. <br> Example: <br>
+  /// `h0: 0x760a6c50ad47cbae 0xf8101008f3bfebd5` <br>
+  /// `h1: 0x8cf39445888620bb 0xd391c02aa69d486f`
+  pub fn new_from_c(h0_0: u64, h0_1: u64, h1_0: u64, h1_1: u64) -> Self {
+    HashDigest {
+      h0: ((h0_0 as u128) << 64) | (h0_1 as u128),
+      h1: ((h1_0 as u128) << 64) | (h1_1 as u128)
+    }
   }
 }
 

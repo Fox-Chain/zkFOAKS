@@ -13,7 +13,7 @@ use prime_field::FieldElement;
 
 use crate::vpd::{
   fri::{
-    request_init_commit, request_init_value_with_merkle, request_step_commit, FRIContext, TripleVec,
+    FRIContext, request_init_commit, request_init_value_with_merkle, request_step_commit, TripleVec,
   },
   verifier::verify_merkle,
 };
@@ -390,8 +390,7 @@ impl PolyCommitVerifier {
     mut proof_size: usize,
     mut p_time: f64,
     merkle_tree_l: HashDigest,
-    merkle_tree_h: HashDigest,
-    fri_ctx: &mut FRIContext,
+    merkle_tree_h: HashDigest
   ) -> bool {
     let command = format!("./fft_gkr {} log_fftgkr.txt", log_length - LOG_SLICE_NUMBER);
 
@@ -508,6 +507,7 @@ impl PolyCommitVerifier {
             + (alpha.0[j].0 - alpha.0[j].1) * inv_2 * com.randomness[i] * inv_mu
         };
 
+        let mut fri_ctx = self.pc_prover.fri_ctx.as_mut().unwrap();
         if i == 0 {
           time_span = t0.elapsed().as_secs_f64();
           v_time += time_span;
@@ -516,14 +516,14 @@ impl PolyCommitVerifier {
             s1_pow.try_into().unwrap(),
             new_size,
             0,
-            fri_ctx,
+            &mut fri_ctx,
           );
           alpha_h = request_init_value_with_merkle(
             s0_pow.try_into().unwrap(),
             s1_pow.try_into().unwrap(),
             new_size,
             1,
-            fri_ctx,
+            &mut fri_ctx,
           );
           //println!("alpha_h {:?}", alpha_h);
 
@@ -561,7 +561,7 @@ impl PolyCommitVerifier {
           }
 
           v_time += t0.elapsed().as_secs_f64();
-          beta = request_step_commit(0, (pow / 2).try_into().unwrap(), new_size, fri_ctx);
+          beta = request_step_commit(0, (pow / 2).try_into().unwrap(), new_size, &mut fri_ctx);
 
           proof_size += new_size;
 
@@ -648,7 +648,7 @@ impl PolyCommitVerifier {
           v_time += time_span;
 
           alpha = beta.clone();
-          beta = request_step_commit(i, (pow / 2).try_into().unwrap(), new_size, fri_ctx);
+          beta = request_step_commit(i, (pow / 2).try_into().unwrap(), new_size, &mut fri_ctx);
 
           proof_size += new_size;
 
@@ -685,14 +685,21 @@ impl PolyCommitVerifier {
         }
       }
 
+      let mut fri_ctx = self.pc_prover.fri_ctx.as_mut().unwrap();
       for i in 0..slice_count {
         let template =
-          fri_ctx.cpd.rs_codeword[com.mx_depth - 1][0 << (LOG_SLICE_NUMBER + 1) | i << 1 | 0];
+          fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(0 << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0];
         for j in 0..(1 << (RS_CODE_RATE - 1)) {
-          if fri_ctx.cpd.rs_codeword[com.mx_depth - 1][j << (LOG_SLICE_NUMBER + 1) | i << 1 | 0]
+          if i == 0 && j == 1 {
+            println!("[com.mx_depth - 1][j << (LOG_SLICE_NUMBER + 1) | i << 1 | 0] [{}][{}]", com.mx_depth - 1, (j << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0);
+            println!("fri_ctx.cpd.rs_codeword[com.mx_depth - 1][j << (LOG_SLICE_NUMBER + 1) | i << 1 | 0] {:?}\n template {:?}",
+            fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(j << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0], template);
+          }
+
+          if fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(j << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0]
             != template
           {
-            eprintln!("Fri rs code check fail");
+            eprintln!("Fri rs code check fail {} {}", i, j);
             return false;
           }
         }
