@@ -1,3 +1,4 @@
+use std::process::exit;
 #[allow(unused)]
 use std::{
   env, ffi::OsStr, fs::File, io::Read, os::unix::prelude::OsStrExt, process::Command, time,
@@ -13,7 +14,7 @@ use prime_field::FieldElement;
 
 use crate::vpd::{
   fri::{
-    FRIContext, request_init_commit, request_init_value_with_merkle, request_step_commit, TripleVec,
+    request_init_commit, request_init_value_with_merkle, request_step_commit, FRIContext, TripleVec,
   },
   verifier::verify_merkle,
 };
@@ -279,6 +280,7 @@ impl PolyCommitProver {
             .unwrap(),
           &mut self.ctx.lq_coef,
         );
+        panic!("Fix last values after inverse_fast_fourier_transform");
 
         for j in 0..self.ctx.slice_real_ele_cnt {
           self.ctx.h_coef[j] = self.ctx.lq_coef[j + self.ctx.slice_real_ele_cnt];
@@ -293,6 +295,7 @@ impl PolyCommitProver {
           &mut self.scratch_pad,
           None,
         );
+        panic!("Verify values after fast_fourier_transform");
 
         ftt_time += ftt_t0.elapsed().as_secs_f64();
       }
@@ -305,21 +308,23 @@ impl PolyCommitProver {
       let const_sum = FieldElement::zero() - (self.ctx.lq_coef[0] + self.ctx.h_coef[0]);
 
       for j in 0..self.ctx.slice_size {
-        let g = self.ctx.l_eval[i * self.ctx.slice_size + j]
-          * self.ctx.q_eval[i * self.ctx.slice_size + j]
-          - (self.scratch_pad.twiddle_factor
-            [twiddle_gap * j % self.scratch_pad.twiddle_factor_size]
-            - FieldElement::real_one())
-            * self.ctx.h_eval[j];
+        let p = self.ctx.l_eval[i * self.ctx.slice_size + j];
+        let q = self.ctx.q_eval[i * self.ctx.slice_size + j];
+        let aabb = self.scratch_pad.twiddle_factor
+          [twiddle_gap * j % self.scratch_pad.twiddle_factor_size]
+          - FieldElement::real_one();
+        let h = self.ctx.h_eval[j];
+        let g = p * q - aabb * h;
 
         if j < self.ctx.slice_size / 2 {
           assert!((j << log_leaf_size | (i << 1) | 0) < self.ctx.slice_count * self.ctx.slice_size);
           assert_eq!((j << log_leaf_size) & (i << 1), 0);
 
-          fri_ctx.virtual_oracle_witness[j << log_leaf_size | (i << 1) | 0] = (g + const_sum)
-            * self.scratch_pad.inv_twiddle_factor
-              [inv_twiddle_gap * j % self.scratch_pad.twiddle_factor_size]
-            * FieldElement::from_real(self.ctx.slice_real_ele_cnt as u64);
+          let a = g + const_sum;
+          let b = self.scratch_pad.inv_twiddle_factor
+            [inv_twiddle_gap * j % self.scratch_pad.twiddle_factor_size];
+          let c = FieldElement::from_real(self.ctx.slice_real_ele_cnt as u64);
+          fri_ctx.virtual_oracle_witness[j << log_leaf_size | (i << 1) | 0] = a * b * c;
 
           fri_ctx.virtual_oracle_witness_mapping[j << LOG_SLICE_NUMBER | i] =
             j << log_leaf_size | (i << 1) | 0;
@@ -390,7 +395,7 @@ impl PolyCommitVerifier {
     mut proof_size: usize,
     mut p_time: f64,
     merkle_tree_l: HashDigest,
-    merkle_tree_h: HashDigest
+    merkle_tree_h: HashDigest,
   ) -> bool {
     let command = format!("./fft_gkr {} log_fftgkr.txt", log_length - LOG_SLICE_NUMBER);
 
@@ -685,16 +690,23 @@ impl PolyCommitVerifier {
         }
       }
 
-      let mut fri_ctx = self.pc_prover.fri_ctx.as_mut().unwrap();
+      let fri_ctx = self.pc_prover.fri_ctx.as_mut().unwrap();
       for i in 0..slice_count {
         let template =
           fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(0 << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0];
         for j in 0..(1 << (RS_CODE_RATE - 1)) {
-          if i == 0 && j == 1 {
-            println!("[com.mx_depth - 1][j << (LOG_SLICE_NUMBER + 1) | i << 1 | 0] [{}][{}]", com.mx_depth - 1, (j << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0);
-            println!("fri_ctx.cpd.rs_codeword[com.mx_depth - 1][j << (LOG_SLICE_NUMBER + 1) | i << 1 | 0] {:?}\n template {:?}",
-            fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(j << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0], template);
-          }
+          //if i == 0 && j == 1 {
+          println!(
+            "fri_ctx.cpd.rs_codeword[{}][{}]:{}, img:{}",
+            com.mx_depth - 1,
+            (j << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0,
+            fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(j << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0]
+              .real,
+            fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(j << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0]
+              .img
+          );
+          println!("template.real:{}, img:{}", template.real, template.img);
+          //}
 
           if fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(j << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0]
             != template
@@ -703,9 +715,9 @@ impl PolyCommitVerifier {
             return false;
           }
         }
+        panic!("stop");
       }
     }
-
     true
   }
 }

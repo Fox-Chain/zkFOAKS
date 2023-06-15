@@ -270,11 +270,10 @@ pub fn request_init_value_with_merkle(
         [pow_0 << log_leaf_size | i << 1 | 1],
     ));
 
-    /**
-    it was `pow_0 << log_leaf_size | i << 1 | 1` but this makes the number be added by 1,
-    As C++ returns the number calculated in the left part of this expression `70 << 7 | 0 << 1 | 1 == 3` the assert pass
-    but in Rust the equals is actually evaluated.
-     */
+    // it was `pow_0 << log_leaf_size | i << 1 | 1` but this makes the number be added by 1,
+    // As C++ returns the number calculated in the left part of this expression `70 << 7 | 0 << 1 | 1 == 3` the assert pass
+    // but in Rust the equals is actually evaluated.
+
     assert_eq!(
       pow_0 << log_leaf_size | i << 1,
       fri_ctx.witness_rs_mapping[oracle_indicator][i][pow_1]

@@ -1,9 +1,9 @@
+#[allow(unused)]
+use prime_field::FieldElement;
 use std::{
   mem,
   ops::{Deref, DerefMut},
 };
-
-use prime_field::FieldElement;
 
 use crate::utility::my_log;
 
@@ -159,12 +159,12 @@ pub fn fast_fourier_transform(
 
   for i in 0..order {
     result[i] = scratch_pad.dst[0][i];
+    println!(
+      "result[{}].real:{}, img:{}",
+      i, result[i].real, result[i].img
+    );
   }
-  // println!("scratch_pad.dst[0][0]: {}", scratch_pad.dst[0][0].real);
-  // println!(
-  //   "scratch_pad.dst[0][order-1]: {}",
-  //   scratch_pad.dst[0][order - 1].real
-  // );
+  println!();
 }
 
 pub fn inverse_fast_fourier_transform(

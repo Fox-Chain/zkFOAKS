@@ -1,17 +1,17 @@
 use std::mem;
 use std::time::Instant;
 
+use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
+#[allow(unused)]
+use infrastructure::my_hash::my_hash;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, RS_CODE_RATE, SLICE_NUMBER},
   my_hash::{self, HashDigest},
 };
-use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
-#[allow(unused)]
-use infrastructure::my_hash::my_hash;
 use prime_field::FieldElement;
 
-use crate::LdtCommitment;
 use crate::vpd::fri::FRIContext;
+use crate::LdtCommitment;
 
 pub fn verify_merkle(
   hash_digest: HashDigest,
@@ -261,12 +261,13 @@ impl FRIContext {
 
       for j in 0..SLICE_NUMBER {
         let real_pos = previous_witness_mapping[(pos) << LOG_SLICE_NUMBER | j];
-        // assert((i << LOG_SLICE_NUMBER | j) < nxt_witness_size * SLICE_COUNT);
+        assert!((i << LOG_SLICE_NUMBER | j) < nxt_witness_size * slice_count);
         // we should check this since the original code has BUG comment
         self.cpd.rs_codeword[self.current_step_no][i << LOG_SLICE_NUMBER | j] = inv_2
           * (previous_witness[real_pos] + previous_witness[real_pos | 1])
           + inv_mu * r * (previous_witness[real_pos] - previous_witness[real_pos | 1]);
       }
+      let abcx = 0;
     }
 
     for i in 0..nxt_witness_size {

@@ -1,18 +1,18 @@
+use infrastructure::my_hash::HashDigest;
+#[allow(unused)]
+use infrastructure::{
+  constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
+  rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
+};
+use poly_commitment::PolyCommitVerifier;
+use prime_field::FieldElement;
+use std::fmt::format;
 use std::{fs, fs::read_to_string, process, time::Instant};
 use std::{
   fs::File,
   io::{Error, Write},
   mem, time,
 };
-use std::fmt::format;
-
-use infrastructure::{
-  constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
-  rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
-};
-use infrastructure::my_hash::HashDigest;
-use poly_commitment::PolyCommitVerifier;
-use prime_field::FieldElement;
 
 use crate::{
   circuit_fast_track::{Gate, Layer, LayeredCircuit},
@@ -664,7 +664,7 @@ impl ZkVerifier {
       self.proof_size,
       zk_prover.total_time,
       merkle_root_l,
-      merkle_root_h
+      merkle_root_h,
     );
 
     zk_prover.poly_prover.total_time_pc_p += self.poly_verifier.pc_prover.total_time_pc_p;
