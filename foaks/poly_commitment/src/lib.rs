@@ -280,7 +280,7 @@ impl PolyCommitProver {
             .unwrap(),
           &mut self.ctx.lq_coef,
         );
-        panic!("Fix last values after inverse_fast_fourier_transform");
+        //panic!("Fix last values after inverse_fast_fourier_transform");
 
         for j in 0..self.ctx.slice_real_ele_cnt {
           self.ctx.h_coef[j] = self.ctx.lq_coef[j + self.ctx.slice_real_ele_cnt];
@@ -295,7 +295,7 @@ impl PolyCommitProver {
           &mut self.scratch_pad,
           None,
         );
-        panic!("Verify values after fast_fourier_transform");
+        //panic!("Verify values after fast_fourier_transform");
 
         ftt_time += ftt_t0.elapsed().as_secs_f64();
       }
@@ -553,7 +553,7 @@ impl PolyCommitVerifier {
           ) {
             return false;
           }
-          println!("pass verify_merkle 1");
+          //println!("pass verify_merkle 1");
 
           if !verify_merkle(
             merkle_tree_h,
@@ -696,16 +696,16 @@ impl PolyCommitVerifier {
           fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(0 << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0];
         for j in 0..(1 << (RS_CODE_RATE - 1)) {
           //if i == 0 && j == 1 {
-          println!(
-            "fri_ctx.cpd.rs_codeword[{}][{}]:{}, img:{}",
-            com.mx_depth - 1,
-            (j << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0,
-            fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(j << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0]
-              .real,
-            fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(j << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0]
-              .img
-          );
-          println!("template.real:{}, img:{}", template.real, template.img);
+          // println!(
+          //   "fri_ctx.cpd.rs_codeword[{}][{}]:{}, img:{}",
+          //   com.mx_depth - 1,
+          //   (j << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0,
+          //   fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(j << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0]
+          //     .real,
+          //   fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(j << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0]
+          //     .img
+          // );
+          // println!("template.real:{}, img:{}", template.real, template.img);
           //}
 
           if fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(j << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0]
@@ -715,7 +715,7 @@ impl PolyCommitVerifier {
             return false;
           }
         }
-        panic!("stop");
+        //panic!("stop");
       }
     }
     true
