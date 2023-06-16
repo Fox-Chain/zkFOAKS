@@ -59,7 +59,9 @@ impl LinearPC {
         n / COLUMN_SIZE,
         Some(0),
       );
+      println!("ENCODED {} {} {}", i, self.encoded_codeword[i][127].real, self.encoded_codeword[i][127].img);
     }
+    //println!("ENCODED {} {} ", self.encoded_codeword[6][255].real, self.encoded_codeword[6][255].img);
     //   println!("self.coef[0] out loop: {}", self.coef[0].len());
 
     for i in 0..(n / COLUMN_SIZE * 2) {
@@ -242,6 +244,13 @@ impl LinearPC {
     for i in 0..COLUMN_SIZE {
       for j in 0..self.codeword_size[0] {
         combined_codeword[j] = combined_codeword[j] + r0[i] * self.encoded_codeword[i][j];
+        if j ==127 || j == 128 {
+          println!("{i}|{j} {} {} = {} {} + {} {} * {} {};",
+                   combined_codeword[j].real, combined_codeword[j].img, combined_codeword[j].real,
+                   combined_codeword[j].img, r0[i].real, r0[i].img, self.encoded_codeword[i][j].real,
+                   self.encoded_codeword[i][j].img
+          );
+        }
       }
     }
 

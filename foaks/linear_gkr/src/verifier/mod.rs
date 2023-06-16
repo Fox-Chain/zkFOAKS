@@ -1,18 +1,19 @@
-use infrastructure::my_hash::HashDigest;
-#[allow(unused)]
-use infrastructure::{
-  constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
-  rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
-};
-use poly_commitment::PolyCommitVerifier;
-use prime_field::FieldElement;
-use std::fmt::format;
 use std::{fs, fs::read_to_string, process, time::Instant};
 use std::{
   fs::File,
   io::{Error, Write},
   mem, time,
 };
+use std::fmt::format;
+
+#[allow(unused)]
+use infrastructure::{
+  constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
+  rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
+};
+use infrastructure::my_hash::HashDigest;
+use poly_commitment::PolyCommitVerifier;
+use prime_field::FieldElement;
 
 use crate::{
   circuit_fast_track::{Gate, Layer, LayeredCircuit},
@@ -694,7 +695,7 @@ impl ZkVerifier {
     }
     // Code added from tensor_product()
     let sample_t0 = Instant::now();
-    for i in 0..query_count {
+    for i in 0..query_count { // i = 717 q[i] = 128 combined_codeword[128] = 0
       assert_eq!(
         zk_prover.circuit_value[zk_prover.a_c.total_depth - 1][i],
         combined_codeword[q[i]],

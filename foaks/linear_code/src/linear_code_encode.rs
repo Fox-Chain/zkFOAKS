@@ -1,12 +1,14 @@
-use crate::parameter::DISTANCE_THRESHOLD;
-#[allow(unused)]
-use crate::parameter::*;
-use prime_field::FieldElement;
 use std::{
   fs::read_to_string,
   str::{Lines, Split},
   vec::Vec,
 };
+
+use prime_field::FieldElement;
+
+#[allow(unused)]
+use crate::parameter::*;
+use crate::parameter::DISTANCE_THRESHOLD;
 
 #[derive(Default, Clone)]
 pub struct Graph {
@@ -66,7 +68,7 @@ impl LinearCodeEncodeContext {
         i = i + 1;
       }
     }
-    if n <= DISTANCE_THRESHOLD.try_into().unwrap() {
+    if n <= DISTANCE_THRESHOLD {
       for i in 0..n {
         dst[i] = src[i];
       }
@@ -102,7 +104,7 @@ impl LinearCodeEncodeContext {
       self.scratch[0][dep][n + l + i] = FieldElement::from_real(0);
     }
     for i in 0..l {
-      let ref val = src[i];
+      let ref val = self.scratch[0][dep][n + i].clone();
       for d in 0..self.d[dep].degree {
         let target = self.d[dep].neighbor[i][d];
         self.scratch[0][dep][n + l + target] =
