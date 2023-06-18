@@ -1,5 +1,2 @@
 /target
-/linear_gkr/src/log_fftgkr.txt
-/linear_gkr/src/mat_16_circuit.txt
-/linear_gkr/src/mat_16_meta.txt
-/linear_gkr/src/LOG
+log.txt

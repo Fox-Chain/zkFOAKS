@@ -1,14 +1,9 @@
-use std::{
-  fs::read_to_string,
-  str::{Lines, Split},
-  vec::Vec,
-};
+use std::{fs::read_to_string, vec::Vec};
 
 use prime_field::FieldElement;
 
-#[allow(unused)]
-use crate::parameter::*;
 use crate::parameter::DISTANCE_THRESHOLD;
+use crate::parameter::*;
 
 #[derive(Default, Clone)]
 pub struct Graph {
@@ -50,14 +45,8 @@ impl LinearCodeEncodeContext {
     }
   }
 
-  pub fn encode(
-    &mut self,
-    src: Vec<FieldElement>,
-    dst: &mut Vec<FieldElement>,
-    n: usize,
-    dep_: Option<usize>,
-  ) -> usize {
-    let dep = dep_.unwrap_or(0);
+  pub fn encode(&mut self, src: Vec<FieldElement>, dst: &mut [FieldElement], n: usize) -> usize {
+    let dep = 0;
     if !self.encode_initialized {
       self.encode_initialized = true;
       let mut i = 0usize;
@@ -68,16 +57,11 @@ impl LinearCodeEncodeContext {
         i = i + 1;
       }
     }
-    if n <= DISTANCE_THRESHOLD {
-      for i in 0..n {
-        dst[i] = src[i];
-      }
-      return n;
-    }
     for i in 0..n {
       self.scratch[0][dep][i] = src[i];
     }
-    let mut r = (ALPHA * (n as f64)) as usize; //chech here
+    let mut r: usize = (ALPHA * (n as f64)) as usize; //chech here
+                                                      // println!("r: {}", r);
     for j in 0..r {
       self.scratch[1][dep][j] = FieldElement::zero();
     }
@@ -90,13 +74,8 @@ impl LinearCodeEncodeContext {
           self.scratch[1][dep][target] + self.c[dep].weight[i][d] * val;
       }
     }
-    // TODO
-    let l = self.encode(
-      self.scratch[1][dep].clone(),
-      &mut (self.scratch[0][dep][n..]).to_vec(),
-      r,
-      Some(dep + 1),
-    );
+    let l: usize = self.encode_scratch(r, Some((n, dep + 1)));
+
     assert_eq!(self.d[dep].l, l);
     // R consumed
     r = self.d[dep].r;
@@ -104,20 +83,70 @@ impl LinearCodeEncodeContext {
       self.scratch[0][dep][n + l + i] = FieldElement::from_real(0);
     }
     for i in 0..l {
-      let ref val = self.scratch[0][dep][n + i].clone();
+      let val = self.scratch[0][dep][n + i].clone();
       for d in 0..self.d[dep].degree {
         let target = self.d[dep].neighbor[i][d];
         self.scratch[0][dep][n + l + target] =
-          self.scratch[0][dep][n + l + target] + *val * self.d[dep].weight[i][d];
+          self.scratch[0][dep][n + l + target] + val * self.d[dep].weight[i][d];
       }
     }
+
     for i in 0..(n + l + r) {
       dst[i] = self.scratch[0][dep][i];
     }
-    // return
+
     return n + l + r;
   }
 
+  pub fn encode_scratch(&mut self, n: usize, pre_n_and_dep: Option<(usize, usize)>) -> usize {
+    let (pre_n, dep) = match pre_n_and_dep {
+      Some((pre_n, dep)) => (pre_n, dep),
+      None => (0, 0),
+    };
+    if n <= DISTANCE_THRESHOLD {
+      for i in 0..n {
+        self.scratch[0][dep - 1][pre_n + i] = self.scratch[1][dep - 1][i];
+      }
+      return n;
+    }
+    for i in 0..n {
+      self.scratch[0][dep][i] = self.scratch[1][dep - 1][i];
+    }
+    let mut r = (ALPHA * (n as f64)) as usize; //chech here
+    for j in 0..r {
+      self.scratch[1][dep][j] = FieldElement::zero();
+    }
+    //expander mult
+    for i in 0..n {
+      let val = self.scratch[1][dep - 1][i];
+      for d in 0..self.c[dep].degree {
+        let target = self.c[dep].neighbor[i][d];
+        self.scratch[1][dep][target] =
+          self.scratch[1][dep][target] + self.c[dep].weight[i][d] * val;
+      }
+    }
+    let l: usize = self.encode_scratch(r, Some((n, dep + 1)));
+    assert_eq!(self.d[dep].l, l);
+    // R consumed
+    r = self.d[dep].r;
+    for i in 0..r {
+      self.scratch[0][dep][n + l + i] = FieldElement::from_real(0);
+    }
+    for i in 0..l {
+      let val = self.scratch[0][dep][n + i].clone();
+      for d in 0..self.d[dep].degree {
+        let target = self.d[dep].neighbor[i][d];
+        self.scratch[0][dep][n + l + target] =
+          self.scratch[0][dep][n + l + target] + val * self.d[dep].weight[i][d];
+      }
+    }
+
+    for i in 0..(n + l + r) {
+      self.scratch[0][dep - 1][pre_n + i] = self.scratch[0][dep][i];
+    }
+
+    return n + l + r;
+  }
   pub unsafe fn expander_init(&mut self, n: usize, dep: Option<usize>) -> usize {
     // random Graph
     if n <= DISTANCE_THRESHOLD {

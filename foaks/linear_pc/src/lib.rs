@@ -8,11 +8,10 @@ use infrastructure::{
 };
 use linear_code::{
   linear_code_encode::LinearCodeEncodeContext,
-  parameter::{ALPHA, CN, COLUMN_SIZE, DISTANCE_THRESHOLD, DN, R, TARGET_DISTANCE},
+  parameter::{CN, COLUMN_SIZE, DISTANCE_THRESHOLD, DN},
 };
 use linear_gkr::{
   circuit_fast_track::{Gate, Layer},
-  prover::ZkProver,
   verifier::ZkVerifier,
 };
 use prime_field::FieldElement;
@@ -23,7 +22,6 @@ pub struct LinearPC {
   coef: Vec<Vec<FieldElement>>,
   codeword_size: Vec<usize>,
   mt: Vec<HashDigest>,
-  prover: ZkProver,
   verifier: ZkVerifier,
   pub lce_ctx: LinearCodeEncodeContext,
   gates_count: HashMap<usize, usize>,
@@ -48,7 +46,7 @@ impl LinearPC {
     for i in 0..COLUMN_SIZE {
       self.encoded_codeword[i] = vec![FieldElement::zero(); n / COLUMN_SIZE * 2];
       self.coef[i] = vec![FieldElement::zero(); n / COLUMN_SIZE];
-      let src_slice = &src[i * n / COLUMN_SIZE..(i + 1) * n / COLUMN_SIZE];
+      let src_slice = &src[(i * n / COLUMN_SIZE)..((i + 1) * n / COLUMN_SIZE)];
       self.coef[i].copy_from_slice(src_slice);
       //memset(encoded_codeword[i], 0, sizeof(prime_field::field_element) * n /
       // COLUMN_SIZE * 2);
@@ -57,9 +55,11 @@ impl LinearPC {
         (src[i * n / COLUMN_SIZE..]).to_vec(),
         &mut self.encoded_codeword[i],
         n / COLUMN_SIZE,
-        Some(0),
       );
-      println!("ENCODED {} {} {}", i, self.encoded_codeword[i][127].real, self.encoded_codeword[i][127].img);
+      // println!(
+      //   "ENCODED {} {} {}",
+      //   i, self.encoded_codeword[i][128].real, self.encoded_codeword[i][128].img
+      // );
     }
     //println!("ENCODED {} {} ", self.encoded_codeword[6][255].real, self.encoded_codeword[6][255].img);
     //   println!("self.coef[0] out loop: {}", self.coef[0].len());
@@ -101,7 +101,7 @@ impl LinearPC {
     input: Vec<FieldElement>,
   ) {
     query.sort();
-    self.prepare_gates_count(query.to_vec(), n, query_count);
+    self.prepare_gates_count(n, query_count);
     println!("Depth {}", self.gates_count.len());
     assert_eq!((1 << my_log(n).unwrap()), n);
 
@@ -244,13 +244,19 @@ impl LinearPC {
     for i in 0..COLUMN_SIZE {
       for j in 0..self.codeword_size[0] {
         combined_codeword[j] = combined_codeword[j] + r0[i] * self.encoded_codeword[i][j];
-        if j ==127 || j == 128 {
-          println!("{i}|{j} {} {} = {} {} + {} {} * {} {};",
-                   combined_codeword[j].real, combined_codeword[j].img, combined_codeword[j].real,
-                   combined_codeword[j].img, r0[i].real, r0[i].img, self.encoded_codeword[i][j].real,
-                   self.encoded_codeword[i][j].img
-          );
-        }
+        //   if j == 127 || j == 128 {
+        //     println!(
+        //       "{i}|{j} {} {} = {} {} + {} {} * {} {};",
+        //       combined_codeword[j].real,
+        //       combined_codeword[j].img,
+        //       combined_codeword[j].real,
+        //       combined_codeword[j].img,
+        //       r0[i].real,
+        //       r0[i].img,
+        //       self.encoded_codeword[i][j].real,
+        //       self.encoded_codeword[i][j].img
+        //     );
+        //   }
       }
     }
 
@@ -292,7 +298,6 @@ impl LinearPC {
         combined_message.clone(),
         &mut test_codeword,
         n / COLUMN_SIZE,
-        None,
       );
       assert_eq!(test_codeword_size, self.codeword_size[0]);
       for i in 0..test_codeword_size {
@@ -303,7 +308,7 @@ impl LinearPC {
     //verifier random check columns
     let v_t0 = Instant::now();
 
-    for i in 0..query_count {
+    for _ in 0..query_count {
       let q = rand::random::<usize>() % self.codeword_size[0];
       let mut sum = FieldElement::zero();
       for j in 0..COLUMN_SIZE {
@@ -357,12 +362,12 @@ impl LinearPC {
     // prover commit private input
 
     // verifier samples query
-    let mut q = vec![0; query_count.try_into().unwrap()];
+    //let mut q = vec![0; query_count.try_into().unwrap()];
     // TODO Gian: Temporary change: Read q from Orion C++ for testing, later we have to use random provied by rust
     // for i in 0..query_count {
     //   q[i] = rand::random::<usize>() % self.codeword_size[0];
     // }
-    q = read_random_file("q.txt");
+    let mut q = read_random_file("q.txt");
     // generate circuit
 
     self.generate_circuit(
@@ -411,7 +416,8 @@ impl LinearPC {
     (answer, result)
   }
 
-  fn prepare_gates_count(&mut self, query: Vec<usize>, n: usize, query_count: usize) {
+  // Original code use "query" input, but never used it, so I removed it
+  fn prepare_gates_count(&mut self, n: usize, query_count: usize) {
     //long long query_ptr = 0;
     // input layer
     self.gates_count.insert(0, n);

@@ -1,5 +1,3 @@
-use std::process::exit;
-#[allow(unused)]
 use std::{
   env, ffi::OsStr, fs::File, io::Read, os::unix::prelude::OsStrExt, process::Command, time,
 };
@@ -455,7 +453,6 @@ impl PolyCommitVerifier {
       let mut pre_y = FieldElement::default();
       let mut root_of_unity = FieldElement::default();
       let mut y = FieldElement::default();
-
       let mut equ_beta: bool;
       assert!(log_length - LOG_SLICE_NUMBER > 0);
       let mut pow: u128 = 0;
