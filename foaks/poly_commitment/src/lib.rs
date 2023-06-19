@@ -1,3 +1,7 @@
+use std::{
+  env, ffi::OsStr, fs::File, io::Read, os::unix::prelude::OsStrExt, process::Command, time,
+};
+
 use infrastructure::{
   constants::*,
   my_hash::HashDigest,
@@ -5,13 +9,10 @@ use infrastructure::{
   utility::my_log,
 };
 use prime_field::FieldElement;
-use std::{
-  env, ffi::OsStr, fs::File, io::Read, os::unix::prelude::OsStrExt, process::Command, time,
-};
 
 use crate::vpd::{
   fri::{
-    request_init_commit, request_init_value_with_merkle, request_step_commit, FRIContext, TripleVec,
+    FRIContext, request_init_commit, request_init_value_with_merkle, request_step_commit, TripleVec,
   },
   verifier::verify_merkle,
 };
@@ -116,12 +117,10 @@ impl PolyCommitProver {
       }
 
       if all_zero {
-        //println!("all zero");
         for j in 0..slice_size {
           self.ctx.l_eval[i * slice_size + j] = zero;
         }
       } else {
-        //println!("Start IFFT in commit_private_array");
 
         inverse_fast_fourier_transform(
           &mut self.scratch_pad,
@@ -131,7 +130,6 @@ impl PolyCommitProver {
           FieldElement::get_root_of_unity(my_log(slice_real_ele_cnt).unwrap()).unwrap(),
           &mut tmp[..],
         );
-        //println!("Start FFT in commit_private_array");
 
         fast_fourier_transform(
           &tmp[..],
@@ -144,8 +142,6 @@ impl PolyCommitProver {
         )
       }
     }
-    // println!("self.ctx.l_eval[0] {}", self.ctx.l_eval[0].real);
-    // println!("self.ctx.l_eval[1] {}", self.ctx.l_eval[1].real);
 
     let elapsed_time = now.elapsed();
     println!("FFT Prepare time: {} ms", elapsed_time.as_millis());
@@ -197,8 +193,6 @@ impl PolyCommitProver {
         FieldElement::get_root_of_unity(my_log(self.ctx.slice_real_ele_cnt).unwrap()).unwrap(),
         &mut tmp,
       );
-      // println!("Pass inverse_fast_fourier_transform");
-      // println!("Start extern FFT");
       fast_fourier_transform(
         &tmp,
         self.ctx.slice_real_ele_cnt,
@@ -208,7 +202,6 @@ impl PolyCommitProver {
         &mut self.scratch_pad,
         None,
       );
-      //println!("Pass fast_fourier_transform");
     }
     ftt_time += ftt_t0.elapsed().as_secs_f64();
 
@@ -447,12 +440,12 @@ impl PolyCommitVerifier {
       let mut alpha: TripleVec = (vec![], vec![]);
       let mut beta: TripleVec = (vec![], vec![]);
 
-      let mut s0 = FieldElement::default();
-      let mut s1 = FieldElement::default();
+      let mut s0;
+      let mut s1;
       let mut pre_y = FieldElement::default();
       let mut root_of_unity = FieldElement::default();
       let mut y = FieldElement::default();
-      let mut equ_beta: bool;
+      // let mut equ_beta: bool; not used in C++
       assert!(log_length - LOG_SLICE_NUMBER > 0);
       let mut pow: u128 = 0;
       //let mut max: u128 = 0;
@@ -488,15 +481,15 @@ impl PolyCommitVerifier {
         s0 = root_of_unity.fast_pow(s0_pow);
         s1 = root_of_unity.fast_pow(s1_pow);
 
-        let mut indicator;
+        // let mut indicator; in C++ "indicator" is used but in the if else the sentence are the same. Check vpd_verifier.cpp line 263
 
         if i != 0 {
           assert!(s1 == pre_y || s0 == pre_y);
-          if s1 == pre_y {
-            indicator = 1;
-          } else {
-            indicator = 0;
-          }
+          // if s1 == pre_y {
+          //   indicator = 1;
+          // } else {
+          //   indicator = 0;
+          // }
         }
 
         assert_eq!(s0 * s0, y);
@@ -526,7 +519,6 @@ impl PolyCommitVerifier {
             1,
             &mut fri_ctx,
           );
-          //println!("alpha_h {:?}", alpha_h);
 
           *proof_size += new_size;
 
@@ -549,7 +541,6 @@ impl PolyCommitVerifier {
           ) {
             return false;
           }
-          //println!("pass verify_merkle 1");
 
           if !verify_merkle(
             merkle_tree_h,
@@ -636,11 +627,11 @@ impl PolyCommitVerifier {
               return false;
             }
 
-            if p_val == beta.0[j].0 {
-              equ_beta = false
-            } else {
-              equ_beta = true
-            };
+            // if p_val == beta.0[j].0 {
+            //   equ_beta = false
+            // } else {
+            //   equ_beta = true
+            // };
           }
 
           time_span = t0.elapsed().as_secs_f64();

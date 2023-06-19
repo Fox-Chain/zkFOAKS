@@ -1,11 +1,13 @@
-#[allow(unused)]
-use crate::my_hash::{my_hash, HashDigest};
-use prime_field::FieldElement;
 use std::{
   mem::{size_of, size_of_val},
   ptr::copy_nonoverlapping,
   vec::Vec,
 };
+
+use prime_field::FieldElement;
+
+#[allow(unused)]
+use crate::my_hash::{HashDigest, my_hash};
 
 // Todo: Debug coppy no overlapping
 pub unsafe fn hash_single_field_element(x: FieldElement) -> HashDigest {
@@ -58,13 +60,11 @@ pub fn create_tree(
   let mut current_lvl_size = size_after_padding;
   // TODO: parallel
   for i in (0..current_lvl_size).rev() {
-    let mut data = [HashDigest::default(); 2];
     if i < element_num {
       dst[i + start_idx] = src_data[i];
     } else {
-      data = [HashDigest::default(); 2];
       // my_hash(data, &mut dst[i + start_idx]);
-      dst[i + start_idx] = my_hash(data);
+      dst[i + start_idx] = my_hash([HashDigest::default(); 2]);
     }
   }
   current_lvl_size /= 2;

@@ -2,8 +2,8 @@ use std::{fs::read_to_string, vec::Vec};
 
 use prime_field::FieldElement;
 
-use crate::parameter::DISTANCE_THRESHOLD;
 use crate::parameter::*;
+use crate::parameter::DISTANCE_THRESHOLD;
 
 #[derive(Default, Clone)]
 pub struct Graph {
@@ -60,8 +60,8 @@ impl LinearCodeEncodeContext {
     for i in 0..n {
       self.scratch[0][dep][i] = src[i];
     }
-    let mut r: usize = (ALPHA * (n as f64)) as usize; //chech here
-                                                      // println!("r: {}", r);
+    let mut r: usize = (ALPHA * (n as f64)) as usize;
+
     for j in 0..r {
       self.scratch[1][dep][j] = FieldElement::zero();
     }

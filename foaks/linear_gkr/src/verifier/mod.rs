@@ -1,22 +1,22 @@
 use std::{fs, fs::read_to_string, process, time::Instant};
 use std::{
-  fs::File,
-  io::{Error, Write},
-  mem,
+    fs::File,
+    io::{Error, Write},
+    mem,
 };
 
-use infrastructure::my_hash::HashDigest;
 use infrastructure::{
-  constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
-  rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
+    constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
+    rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
 };
+use infrastructure::my_hash::HashDigest;
 use poly_commitment::PolyCommitVerifier;
 use prime_field::FieldElement;
 
 use crate::{
-  circuit_fast_track::{Gate, Layer, LayeredCircuit},
-  polynomial::QuadraticPoly,
-  prover::ZkProver,
+    circuit_fast_track::{Gate, Layer, LayeredCircuit},
+    polynomial::QuadraticPoly,
+    prover::ZkProver,
 };
 
 #[derive(Default, Debug)]
@@ -100,7 +100,6 @@ impl ZkVerifier {
       let pad_requirement: usize;
       let mut next_line_splited = circuit_lines.next().unwrap().split_whitespace();
       let mut number_gates: usize = next_line_splited.next().unwrap().parse().unwrap();
-      //println!("number_gates: {}", number_gates);
       if d > 3 {
         pad_requirement = 17;
       } else {
@@ -136,7 +135,6 @@ impl ZkVerifier {
         let g: usize = next_line_splited.next().unwrap().parse().unwrap();
         let u: usize = next_line_splited.next().unwrap().parse().unwrap();
         let mut v: usize = next_line_splited.next().unwrap().parse().unwrap();
-        //println!("{} {} {} {} ", ty, g, u, v);
 
         if ty != 3 {
           if ty == 5 {
@@ -184,8 +182,6 @@ impl ZkVerifier {
         previous_g = Some(g);
         if i != 1 {
           self.a_c.circuit[i].gates[g] = Gate::from_params(ty, u, v);
-          /*println!("{} {} {} {} ", ty, g, u, v);
-          panic!();*/
         } else {
           assert!(ty == 2 || ty == 3);
           self.a_c.circuit[1].gates[g] = Gate::from_params(4, g, 0);

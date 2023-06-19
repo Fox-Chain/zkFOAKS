@@ -1,12 +1,14 @@
-#[allow(unused)]
-use crate::PolyCommitContext;
+use std::{mem::size_of, time, usize, vec};
+
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, MAX_BIT_LENGTH, MAX_FRI_DEPTH, RS_CODE_RATE, SLICE_NUMBER},
   merkle_tree,
-  my_hash::{my_hash, HashDigest},
+  my_hash::{HashDigest, my_hash},
 };
 use prime_field::FieldElement;
-use std::{mem::size_of, time, usize, vec};
+
+#[allow(unused)]
+use crate::PolyCommitContext;
 
 pub type TripleVec<'a> = (Vec<(FieldElement, FieldElement)>, Vec<HashDigest>);
 
@@ -83,20 +85,16 @@ pub fn request_init_commit(
     log_current_witness_size_per_slice,
     witness_bit_length_per_slice,
     current_step_no,
-    cpd,
     fri_timer,
     witness_merkle,
     witness_rs_codeword_before_arrange,
     witness_rs_codeword_interleaved,
     witness_rs_mapping,
     l_group,
-    visited,
     visited_init,
     visited_witness,
-    virtual_oracle_witness,
-    virtual_oracle_witness_mapping,
-    r_extended,
     leaf_hash,
+    ..
   }: &mut FRIContext,
   PolyCommitContext {
     slice_size,

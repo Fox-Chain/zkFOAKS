@@ -40,8 +40,7 @@ impl LinearPC {
     assert_eq!(n % COLUMN_SIZE, 0);
     self.encoded_codeword = vec![vec![FieldElement::zero()]; COLUMN_SIZE];
     self.coef = vec![Vec::new(); COLUMN_SIZE];
-    // println!("n: {}", n);
-    // println!("self.coef size: {}", self.coef.len());
+
     //new code
     for i in 0..COLUMN_SIZE {
       self.encoded_codeword[i] = vec![FieldElement::zero(); n / COLUMN_SIZE * 2];
@@ -56,13 +55,7 @@ impl LinearPC {
         &mut self.encoded_codeword[i],
         n / COLUMN_SIZE,
       );
-      // println!(
-      //   "ENCODED {} {} {}",
-      //   i, self.encoded_codeword[i][128].real, self.encoded_codeword[i][128].img
-      // );
     }
-    //println!("ENCODED {} {} ", self.encoded_codeword[6][255].real, self.encoded_codeword[6][255].img);
-    //   println!("self.coef[0] out loop: {}", self.coef[0].len());
 
     for i in 0..(n / COLUMN_SIZE * 2) {
       stash[i] = HashDigest::default();
@@ -74,14 +67,6 @@ impl LinearPC {
         );
       }
     }
-    // println!("Pass hash_double_field_element_merkle_damgard");
-
-    // println!("\nCOMMIT {}", n / COLUMN_SIZE * 2);
-    // for item in stash.iter() {
-    //   item.print2();
-    // }
-    //println!("{} {:?}", stash.len(), stash);
-    // println!("COMMIT {:?}", self.mt);
 
     create_tree(
       stash,
@@ -161,13 +146,6 @@ impl LinearPC {
         let l = self.lce_ctx.c[0].r_neighbor[i][j];
         let r = i;
         let weight = self.lce_ctx.c[0].r_weight[r][j];
-        // println!(
-        //   "i:2, g;{}, j:{}, weight.real:{}, weight.img:{}, ",
-        //   i + n,
-        //   j,
-        //   weight.real,
-        //   weight.img
-        // );
         self.verifier.a_c.circuit[2].gates[i + n].src[j] = l;
         self.verifier.a_c.circuit[2].gates[i + n].weight[j] = weight;
       }
@@ -244,19 +222,6 @@ impl LinearPC {
     for i in 0..COLUMN_SIZE {
       for j in 0..self.codeword_size[0] {
         combined_codeword[j] = combined_codeword[j] + r0[i] * self.encoded_codeword[i][j];
-        //   if j == 127 || j == 128 {
-        //     println!(
-        //       "{i}|{j} {} {} = {} {} + {} {} * {} {};",
-        //       combined_codeword[j].real,
-        //       combined_codeword[j].img,
-        //       combined_codeword[j].real,
-        //       combined_codeword[j].img,
-        //       r0[i].real,
-        //       r0[i].img,
-        //       self.encoded_codeword[i][j].real,
-        //       self.encoded_codeword[i][j].img
-        //     );
-        //   }
       }
     }
 
@@ -279,8 +244,6 @@ impl LinearPC {
 
     //prover construct the combined original message
     let mut combined_message = vec![FieldElement::zero(); n];
-    // println!("self.codeword_size[0]: {}", self.codeword_size[0]);
-    // println!("self.coef[127].len(): {}", self.coef[127].len());
 
     for i in 0..COLUMN_SIZE {
       for j in 0..self.codeword_size[0] {
