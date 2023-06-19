@@ -610,18 +610,9 @@ impl ZkVerifier {
     println!("GKR Prove Time: {}", zk_prover.total_time);
     let mut all_sum = vec![FieldElement::zero(); SLICE_NUMBER];
     println!("GKR witness size: {}", 1 << self.a_c.circuit[0].bit_length);
-    // println!(
-    //   "zk_prover.circuit_value[0][0]: {}",
-    //   zk_prover.circuit_value[0][0].real
-    // );
-    // println!(
-    //   "zk_prover.circuit_value[0][1]: {}",
-    //   zk_prover.circuit_value[0][1].real
-    // );
     let merkle_root_l = zk_prover
       .poly_prover
       .commit_private_array(&zk_prover.circuit_value[0], self.a_c.circuit[0].bit_length);
-    //println!("Pass commit_private_array");
     self.ctx.q_eval_real = vec![FieldElement::zero(); 1 << self.a_c.circuit[0].bit_length];
     self.dfs_for_public_eval(
       0usize,
@@ -631,7 +622,6 @@ impl ZkVerifier {
       self.a_c.circuit[0].bit_length,
       0,
     );
-    //println!("Start commit_public_array");
 
     let merkle_root_h = zk_prover.poly_prover.commit_public_array(
       &self.ctx.q_eval_real,
@@ -639,13 +629,10 @@ impl ZkVerifier {
       alpha_beta_sum,
       &mut all_sum,
     );
-    //println!("Pass commit_public_array");
 
     self.proof_size += 2 * mem::size_of::<HashDigest>();
     self.vpd_randomness = r_0.clone();
     self.one_minus_vpd_randomness = one_minus_r_0.clone();
-    //From poly_ver.p = &(p -> poly_prover); TODO check if the implementation is
-    // correct
     self.poly_verifier.pc_prover = zk_prover.poly_prover.clone();
 
     let public_array = self.public_array_prepare(
@@ -659,9 +646,9 @@ impl ZkVerifier {
       &all_sum,
       self.a_c.circuit[0].bit_length,
       &public_array,
-      verification_time,
-      self.proof_size,
-      zk_prover.total_time,
+      &mut verification_time,
+      &mut self.proof_size,
+      &mut zk_prover.total_time,
       merkle_root_l,
       merkle_root_h,
     );
@@ -673,7 +660,8 @@ impl ZkVerifier {
       return (false, 0.0);
     } else {
       println!("Verification pass");
-      println!("Prove time {}", verification_rdl_time);
+      println!("Prove time {}", zk_prover.total_time);
+      println!("Verification rdl time {}", verification_rdl_time);
       println!(
         "Verification time {}",
         verification_time - verification_rdl_time

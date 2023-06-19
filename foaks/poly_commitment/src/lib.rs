@@ -1,7 +1,3 @@
-use std::{
-  env, ffi::OsStr, fs::File, io::Read, os::unix::prelude::OsStrExt, process::Command, time,
-};
-
 use infrastructure::{
   constants::*,
   my_hash::HashDigest,
@@ -9,6 +5,9 @@ use infrastructure::{
   utility::my_log,
 };
 use prime_field::FieldElement;
+use std::{
+  env, ffi::OsStr, fs::File, io::Read, os::unix::prelude::OsStrExt, process::Command, time,
+};
 
 use crate::vpd::{
   fri::{
@@ -389,9 +388,9 @@ impl PolyCommitVerifier {
     all_sum: &[FieldElement],
     log_length: usize,
     public_array: &[FieldElement],
-    mut v_time: f64,
-    mut proof_size: usize,
-    mut p_time: f64,
+    v_time: &mut f64,
+    proof_size: &mut usize,
+    p_time: &mut f64,
     merkle_tree_l: HashDigest,
     merkle_tree_h: HashDigest,
   ) -> bool {
@@ -427,9 +426,9 @@ impl PolyCommitVerifier {
     proof_size_fft = iter.next().unwrap().parse::<usize>().unwrap();
     p_time_fft = iter.next().unwrap().parse::<f64>().unwrap();
 
-    v_time += v_time_fft;
-    p_time += p_time_fft;
-    proof_size += proof_size_fft;
+    *v_time += v_time_fft;
+    *p_time += p_time_fft;
+    *proof_size += proof_size_fft;
 
     let com = self.pc_prover.commit_phase(log_length);
     let coef_slice_size = 1 << (log_length - LOG_SLICE_NUMBER);
@@ -512,7 +511,7 @@ impl PolyCommitVerifier {
         let mut fri_ctx = self.pc_prover.fri_ctx.as_mut().unwrap();
         if i == 0 {
           time_span = t0.elapsed().as_secs_f64();
-          v_time += time_span;
+          *v_time += time_span;
           alpha_l = request_init_value_with_merkle(
             s0_pow.try_into().unwrap(),
             s1_pow.try_into().unwrap(),
@@ -529,7 +528,7 @@ impl PolyCommitVerifier {
           );
           //println!("alpha_h {:?}", alpha_h);
 
-          proof_size += new_size;
+          *proof_size += new_size;
 
           t0 = time::Instant::now();
 
@@ -562,10 +561,10 @@ impl PolyCommitVerifier {
             return false;
           }
 
-          v_time += t0.elapsed().as_secs_f64();
+          *v_time += t0.elapsed().as_secs_f64();
           beta = request_step_commit(0, (pow / 2).try_into().unwrap(), new_size, &mut fri_ctx);
 
-          proof_size += new_size;
+          *proof_size += new_size;
 
           t0 = time::Instant::now();
 
@@ -647,12 +646,12 @@ impl PolyCommitVerifier {
           time_span = t0.elapsed().as_secs_f64();
         } else {
           time_span = t0.elapsed().as_secs_f64();
-          v_time += time_span;
+          *v_time += time_span;
 
           alpha = beta.clone();
           beta = request_step_commit(i, (pow / 2).try_into().unwrap(), new_size, &mut fri_ctx);
 
-          proof_size += new_size;
+          *proof_size += new_size;
 
           t0 = time::Instant::now();
 
@@ -668,7 +667,7 @@ impl PolyCommitVerifier {
 
           let inv_mu = root_of_unity.fast_pow((pow / 2) as u128).inverse();
           time_span = t0.elapsed().as_secs_f64();
-          v_time += time_span;
+          *v_time += time_span;
 
           for j in 0..slice_count {
             let p_val_0 = gen_val(&alpha, inv_mu, i, j);
