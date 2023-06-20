@@ -3,8 +3,10 @@ use std::{
   ops::{Deref, DerefMut},
 };
 
-use crate::utility::my_log;
+#[allow(unused)]
 use prime_field::FieldElement;
+
+use crate::utility::my_log;
 
 const MAX_ORDER: usize = 28;
 
@@ -116,7 +118,6 @@ pub fn fast_fourier_transform(
 
   let log_coefficient = log_coefficient.unwrap();
   assert!(log_coefficient <= log_order);
-  //println!("Pass assert!(log_coefficient <= log_order);");
 
   // initialize leaves
   let blk_sz = order / coefficient_len;
@@ -147,7 +148,7 @@ pub fn fast_fourier_transform(
             for j in 0..(1 << dep) {
               let l_value = pre_ptr[(double_k << (dep + 1)) | j];
               let r_value = x * pre_ptr[(double_k << (dep + 1) | (1 << dep)) | j];
-              cur_ptr[(k << dep) | j] = l_value + r_value;
+              cur_ptr[(k << dep) | j] = l_value.clone() + r_value.clone();
               cur_ptr[((k + blk_size / 2) << dep) | j] = l_value - r_value;
             }
           }
@@ -159,11 +160,6 @@ pub fn fast_fourier_transform(
   for i in 0..order {
     result[i] = scratch_pad.dst[0][i];
   }
-  println!("scratch_pad.dst[0][0]: {}", scratch_pad.dst[0][0].real);
-  println!(
-    "scratch_pad.dst[0][order-1]: {}",
-    scratch_pad.dst[0][order - 1].real
-  );
 }
 
 pub fn inverse_fast_fourier_transform(
@@ -194,8 +190,6 @@ pub fn inverse_fast_fourier_transform(
     sub_eval = evaluations.to_vec();
   }
 
-  // println!("sub_eval[0] {}", sub_eval[0].real);
-  // println!("sub_eval[1] {}", sub_eval[1].real);
   let mut new_rou = FieldElement::real_one();
   for _ in 0..(order / coefficient_len) {
     new_rou = new_rou * root_of_unity;
@@ -229,16 +223,14 @@ pub fn inverse_fast_fourier_transform(
     tmp = tmp * tmp;
   }
   assert_eq!(inv_rou * new_rou, FieldElement::real_one());
-  // todo: check
-  //println!("Start intern FFT in inverse_fast_fourier_transform()");
   fast_fourier_transform(
-    sub_eval.as_ref(),
+    &sub_eval,
     order,
     coefficient_len,
     inv_rou,
     dst,
     scratch_pad,
-    None,
+    Some(scratch_pad.inv_twiddle_factor.clone()),
   );
 
   let inv_n = FieldElement::inverse(FieldElement::from_real(order as u64));

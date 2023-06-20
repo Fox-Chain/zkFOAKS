@@ -1,17 +1,13 @@
 #[cfg(test)]
 mod test {
-    use crate::vpd::verifier::verify_merkle;
-    use infrastructure::my_hash::{HashDigest, my_hash, my_hash_blake};
-    use prime_field::FieldElement;
     use std::env;
     use std::fs::read_to_string;
 
-    fn generate_hash_digest(h0: &str, h1: &str) -> HashDigest {
-        HashDigest {
-            h0: u128::from_str_radix(h0, 16).unwrap(),
-            h1: u128::from_str_radix(h1, 16).unwrap(),
-        }
-    }
+    use infrastructure::merkle_tree::hash_double_field_element_merkle_damgard;
+    use infrastructure::my_hash::{HashDigest, my_hash, my_hash_blake};
+    use prime_field::FieldElement;
+
+    use crate::vpd::verifier::verify_merkle;
 
     fn generate_tuple_field_element(input: &str) -> (FieldElement, FieldElement) {
         let mut content = input.split_whitespace();
@@ -29,87 +25,43 @@ mod test {
     }
 
     #[test]
-    fn verify_merkle_test() {
-        let hash_digest = generate_hash_digest(
-            "5dd1fdf47f03d24f100d896a8561dba5",
-            "68f7438ca99737561044a4fdac19f9f7",
-        );
-        let merkle_path = vec![
-            generate_hash_digest(
-                "8f6a92ecadaf4d3527cc9fd7fd7e7b6b",
-                "bd36cbb14173b495396fc823caf5221b",
-            ),
-            generate_hash_digest(
-                "54790f164bf92ff597e22de9b43d7cbe",
-                "6816da2ba3277db9710646523198be15",
-            ),
-            generate_hash_digest(
-                "02a08c9e3d5675355d358225f8f0c5a0",
-                "460a641d79608e67c0f2f887c32ba68f",
-            ),
-            generate_hash_digest(
-                "9ebf71f69c4bcce8d72b3d35af3c3882",
-                "88ee8499825ef530f5e62569f59bb525",
-            ),
-            generate_hash_digest(
-                "6dd05bc00b9d56e84d517c6b55fc1cf7",
-                "6660db3c1c916e2cf202e04e70d34ee3",
-            ),
-            generate_hash_digest(
-                "c77e964bcf2553fdab9eec4d257590d3",
-                "b186d0f7cd344d822030f9a20c8cc4fc",
-            ),
-            generate_hash_digest(
-                "2dee9d01a08368592e929c61f70f1d00",
-                "8ad15424147427787cfb2edd52ed26a7",
-            ),
-            generate_hash_digest(
-                "19169f81ced2c32fe24a9f1fdf821c42",
-                "bdec40413a8121a5585e49426a8190d7",
-            ),
-        ];
+    fn verify_damgard() {
+        // Extracted from i linear_pc/src/lib line 65
+        let mut prev_hash = HashDigest::new_from_c(0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000);
+        let mut x = FieldElement::new(1290311065, 751792346);
+        let mut y = FieldElement::new(213961255, 3403933);
 
-        let len = 8;
-        let pow = 70;
-
-        let mut values = vec![];
-        let content =
-            read_to_string(env::current_dir().unwrap().join("src/value_for_merkle.txt")).unwrap();
-        for line in content.lines() {
-            values.push(generate_tuple_field_element(line));
+        unsafe {
+            assert_eq!(
+                HashDigest::new_from_c(0xfa7897b655bb128a, 0x58c3d9a3999de2f3, 0xa819bd64f1312f99, 0x79bfe75a8ffdb45b),
+                hash_double_field_element_merkle_damgard(x, y, prev_hash)
+            );
         }
 
-        assert_eq!(
-            true,
-            verify_merkle(hash_digest, &merkle_path, len, pow, &values)
-        );
+        prev_hash = HashDigest::new_from_c(0xb57a052575651e28, 0x2771f4abfb7cfb46, 0x40c1484e5310ffa3, 0x3d6fe15a5a9486dd);
+        x = FieldElement::new(751266410 ,2029902733);
+        y = FieldElement::new(912098043, 2031678345);
+
+        unsafe {
+            assert_eq!(
+                HashDigest::new_from_c(0x68b872dc68bf5200, 0x21af84922511cfff, 0x65d9dd125e0ca0f4, 0x4165f31efeaf4cd5),
+                hash_double_field_element_merkle_damgard(x, y, prev_hash)
+            );
+        }
     }
 
     #[test]
-    fn hash_digest() {
-        let input = [
-            generate_hash_digest(
-                "5dd1fdf47f03d24f100d896a8561dba5",
-                "68f7438ca99737561044a4fdac19f9f7",
-            ),
-            generate_hash_digest(
-                "5dd1fdf47f03d24f100d896a8561dba5",
-                "68f7438ca99737561044a4fdac19f9f7",
-            )
+    fn test_hash() {
+        let src = [
+            HashDigest::new_from_c(0x0,0x0,0x0,0x0),
+            HashDigest::new_from_c(0x000000004ce89599, 0x000000002ccf70da, 0x000000000cc0ca27, 0x000000000033f09d)
         ];
 
-        println!("C++ hash:   {:?}", generate_hash_digest("f5ef8ca9d101cd82e38f39c60b1a5006", "06c40ef077ba2f8b70ac0aa9384d5c3e"));
-        println!("Ring hash:  {:?}", my_hash(input));
-        println!("Blake hash: {:?}", my_hash_blake(input));
-        /*
-        assert_eq!(
-            my_hash(input),
-            generate_hash_digest("f5ef8ca9d101cd82e38f39c60b1a5006", "06c40ef077ba2f8b70ac0aa9384d5c3e")
-        );
-
-        assert_eq!(
-            my_hash_blake(input),
-            generate_hash_digest("f5ef8ca9d101cd82e38f39c60b1a5006", "06c40ef077ba2f8b70ac0aa9384d5c3e")
-        );*/
+        unsafe {
+            assert_eq!(
+                my_hash(src),
+                HashDigest::new_from_c(0xfa7897b655bb128a, 0x58c3d9a3999de2f3, 0xa819bd64f1312f99, 0x79bfe75a8ffdb45b)
+            )
+        }
     }
 }

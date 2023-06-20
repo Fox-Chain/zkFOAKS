@@ -1,12 +1,14 @@
-#[allow(unused)]
-use crate::PolyCommitContext;
+use std::{mem::size_of, time, usize, vec};
+
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, MAX_BIT_LENGTH, MAX_FRI_DEPTH, RS_CODE_RATE, SLICE_NUMBER},
   merkle_tree,
-  my_hash::{my_hash, HashDigest},
+  my_hash::{HashDigest, my_hash},
 };
 use prime_field::FieldElement;
-use std::{mem::size_of, time, usize, vec};
+
+#[allow(unused)]
+use crate::PolyCommitContext;
 
 pub type TripleVec<'a> = (Vec<(FieldElement, FieldElement)>, Vec<HashDigest>);
 
@@ -83,20 +85,16 @@ pub fn request_init_commit(
     log_current_witness_size_per_slice,
     witness_bit_length_per_slice,
     current_step_no,
-    cpd,
     fri_timer,
     witness_merkle,
     witness_rs_codeword_before_arrange,
     witness_rs_codeword_interleaved,
     witness_rs_mapping,
     l_group,
-    visited,
     visited_init,
     visited_witness,
-    virtual_oracle_witness,
-    virtual_oracle_witness_mapping,
-    r_extended,
     leaf_hash,
+    ..
   }: &mut FRIContext,
   PolyCommitContext {
     slice_size,
@@ -152,7 +150,7 @@ pub fn request_init_commit(
     vec![FieldElement::default(); 1 << (bit_len + RS_CODE_RATE)];
 
   let log_leaf_size = LOG_SLICE_NUMBER + 1;
-  println!("l_eval {:?}", l_eval[0]);
+  //println!("l_eval {:?}", l_eval[0]);
   //println!("h_eval_arr {:?}", h_eval_arr[0]); TODO find the cause why this is not initialized anywhere
   for i in 0..SLICE_NUMBER {
     assert_eq!(
@@ -215,7 +213,7 @@ pub fn request_init_commit(
 
         let src = std::ptr::addr_of!(element) as *const HashDigest;
         let dst = std::ptr::addr_of_mut!(data[0]);
-        std::ptr::copy_nonoverlapping(src, dst, 2);
+        std::ptr::copy_nonoverlapping(src, dst, 1);
       }
 
       data[1] = tmp_hash;
@@ -270,11 +268,10 @@ pub fn request_init_value_with_merkle(
         [pow_0 << log_leaf_size | i << 1 | 1],
     ));
 
-    /**
-    it was `pow_0 << log_leaf_size | i << 1 | 1` but this makes the number be added by 1,
-    As C++ returns the number calculated in the left part of this expression `70 << 7 | 0 << 1 | 1 == 3` the assert pass
-    but in Rust the equals is actually evaluated.
-     */
+    // it was `pow_0 << log_leaf_size | i << 1 | 1` but this makes the number be added by 1,
+    // As C++ returns the number calculated in the left part of this expression `70 << 7 | 0 << 1 | 1 == 3` the assert pass
+    // but in Rust the equals is actually evaluated.
+
     assert_eq!(
       pow_0 << log_leaf_size | i << 1,
       fri_ctx.witness_rs_mapping[oracle_indicator][i][pow_1]
@@ -321,7 +318,7 @@ pub fn request_init_value_with_merkle(
     assert_eq!(test_hash, fri_ctx.witness_merkle[oracle_indicator][pos]);
   }
 
-  println!("324 -> {:?} {:?}", value[0], com_hhash[0]);
+  //println!("324 -> {:?} {:?}", value[0], com_hhash[0]);
   assert_eq!(pos, 1);
   (value, com_hhash)
 }

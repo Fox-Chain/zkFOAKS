@@ -1,3 +1,5 @@
+use std::{collections::HashMap, fs::read_to_string, time::Instant};
+
 #[allow(unused)]
 use infrastructure::{
   merkle_tree::{self, create_tree},
@@ -6,15 +8,13 @@ use infrastructure::{
 };
 use linear_code::{
   linear_code_encode::LinearCodeEncodeContext,
-  parameter::{ALPHA, CN, COLUMN_SIZE, DISTANCE_THRESHOLD, DN, R, TARGET_DISTANCE},
+  parameter::{CN, COLUMN_SIZE, DISTANCE_THRESHOLD, DN},
 };
 use linear_gkr::{
   circuit_fast_track::{Gate, Layer},
-  prover::ZkProver,
   verifier::ZkVerifier,
 };
 use prime_field::FieldElement;
-use std::{collections::HashMap, fs::read_to_string, time::Instant};
 
 mod test;
 
@@ -24,7 +24,6 @@ pub struct LinearPC {
   coef: Vec<Vec<FieldElement>>,
   codeword_size: Vec<usize>,
   mt: Vec<HashDigest>,
-  prover: ZkProver,
   verifier: ZkVerifier,
   pub lce_ctx: LinearCodeEncodeContext,
   gates_count: HashMap<usize, usize>,
@@ -43,13 +42,12 @@ impl LinearPC {
     assert_eq!(n % COLUMN_SIZE, 0);
     self.encoded_codeword = vec![vec![FieldElement::zero()]; COLUMN_SIZE];
     self.coef = vec![Vec::new(); COLUMN_SIZE];
-    // println!("n: {}", n);
-    // println!("self.coef size: {}", self.coef.len());
+
     //new code
     for i in 0..COLUMN_SIZE {
       self.encoded_codeword[i] = vec![FieldElement::zero(); n / COLUMN_SIZE * 2];
       self.coef[i] = vec![FieldElement::zero(); n / COLUMN_SIZE];
-      let src_slice = &src[i * n / COLUMN_SIZE..(i + 1) * n / COLUMN_SIZE];
+      let src_slice = &src[(i * n / COLUMN_SIZE)..((i + 1) * n / COLUMN_SIZE)];
       self.coef[i].copy_from_slice(src_slice);
       //memset(encoded_codeword[i], 0, sizeof(prime_field::field_element) * n /
       // COLUMN_SIZE * 2);
@@ -58,10 +56,8 @@ impl LinearPC {
         (src[i * n / COLUMN_SIZE..]).to_vec(),
         &mut self.encoded_codeword[i],
         n / COLUMN_SIZE,
-        Some(0),
       );
     }
-    //   println!("self.coef[0] out loop: {}", self.coef[0].len());
 
     for i in 0..(n / COLUMN_SIZE * 2) {
       stash[i] = HashDigest::default();
@@ -73,7 +69,6 @@ impl LinearPC {
         );
       }
     }
-    // println!("Pass hash_double_field_element_merkle_damgard");
 
     create_tree(
       stash,
@@ -93,7 +88,7 @@ impl LinearPC {
     input: Vec<FieldElement>,
   ) {
     query.sort();
-    self.prepare_gates_count(query.to_vec(), n, query_count);
+    self.prepare_gates_count(n, query_count);
     println!("Depth {}", self.gates_count.len());
     assert_eq!((1 << my_log(n).unwrap()), n);
 
@@ -153,13 +148,6 @@ impl LinearPC {
         let l = self.lce_ctx.c[0].r_neighbor[i][j];
         let r = i;
         let weight = self.lce_ctx.c[0].r_weight[r][j];
-        println!(
-          "i:2, g;{}, j:{}, weight.real:{}, weight.img:{}, ",
-          i + n,
-          j,
-          weight.real,
-          weight.img
-        );
         self.verifier.a_c.circuit[2].gates[i + n].src[j] = l;
         self.verifier.a_c.circuit[2].gates[i + n].weight[j] = weight;
       }
@@ -183,6 +171,7 @@ impl LinearPC {
       self.verifier.a_c.circuit[final_output_depth].gates[output_so_far + i].ty = 14;
       self.verifier.a_c.circuit[final_output_depth].gates[output_so_far + i].parameter_length =
         self.lce_ctx.d[0].r_neighbor[i].len();
+
       self.verifier.a_c.circuit[final_output_depth].gates[output_so_far + i].src =
         self.verifier.a_c.circuit[final_output_depth].src_expander_d_mempool[d_mempool_ptr..]
           .to_vec();
@@ -257,8 +246,6 @@ impl LinearPC {
 
     //prover construct the combined original message
     let mut combined_message = vec![FieldElement::zero(); n];
-    // println!("self.codeword_size[0]: {}", self.codeword_size[0]);
-    // println!("self.coef[127].len(): {}", self.coef[127].len());
 
     for i in 0..COLUMN_SIZE {
       for j in 0..self.codeword_size[0] {
@@ -276,7 +263,6 @@ impl LinearPC {
         combined_message.clone(),
         &mut test_codeword,
         n / COLUMN_SIZE,
-        None,
       );
       assert_eq!(test_codeword_size, self.codeword_size[0]);
       for i in 0..test_codeword_size {
@@ -287,7 +273,7 @@ impl LinearPC {
     //verifier random check columns
     let v_t0 = Instant::now();
 
-    for i in 0..query_count {
+    for _ in 0..query_count {
       let q = rand::random::<usize>() % self.codeword_size[0];
       let mut sum = FieldElement::zero();
       for j in 0..COLUMN_SIZE {
@@ -341,12 +327,12 @@ impl LinearPC {
     // prover commit private input
 
     // verifier samples query
-    let mut q = vec![0; query_count.try_into().unwrap()];
-    // Gian: Temporary change: Read q from Orion C++ for testing
+    //let mut q = vec![0; query_count.try_into().unwrap()];
+    // TODO Gian: Temporary change: Read q from Orion C++ for testing, later we have to use random provied by rust
     // for i in 0..query_count {
     //   q[i] = rand::random::<usize>() % self.codeword_size[0];
     // }
-    q = read_random_file("q.txt");
+    let mut q = read_random_file("q.txt");
     // generate circuit
 
     self.generate_circuit(
@@ -395,7 +381,8 @@ impl LinearPC {
     (answer, result)
   }
 
-  fn prepare_gates_count(&mut self, query: Vec<usize>, n: usize, query_count: usize) {
+  // Original code use "query" input, but never used it, so I removed it
+  fn prepare_gates_count(&mut self, n: usize, query_count: usize) {
     //long long query_ptr = 0;
     // input layer
     self.gates_count.insert(0, n);
@@ -470,6 +457,12 @@ impl LinearPC {
       self.verifier.a_c.circuit[input_depth + 1].gates[output_size_so_far + i].ty = 14;
       self.verifier.a_c.circuit[input_depth + 1].gates[output_size_so_far + i].parameter_length =
         neighbor_size;
+
+      // For testing
+      // if (input_depth + 1) >= 3 && (output_size_so_far + i) >= 158 {
+      //   println!("478 neighbor_size {i}: {}, i: {}, g: {}", neighbor_size, input_depth + 1, output_size_so_far + i);
+      // }
+
       //Todo: check if this is correct
       self.verifier.a_c.circuit[input_depth + 1].gates[output_size_so_far + i].src =
         self.verifier.a_c.circuit[input_depth + 1].src_expander_c_mempool[mempool_ptr..].to_vec();
@@ -513,6 +506,12 @@ impl LinearPC {
       self.verifier.a_c.circuit[final_output_depth].gates[output_size_so_far + i].ty = 14;
       self.verifier.a_c.circuit[final_output_depth].gates[output_size_so_far + i]
         .parameter_length = neighbor_size;
+
+      // For testing
+      // if final_output_depth >= 3 && (output_size_so_far + i) >= 158 {
+      //   println!("526 neighbor_size {i}: {}, i: {final_output_depth}, g: {}", neighbor_size, output_size_so_far + i);
+      // }
+
       //Todo: check if this is correct
       self.verifier.a_c.circuit[final_output_depth].gates[output_size_so_far + i].src =
         self.verifier.a_c.circuit[final_output_depth].src_expander_d_mempool[mempool_ptr..]

@@ -1,7 +1,13 @@
-#[allow(unused)]
-use crate::my_hash::{my_hash, HashDigest};
+use std::{
+  mem::{size_of, size_of_val},
+  ptr::copy_nonoverlapping,
+  vec::Vec,
+};
+
 use prime_field::FieldElement;
-use std::{mem, mem::size_of_val, ptr::copy_nonoverlapping, vec::Vec};
+
+#[allow(unused)]
+use crate::my_hash::{HashDigest, my_hash};
 
 // Todo: Debug coppy no overlapping
 pub unsafe fn hash_single_field_element(x: FieldElement) -> HashDigest {
@@ -23,21 +29,13 @@ pub unsafe fn hash_double_field_element_merkle_damgard(
   data[0] = prev_hash;
   let element = [x, y];
   //println!("Inside hash_double_field_element_merkle_damgard");
-  // let src = std::ptr::addr_of!(element) as *const HashDigest;
-  // let dst = std::ptr::addr_of_mut!(data[1]);
-  // let count = element.len();
+  let src = std::ptr::addr_of!(element) as *const HashDigest;
+  let dst = std::ptr::addr_of_mut!(data[1]);
+  let count = 1;
+  //print!("{} ", count);
+  copy_nonoverlapping(src, dst, count);
 
-  let element_bytes = unsafe {
-    // Convert the element array to a byte array
-    let ptr = element.as_ptr() as *const u8;
-    std::slice::from_raw_parts(ptr, 2 * mem::size_of::<FieldElement>())
-  };
-
-  let mut data_bytes: [u8; mem::size_of::<HashDigest>()] = [0; mem::size_of::<HashDigest>()];
-  let data_bytes_slice = &mut data_bytes[..];
-  data_bytes_slice[..2 * mem::size_of::<FieldElement>()].copy_from_slice(element_bytes);
-
-  assert_eq!(2 * mem::size_of::<FieldElement>(), mem::size_of::<HashDigest>());
+  assert_eq!(size_of::<HashDigest>(), 2 * size_of::<FieldElement>());
   my_hash(data)
 }
 
@@ -62,13 +60,11 @@ pub fn create_tree(
   let mut current_lvl_size = size_after_padding;
   // TODO: parallel
   for i in (0..current_lvl_size).rev() {
-    let mut data = [HashDigest::default(); 2];
     if i < element_num {
       dst[i + start_idx] = src_data[i];
     } else {
-      data = [HashDigest::default(); 2];
       // my_hash(data, &mut dst[i + start_idx]);
-      dst[i + start_idx] = my_hash(data);
+      dst[i + start_idx] = my_hash([HashDigest::default(); 2]);
     }
   }
   current_lvl_size /= 2;

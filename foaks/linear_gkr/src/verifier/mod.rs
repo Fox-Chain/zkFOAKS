@@ -1,22 +1,22 @@
-use infrastructure::{
-  constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
-  rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
-};
 use std::{fs, fs::read_to_string, process, time::Instant};
+use std::{
+    fs::File,
+    io::{Error, Write},
+    mem,
+};
 
+use infrastructure::{
+    constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
+    rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
+};
 use infrastructure::my_hash::HashDigest;
 use poly_commitment::PolyCommitVerifier;
 use prime_field::FieldElement;
-use std::{
-  fs::File,
-  io::{Error, Write},
-  mem, time,
-};
 
 use crate::{
-  circuit_fast_track::{Gate, Layer, LayeredCircuit},
-  polynomial::QuadraticPoly,
-  prover::ZkProver,
+    circuit_fast_track::{Gate, Layer, LayeredCircuit},
+    polynomial::QuadraticPoly,
+    prover::ZkProver,
 };
 
 #[derive(Default, Debug)]
@@ -100,7 +100,6 @@ impl ZkVerifier {
       let pad_requirement: usize;
       let mut next_line_splited = circuit_lines.next().unwrap().split_whitespace();
       let mut number_gates: usize = next_line_splited.next().unwrap().parse().unwrap();
-      //println!("number_gates: {}", number_gates);
       if d > 3 {
         pad_requirement = 17;
       } else {
@@ -136,7 +135,6 @@ impl ZkVerifier {
         let g: usize = next_line_splited.next().unwrap().parse().unwrap();
         let u: usize = next_line_splited.next().unwrap().parse().unwrap();
         let mut v: usize = next_line_splited.next().unwrap().parse().unwrap();
-        //println!("{} {} {} {} ", ty, g, u, v);
 
         if ty != 3 {
           if ty == 5 {
@@ -184,8 +182,6 @@ impl ZkVerifier {
         previous_g = Some(g);
         if i != 1 {
           self.a_c.circuit[i].gates[g] = Gate::from_params(ty, u, v);
-          /*println!("{} {} {} {} ", ty, g, u, v);
-          panic!();*/
         } else {
           assert!(ty == 2 || ty == 3);
           self.a_c.circuit[1].gates[g] = Gate::from_params(4, g, 0);
@@ -309,7 +305,7 @@ impl ZkVerifier {
     combined_codeword: Vec<FieldElement>,
     q: Vec<usize>,
   ) -> (bool, f64) {
-    println!("output path: {}", output_path);
+    //println!("output path: {}", output_path);
     // Initialize the prover,
     // the original repo initialize the prover in the main fn()
     let mut zk_prover = ZkProver::new();
@@ -338,16 +334,45 @@ impl ZkVerifier {
     //	random_oracle oracle; // Orion just declare the variable but dont use it
     // later
     let capacity = self.a_c.circuit[self.a_c.total_depth - 1].bit_length;
-    let mut r_0 = generate_randomness(capacity);
-    let mut r_1 = generate_randomness(capacity);
-    let mut one_minus_r_0 = vec![FieldElement::zero(); capacity];
-    let mut one_minus_r_1 = vec![FieldElement::zero(); capacity];
+    //let mut r_0 = generate_randomness(capacity);
+    //let mut r_1 = generate_randomness(capacity);
+
+    // Values extracted from C++ r_0.txt, r_1.txt
+    let mut r_0 = vec![
+      FieldElement::new(1295282939, 1519611747),
+      FieldElement::new(565034012, 1898575994),
+      FieldElement::new(239123822, 1283202478),
+      FieldElement::new(1487119302, 676568365),
+      FieldElement::new(1686079993, 698127655),
+      FieldElement::new(1667178087, 1050708339),
+      FieldElement::new(2044725476, 320324893),
+      FieldElement::new(117745275, 1603165248),
+      FieldElement::new(313357634, 1272974217),
+      FieldElement::new(1266866546, 1041986953),
+      FieldElement::new(1088561576, 368111599),
+    ];
+    let mut r_1 = vec![
+      FieldElement::new(1879022150, 1123913731),
+      FieldElement::new(995779937, 1005913971),
+      FieldElement::new(1020979477, 744133267),
+      FieldElement::new(2034586784, 857316601),
+      FieldElement::new(1244830025, 1182386075),
+      FieldElement::new(229444700, 1809864038),
+      FieldElement::new(933478422, 468568523),
+      FieldElement::new(945582868, 273114076),
+      FieldElement::new(1145136888, 484179213),
+      FieldElement::new(971241731, 664831327),
+      FieldElement::new(1534887552, 868483560),
+    ];
+
+    let mut one_minus_r_0 = Vec::with_capacity(capacity);
+    let mut one_minus_r_1 = Vec::with_capacity(capacity);
 
     for i in 0..capacity {
       one_minus_r_0.push(FieldElement::real_one() - r_0[i]);
       one_minus_r_1.push(FieldElement::real_one() - r_1[i]);
     }
-    let t_a = time::Instant::now();
+    let t_a = Instant::now();
 
     println!("Calc V_output(r)");
     let mut a_0 = zk_prover.v_res(
@@ -363,10 +388,11 @@ impl ZkVerifier {
 
     a_0 = alpha * a_0;
     let mut alpha_beta_sum = a_0;
-    let _direct_relay_value: FieldElement;
+    let mut direct_relay_value: FieldElement;
 
     for i in (1..=(self.a_c.total_depth - 1)).rev() {
-      let _rho = FieldElement::new_random();
+      // never used
+      //let rho = FieldElement::new_random();
 
       zk_prover.sumcheck_init(
         i,
@@ -384,11 +410,17 @@ impl ZkVerifier {
       zk_prover.sumcheck_phase1_init();
 
       let mut previous_random = FieldElement::from_real(0);
-      //next level random
-      let r_u = generate_randomness(self.a_c.circuit[i - 1].bit_length);
-      let mut r_v = generate_randomness(self.a_c.circuit[i - 1].bit_length);
+      let r_u_file = format!("c++files/r_u_{}.txt", i);
+      let r_v_file = format!("c++files/r_v_{}.txt", i);
 
-      let direct_relay_value =
+      //next level random
+      // let r_u = generate_randomness(self.a_c.circuit[i - 1].bit_length);
+      // let mut r_v = generate_randomness(self.a_c.circuit[i - 1].bit_length);
+
+      let r_u = read_vec_fe_file(&r_u_file);
+      let mut r_v = read_vec_fe_file(&r_v_file);
+
+      direct_relay_value =
         alpha * self.direct_relay(i, &r_0, &r_u) + beta * self.direct_relay(i, &r_1, &r_u);
 
       if i == 1 {
@@ -422,6 +454,11 @@ impl ZkVerifier {
         //todo: Debug eval() fn
         let eval_zero = poly.eval(&FieldElement::zero());
         let eval_one = poly.eval(&FieldElement::real_one());
+        // println!(
+        //   "j:{}, i:{}, alpha_beta_sum.real:{}, img{}",
+        //   j, i, alpha_beta_sum.real, alpha_beta_sum.img
+        // );
+
         if eval_zero + eval_one != alpha_beta_sum {
           //todo: Improve error handling
           eprintln!(
@@ -431,7 +468,7 @@ impl ZkVerifier {
           return (false, 0.0);
         } else {
           //println!(
-          //  "Verification fail, phase1, circuit {}, current bit {}",
+          //  "Verification pass, phase1, circuit {}, current bit {}",
           //i, j
           //);
         }
@@ -479,7 +516,7 @@ impl ZkVerifier {
       let v_u = final_claims.0;
       let v_v = final_claims.1;
 
-      let predicates_calc = time::Instant::now();
+      let predicates_calc = Instant::now();
       self.beta_init(
         i,
         alpha,
@@ -569,18 +606,9 @@ impl ZkVerifier {
     println!("GKR Prove Time: {}", zk_prover.total_time);
     let mut all_sum = vec![FieldElement::zero(); SLICE_NUMBER];
     println!("GKR witness size: {}", 1 << self.a_c.circuit[0].bit_length);
-    println!(
-      "zk_prover.circuit_value[0][0]: {}",
-      zk_prover.circuit_value[0][0].real
-    );
-    println!(
-      "zk_prover.circuit_value[0][1]: {}",
-      zk_prover.circuit_value[0][1].real
-    );
     let merkle_root_l = zk_prover
       .poly_prover
       .commit_private_array(&zk_prover.circuit_value[0], self.a_c.circuit[0].bit_length);
-    println!("Pass commit_private_array");
     self.ctx.q_eval_real = vec![FieldElement::zero(); 1 << self.a_c.circuit[0].bit_length];
     self.dfs_for_public_eval(
       0usize,
@@ -590,7 +618,6 @@ impl ZkVerifier {
       self.a_c.circuit[0].bit_length,
       0,
     );
-    println!("Start commit_public_array");
 
     let merkle_root_h = zk_prover.poly_prover.commit_public_array(
       &self.ctx.q_eval_real,
@@ -598,13 +625,10 @@ impl ZkVerifier {
       alpha_beta_sum,
       &mut all_sum,
     );
-    println!("Pass commit_public_array");
 
     self.proof_size += 2 * mem::size_of::<HashDigest>();
     self.vpd_randomness = r_0.clone();
     self.one_minus_vpd_randomness = one_minus_r_0.clone();
-    //From poly_ver.p = &(p -> poly_prover); TODO check if the implementation is
-    // correct
     self.poly_verifier.pc_prover = zk_prover.poly_prover.clone();
 
     let public_array = self.public_array_prepare(
@@ -618,12 +642,11 @@ impl ZkVerifier {
       &all_sum,
       self.a_c.circuit[0].bit_length,
       &public_array,
-      verification_time,
-      self.proof_size,
-      zk_prover.total_time,
+      &mut verification_time,
+      &mut self.proof_size,
+      &mut zk_prover.total_time,
       merkle_root_l,
       merkle_root_h,
-      &mut zk_prover.poly_prover.fri_ctx.unwrap(),
     );
 
     zk_prover.poly_prover.total_time_pc_p += self.poly_verifier.pc_prover.total_time_pc_p;
@@ -633,7 +656,8 @@ impl ZkVerifier {
       return (false, 0.0);
     } else {
       println!("Verification pass");
-      println!("Prove time {}", verification_rdl_time);
+      println!("Prove time {}", zk_prover.total_time);
+      println!("Verification rdl time {}", verification_rdl_time);
       println!(
         "Verification time {}",
         verification_time - verification_rdl_time
@@ -654,6 +678,7 @@ impl ZkVerifier {
     // Code added from tensor_product()
     let sample_t0 = Instant::now();
     for i in 0..query_count {
+      // i = 717 q[i] = 128 combined_codeword[128] = 0
       assert_eq!(
         zk_prover.circuit_value[zk_prover.a_c.total_depth - 1][i],
         combined_codeword[q[i]],
@@ -1569,7 +1594,6 @@ pub fn generate_randomness(size: usize) -> Vec<FieldElement> {
 pub fn read_vec_fe_file(path: &str) -> Vec<FieldElement> {
   let result_content = read_to_string(path).unwrap();
   let result_lines = result_content.lines();
-  //let mut result = Vec::new();
 
   let res: Vec<FieldElement> = result_lines
     .into_iter()

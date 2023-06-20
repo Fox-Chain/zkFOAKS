@@ -1,15 +1,16 @@
-use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
-#[allow(unused)]
-use infrastructure::my_hash::my_hash;
+use std::mem;
+use std::time::Instant;
+
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, RS_CODE_RATE, SLICE_NUMBER},
   my_hash::{self, HashDigest},
 };
-use std::mem;
-
-use crate::LdtCommitment;
+use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
+#[allow(unused)]
+use infrastructure::my_hash::my_hash;
 use prime_field::FieldElement;
 
+use crate::LdtCommitment;
 use crate::vpd::fri::FRIContext;
 
 pub fn verify_merkle(
@@ -23,47 +24,53 @@ pub fn verify_merkle(
   assert!(merkle_path.len() >= len);
 
   let mut pow = pow;
+  //Todo: Print hash_digest, merkle_path
+
+  // println!("hash: {:?}", hash_digest);
+
+  // for i in 0..merkle_path.len() {
+  //   println!("merkle {i}: {:?}", merkle_path[i]);
+  // }
+
+  // println!("len: {}, pow: {}", len, pow);
+  // for i in 0..values.len() {
+  //   println!(
+  //     "values[{}].0.real:{}, img:{}",
+  //     i, values[i].0.real, values[i].0.img
+  //   );
+  //   println!(
+  //     "values[{}].1.real:{}, img:{}",
+  //     i, values[i].1.real, values[i].1.img
+  //   );
+  // }
+  //panic!("stop here");
   let mut current_hash: HashDigest = *merkle_path.last().unwrap();
 
-  let mut data: [HashDigest; 2] = [HashDigest::default(), HashDigest::default()];
+  let mut data: [HashDigest; 2];
   // don't mutate the current_hash, this is the output of the loop following
-  let mut new_hash = HashDigest::new();
 
   for i in 0..(len - 1) {
     data = [current_hash, merkle_path[i]];
 
-    if (pow & i as u128) != 0 {
+    if (pow & 1_u128) != 0 {
       data = [merkle_path[i], current_hash];
     }
     pow /= 2;
 
-    //println!("[{}] {:?}", i+1, current_hash);
     current_hash = my_hash(data);
-    //println!("[{i}] {:?}", current_hash);
   }
-  //println!("data[0]: {:?}\ndata[1]:{:?}\n", data[0], data[1]);
 
   data = unsafe { mem::zeroed() };
-  // delete , it just for testing
-  current_hash = HashDigest {
-    h0: 124708544472041548687713145652200463269,
-    h1: 139523578951561325641486551426283469303,
-  };
 
   let mut value_hash = HashDigest::new();
-  let mut i = 0;
+  //let mut i = 0;
   unsafe {
     for value in values {
-      data = [
-        hash_single_field_element(value.0),
-        hash_single_field_element(value.1),
-      ];
+      let data_ele = [value.0, value.1];
+      let src = std::ptr::addr_of!(data_ele) as *const HashDigest;
+      let dst = std::ptr::addr_of_mut!(data[0]);
+      std::ptr::copy_nonoverlapping(src, dst, 1);
       data[1] = value_hash;
-      while i < 3 {
-        println!("value {i}: {:?}", values[0]);
-        println!("data[0]: {:?}", data[0]);
-        i += 1;
-      }
       value_hash = my_hash::my_hash(data);
     }
   }
@@ -103,7 +110,7 @@ impl FRIContext {
     let mut value: Vec<(FieldElement, FieldElement)> = vec![];
     let log_leaf_size = LOG_SLICE_NUMBER + 1;
 
-    let mut new_size = 0;
+    //let mut new_size: usize = 0;
     for i in 0..SLICE_NUMBER {
       let element_1 =
         self.witness_rs_codeword_interleaved[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 0];
@@ -119,7 +126,7 @@ impl FRIContext {
       if !self.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 1] {
         self.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 1] = true;
       }
-      new_size += std::mem::size_of::<FieldElement>();
+      //new_size += mem::size_of::<FieldElement>();
     }
 
     let depth = self.log_current_witness_size_per_slice - 1;
@@ -132,9 +139,9 @@ impl FRIContext {
     com_hhash[depth] = test_hash;
 
     for i in 0..depth {
-      if !self.visited_init[oracle_indicator][pos ^ 1] {
-        new_size += std::mem::size_of::<HashDigest>();
-      }
+      // if !self.visited_init[oracle_indicator][pos ^ 1] {
+      //   new_size += mem::size_of::<HashDigest>();
+      // }
       self.visited_init[oracle_indicator][pos] = true;
       self.visited_init[oracle_indicator][pos ^ 1] = true;
 
@@ -164,7 +171,7 @@ impl FRIContext {
     pow: usize,
     // new_size: i64,
   ) -> (Vec<(FieldElement, FieldElement)>, Vec<HashDigest>) {
-    let mut new_size = 0;
+    //let mut new_size = 0;
     let mut pow_0 = 0;
 
     let mut value_vec: Vec<(FieldElement, FieldElement)> = vec![];
@@ -186,9 +193,9 @@ impl FRIContext {
     }
 
     // this can be compressed into one by random linear combination
-    if !visited_element {
-      new_size += std::mem::size_of::<FieldElement>();
-    }
+    // if !visited_element {
+    //   new_size += mem::size_of::<FieldElement>();
+    // }
 
     let mut com_hhash: Vec<HashDigest> = vec![];
     let merkle_size = self.cpd.merkle_size[lvl];
@@ -198,7 +205,7 @@ impl FRIContext {
 
     while pow_0 != 1 {
       if !self.visited[lvl][pow_0 ^ 1] {
-        new_size += std::mem::size_of::<HashDigest>();
+        //new_size += mem::size_of::<HashDigest>();
         self.visited[lvl][pow_0 ^ 1] = true;
         self.visited[lvl][pow_0] = true;
       }
@@ -232,7 +239,7 @@ impl FRIContext {
       ),
     };
 
-    let inv_2 = FieldElement::default().inverse();
+    let inv_2 = FieldElement::from_real(2).inverse();
 
     let log_leaf_size = LOG_SLICE_NUMBER + 1;
 
@@ -246,7 +253,7 @@ impl FRIContext {
 
       for j in 0..SLICE_NUMBER {
         let real_pos = previous_witness_mapping[(pos) << LOG_SLICE_NUMBER | j];
-        // assert((i << LOG_SLICE_NUMBER | j) < nxt_witness_size * SLICE_COUNT);
+        assert!((i << LOG_SLICE_NUMBER | j) < nxt_witness_size * slice_count);
         // we should check this since the original code has BUG comment
         self.cpd.rs_codeword[self.current_step_no][i << LOG_SLICE_NUMBER | j] = inv_2
           * (previous_witness[real_pos] + previous_witness[real_pos | 1])
@@ -289,7 +296,7 @@ impl FRIContext {
 
     self.visited[self.current_step_no] = vec![false; nxt_witness_size * 4 * slice_count];
 
-    let mut htmp: HashDigest = HashDigest::default();
+    let htmp: HashDigest = HashDigest::default();
     let mut hash_val: Vec<HashDigest> = vec![HashDigest::default(); nxt_witness_size / 2];
 
     unsafe {
@@ -335,9 +342,9 @@ impl FRIContext {
   }
 
   pub fn commit_phase(&mut self, log_length: usize, slice_count: usize) -> LdtCommitment {
-    // let log_current_witness_size_per_slice_cp =
-    // self.log_current_witness_size_per_slice; assumming we already have the
-    // initial commit
+    let t0 = Instant::now();
+
+    let log_current_witness_size_per_slice_cp = self.log_current_witness_size_per_slice;
     let mut codeword_size = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
     // repeat until the codeword is constant
     let mut ret: Vec<HashDigest> =
@@ -354,11 +361,17 @@ impl FRIContext {
       ptr += 1;
     }
 
-    LdtCommitment {
+    self.log_current_witness_size_per_slice = log_current_witness_size_per_slice_cp;
+
+    let com = LdtCommitment {
       commitment_hash: ret,
       final_rs_code: self.commit_phase_final(),
       randomness,
       mx_depth: ptr,
-    }
+    };
+
+    println!("FRI commit time {}", t0.elapsed().as_secs_f64());
+
+    com
   }
 }
