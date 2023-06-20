@@ -1,22 +1,22 @@
 use std::{fs, fs::read_to_string, process, time::Instant};
 use std::{
-    fs::File,
-    io::{Error, Write},
-    mem,
+  fs::File,
+  io::{Error, Write},
+  mem,
 };
 
 use infrastructure::{
-    constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
-    rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
+  constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
+  rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
 };
 use infrastructure::my_hash::HashDigest;
 use poly_commitment::PolyCommitVerifier;
 use prime_field::FieldElement;
 
 use crate::{
-    circuit_fast_track::{Gate, Layer, LayeredCircuit},
-    polynomial::QuadraticPoly,
-    prover::ZkProver,
+  circuit_fast_track::{Gate, Layer, LayeredCircuit},
+  polynomial::QuadraticPoly,
+  prover::ZkProver,
 };
 
 #[derive(Default, Debug)]
@@ -410,15 +410,15 @@ impl ZkVerifier {
       zk_prover.sumcheck_phase1_init();
 
       let mut previous_random = FieldElement::from_real(0);
-      let r_u_file = format!("c++files/r_u_{}.txt", i);
-      let r_v_file = format!("c++files/r_v_{}.txt", i);
+      //let r_u_file = format!("c++files/r_u_{}.txt", i);
+      //let r_v_file = format!("c++files/r_v_{}.txt", i);
 
       //next level random
-      // let r_u = generate_randomness(self.a_c.circuit[i - 1].bit_length);
-      // let mut r_v = generate_randomness(self.a_c.circuit[i - 1].bit_length);
+       let r_u = generate_randomness(self.a_c.circuit[i - 1].bit_length);
+       let mut r_v = generate_randomness(self.a_c.circuit[i - 1].bit_length);
 
-      let r_u = read_vec_fe_file(&r_u_file);
-      let mut r_v = read_vec_fe_file(&r_v_file);
+      //let r_u = read_vec_fe_file(&r_u_file);
+      //let mut r_v = read_vec_fe_file(&r_v_file);
 
       direct_relay_value =
         alpha * self.direct_relay(i, &r_0, &r_u) + beta * self.direct_relay(i, &r_1, &r_u);

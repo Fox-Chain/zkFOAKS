@@ -20,18 +20,18 @@ fn main() -> Result<(), Error> {
   let n = 1 << lg_n;
   let mut linear_pc = LinearPC::init();
   unsafe { linear_pc.lce_ctx.expander_init(n / COLUMN_SIZE, None) };
-  let mut coefs = read_array_field_element("c++files/coefs.txt");
-  //let mut coefs = vec![FieldElement::zero(); n];
+  //let mut coefs = read_array_field_element("c++files/coefs.txt");
+  let mut coefs = vec![FieldElement::zero(); n];
 
-  // for i in 0..n {
-  //   coefs[i] = FieldElement::new_random()
-  // }
+  for i in 0..n {
+    coefs[i] = FieldElement::new_random()
+  }
+
   let commit_t0 = Instant::now();
   let h = unsafe { linear_pc.commit(coefs, n) };
   let commit_time_diff = commit_t0.elapsed();
   let open_t0 = Instant::now();
-  // todo: change random
-  let result = linear_pc.open_and_verify(FieldElement::new(1231184716, 414754966), n, h);
+  let result = linear_pc.open_and_verify(FieldElement::new_random(), n, h);
   let open_time_diff = open_t0.elapsed();
   println!("Commit time: {}", commit_time_diff.as_secs_f64());
   println!("Open time: {}", open_time_diff.as_secs_f64());

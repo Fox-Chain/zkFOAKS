@@ -327,12 +327,12 @@ impl LinearPC {
     // prover commit private input
 
     // verifier samples query
-    //let mut q = vec![0; query_count.try_into().unwrap()];
+    let mut q = vec![0; query_count.try_into().unwrap()];
     // TODO Gian: Temporary change: Read q from Orion C++ for testing, later we have to use random provied by rust
-    // for i in 0..query_count {
-    //   q[i] = rand::random::<usize>() % self.codeword_size[0];
-    // }
-    let mut q = read_random_file("q.txt");
+     for i in 0..query_count {
+       q[i] = rand::random::<usize>() % self.codeword_size[0];
+     }
+    //let mut q = read_random_file("q.txt");
     // generate circuit
 
     self.generate_circuit(

@@ -172,40 +172,41 @@ pub fn generate_random_expander(l: usize, r: usize, d: usize) -> Graph {
 
   //Comment this block of code for now. For testing purpose we use data from Orion C++
 
-  // for i in 0..l {
-  //   ret.neighbor[i] = vec![0; d];
-  //   ret.weight[i] = vec![FieldElement::zero(); d];
-  //   for j in 0..d {
-  //     let target = rand::random::<usize>() % r;
-  //     let weight = FieldElement::new_random();
-  //     ret.neighbor[i][j] = target;
-  //     ret.r_neighbor[target].push(i);
-  //     ret.r_weight[target].push(weight);
-  //     ret.weight[i][j] = weight;
-  //   }
-  // }
-  //Improve this for later, hardocoded 10
-  if l == 128 {
-    ret.neighbor = read_neighbor_graph_file("c++files/c_0_neighbor.txt");
-    ret.r_neighbor = read_neighbor_graph_file("c++files/c_0_r_neighbor.txt");
-    ret.r_weight = read_weight_graph_file("c++files/c_0_r_weight.txt");
-    ret.weight = read_weight_graph_file("c++files/c_0_weight.txt");
-  } else if l == 30 {
-    ret.neighbor = read_neighbor_graph_file("c++files/c_1_neighbor.txt");
-    ret.r_neighbor = read_neighbor_graph_file("c++files/c_1_r_neighbor.txt");
-    ret.r_weight = read_weight_graph_file("c++files/c_1_r_weight.txt");
-    ret.weight = read_weight_graph_file("c++files/c_1_weight.txt");
-  } else if l == 7 {
-    ret.neighbor = read_neighbor_graph_file("c++files/d_1_neighbor.txt");
-    ret.r_neighbor = read_neighbor_graph_file("c++files/d_1_r_neighbor.txt");
-    ret.r_weight = read_weight_graph_file("c++files/d_1_r_weight.txt");
-    ret.weight = read_weight_graph_file("c++files/d_1_weight.txt");
-  } else if l == 51 {
-    ret.neighbor = read_neighbor_graph_file("c++files/d_0_neighbor.txt");
-    ret.r_neighbor = read_neighbor_graph_file("c++files/d_0_r_neighbor.txt");
-    ret.r_weight = read_weight_graph_file("c++files/d_0_r_weight.txt");
-    ret.weight = read_weight_graph_file("c++files/d_0_weight.txt");
+  for i in 0..l {
+    ret.neighbor[i] = vec![0; d];
+    ret.weight[i] = vec![FieldElement::zero(); d];
+    for j in 0..d {
+      let target = rand::random::<usize>() % r;
+      let weight = FieldElement::new_random();
+      ret.neighbor[i][j] = target;
+      ret.r_neighbor[target].push(i);
+      ret.r_weight[target].push(weight);
+      ret.weight[i][j] = weight;
+    }
   }
+
+  //Improve this for later, hardocoded 10
+  // if l == 128 {
+  //   ret.neighbor = read_neighbor_graph_file("c++files/c_0_neighbor.txt");
+  //   ret.r_neighbor = read_neighbor_graph_file("c++files/c_0_r_neighbor.txt");
+  //   ret.r_weight = read_weight_graph_file("c++files/c_0_r_weight.txt");
+  //   ret.weight = read_weight_graph_file("c++files/c_0_weight.txt");
+  // } else if l == 30 {
+  //   ret.neighbor = read_neighbor_graph_file("c++files/c_1_neighbor.txt");
+  //   ret.r_neighbor = read_neighbor_graph_file("c++files/c_1_r_neighbor.txt");
+  //   ret.r_weight = read_weight_graph_file("c++files/c_1_r_weight.txt");
+  //   ret.weight = read_weight_graph_file("c++files/c_1_weight.txt");
+  // } else if l == 7 {
+  //   ret.neighbor = read_neighbor_graph_file("c++files/d_1_neighbor.txt");
+  //   ret.r_neighbor = read_neighbor_graph_file("c++files/d_1_r_neighbor.txt");
+  //   ret.r_weight = read_weight_graph_file("c++files/d_1_r_weight.txt");
+  //   ret.weight = read_weight_graph_file("c++files/d_1_weight.txt");
+  // } else if l == 51 {
+  //   ret.neighbor = read_neighbor_graph_file("c++files/d_0_neighbor.txt");
+  //   ret.r_neighbor = read_neighbor_graph_file("c++files/d_0_r_neighbor.txt");
+  //   ret.r_weight = read_weight_graph_file("c++files/d_0_r_weight.txt");
+  //   ret.weight = read_weight_graph_file("c++files/d_0_weight.txt");
+  // }
   ret.l = l;
   ret.r = r;
   ret
