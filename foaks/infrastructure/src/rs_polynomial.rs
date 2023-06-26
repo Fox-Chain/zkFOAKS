@@ -3,7 +3,6 @@ use std::{
   ops::{Deref, DerefMut},
 };
 
-#[allow(unused)]
 use prime_field::FieldElement;
 
 use crate::utility::my_log;

@@ -3,11 +3,10 @@ use std::{mem::size_of, time, usize, vec};
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, MAX_BIT_LENGTH, MAX_FRI_DEPTH, RS_CODE_RATE, SLICE_NUMBER},
   merkle_tree,
-  my_hash::{HashDigest, my_hash},
+  my_hash::{my_hash, HashDigest},
 };
 use prime_field::FieldElement;
 
-#[allow(unused)]
 use crate::PolyCommitContext;
 
 pub type TripleVec<'a> = (Vec<(FieldElement, FieldElement)>, Vec<HashDigest>);
@@ -323,13 +322,8 @@ pub fn request_init_value_with_merkle(
   (value, com_hhash)
 }
 
-pub fn request_step_commit(
-  lvl: usize,
-  pow: usize,
-  mut new_size: usize,
-  fri_ctx: &mut FRIContext,
-) -> TripleVec {
-  new_size = 0;
+pub fn request_step_commit(lvl: usize, pow: usize, fri_ctx: &mut FRIContext) -> (TripleVec, usize) {
+  let mut new_size = 0;
 
   let mut pow_0: usize;
   let mut value_vec: Vec<(FieldElement, FieldElement)> = vec![];
@@ -373,5 +367,5 @@ pub fn request_step_commit(
 
   com_hhash.push(val_hhash);
 
-  (value_vec, com_hhash)
+  ((value_vec, com_hhash), new_size)
 }

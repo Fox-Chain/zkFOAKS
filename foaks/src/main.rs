@@ -1,5 +1,4 @@
 use std::{env, time::Instant};
-use std::fs::read_to_string;
 
 use linear_code::parameter::COLUMN_SIZE;
 use linear_pc::LinearPC;
@@ -9,8 +8,6 @@ use prime_field::FieldElement;
 enum Error {
   ParseParamsError,
 }
-#[allow(unused)]
-#[feature(iter_next_chunk)]
 fn main() -> Result<(), Error> {
   let args: Vec<String> = env::args().collect();
   let lg_n = match args.iter().nth(1) {
@@ -37,18 +34,4 @@ fn main() -> Result<(), Error> {
   println!("Open time: {}", open_time_diff.as_secs_f64());
   println!("{}", if result.1 { "succ" } else { "fail" });
   Ok(())
-}
-
-fn read_array_field_element(path: &str) -> Vec<FieldElement> {
-  let result_content = read_to_string(path).unwrap();
-  let result_lines = result_content.lines();
-
-  result_lines.into_iter().map(|r| {
-    let mut elements = r.split_whitespace();
-
-    FieldElement::new(
-      elements.next().unwrap().parse::<u64>().unwrap(),
-      elements.next().unwrap().parse::<u64>().unwrap()
-    )
-  }).collect()
 }

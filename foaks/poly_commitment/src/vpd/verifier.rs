@@ -1,17 +1,16 @@
 use std::mem;
 use std::time::Instant;
 
+use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
+use infrastructure::my_hash::my_hash;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, RS_CODE_RATE, SLICE_NUMBER},
   my_hash::{self, HashDigest},
 };
-use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
-#[allow(unused)]
-use infrastructure::my_hash::my_hash;
 use prime_field::FieldElement;
 
-use crate::LdtCommitment;
 use crate::vpd::fri::FRIContext;
+use crate::LdtCommitment;
 
 pub fn verify_merkle(
   hash_digest: HashDigest,

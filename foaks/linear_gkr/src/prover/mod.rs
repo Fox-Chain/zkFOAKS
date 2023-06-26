@@ -3,7 +3,6 @@ use std::{
   time::{self, SystemTime},
 };
 
-#[allow(unused)]
 use infrastructure::constants::SIZE;
 use poly_commitment::PolyCommitProver;
 use prime_field::FieldElement;
@@ -208,13 +207,13 @@ impl ZkProver {
           assert!(v - u + 1 <= 60);
           for k in u..=v {
             self.circuit_value[i][g] = self.circuit_value[i][g]
-                + self.circuit_value[i - 1][k] * FieldElement::from_real(1u64 << (k - u));
+              + self.circuit_value[i - 1][k] * FieldElement::from_real(1u64 << (k - u));
           }
         } else if ty == 13 {
           assert_eq!(u, v);
           assert!(u < (1 << self.a_c.circuit[i - 1].bit_length),);
           self.circuit_value[i][g] = self.circuit_value[i - 1][u]
-              * (FieldElement::from_real(1) - self.circuit_value[i - 1][v]);
+            * (FieldElement::from_real(1) - self.circuit_value[i - 1][v]);
         } else if ty == 14 {
           self.circuit_value[i][g] = FieldElement::from_real(0);
           for k in 0..self.a_c.circuit[i].gates[g].parameter_length {
@@ -227,7 +226,7 @@ impl ZkProver {
             // }
             let idx = self.a_c.circuit[i].gates[g].src[k];
             self.circuit_value[i][g] =
-                self.circuit_value[i][g] + self.circuit_value[i - 1][idx] * weight;
+              self.circuit_value[i][g] + self.circuit_value[i - 1][idx] * weight;
           }
         } else {
           assert!(false);

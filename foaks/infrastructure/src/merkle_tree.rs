@@ -6,8 +6,7 @@ use std::{
 
 use prime_field::FieldElement;
 
-#[allow(unused)]
-use crate::my_hash::{HashDigest, my_hash};
+use crate::my_hash::{my_hash, HashDigest};
 
 // Todo: Debug coppy no overlapping
 pub unsafe fn hash_single_field_element(x: FieldElement) -> HashDigest {

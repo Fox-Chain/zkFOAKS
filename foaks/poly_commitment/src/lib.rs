@@ -12,7 +12,7 @@ use prime_field::FieldElement;
 
 use crate::vpd::{
   fri::{
-    FRIContext, request_init_commit, request_init_value_with_merkle, request_step_commit, TripleVec,
+    request_init_commit, request_init_value_with_merkle, request_step_commit, FRIContext, TripleVec,
   },
   verifier::verify_merkle,
 };
@@ -121,7 +121,6 @@ impl PolyCommitProver {
           self.ctx.l_eval[i * slice_size + j] = zero;
         }
       } else {
-
         inverse_fast_fourier_transform(
           &mut self.scratch_pad,
           &private_array[i * slice_real_ele_cnt..],
@@ -387,7 +386,10 @@ impl PolyCommitVerifier {
     merkle_tree_l: HashDigest,
     merkle_tree_h: HashDigest,
   ) -> bool {
-    let command = format!("./fft_gkr {} log_fftgkr.txt", log_length - LOG_SLICE_NUMBER);
+    let command = format!(
+      "./fft_gkr {} 16_log_fftgkr.txt",
+      log_length - LOG_SLICE_NUMBER
+    );
 
     let _output = Command::new("sh")
       .arg("-c")
@@ -403,9 +405,9 @@ impl PolyCommitVerifier {
       env::current_dir()
         .unwrap()
         .join("src")
-        .join("log_fftgkr.txt"),
+        .join("16_log_fftgkr.txt"),
     ) {
-      Err(err) => panic!("Couldn't open {}: {}", "log_fftgkr.txt", err),
+      Err(err) => panic!("Couldn't open {}: {}", "16_log_fftgkr.txt", err),
       Ok(file) => file,
     };
 
@@ -448,16 +450,15 @@ impl PolyCommitVerifier {
       // let mut equ_beta: bool; not used in C++
       assert!(log_length - LOG_SLICE_NUMBER > 0);
       let mut pow: u128 = 0;
-      //let mut max: u128 = 0;
+      let mut max: u128 = 0;
 
       for i in 0..log_length - LOG_SLICE_NUMBER {
         t0 = time::Instant::now();
 
         if i == 0 {
-          //max = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i);
-          // Use fixed value for testing, hardcode here pow = 26
-          //pow = rand::random::<u128>() % max;
-          pow = 26;
+          max = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i);
+          pow = rand::random::<u128>() % max;
+
           while pow < (1 << (log_length - LOG_SLICE_NUMBER - i)) || pow % 2 == 1 {
             pow =
               rand::random::<u128>() % (1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i));
@@ -495,7 +496,7 @@ impl PolyCommitVerifier {
         assert_eq!(s0 * s0, y);
         assert_eq!(s1 * s1, y);
 
-        let new_size = 0;
+        let mut new_size = 0;
         let gen_val = |alpha: &TripleVec, inv_mu: FieldElement, i: usize, j: usize| {
           (alpha.0[j].0 + alpha.0[j].1) * inv_2
             + (alpha.0[j].0 - alpha.0[j].1) * inv_2 * com.randomness[i] * inv_mu
@@ -553,7 +554,7 @@ impl PolyCommitVerifier {
           }
 
           *v_time += t0.elapsed().as_secs_f64();
-          beta = request_step_commit(0, (pow / 2).try_into().unwrap(), new_size, &mut fri_ctx);
+          (beta, new_size) = request_step_commit(0, (pow / 2).try_into().unwrap(), &mut fri_ctx);
 
           *proof_size += new_size;
 
@@ -621,9 +622,18 @@ impl PolyCommitVerifier {
             }
 
             let p_val = gen_val(&alpha, inv_mu, i, j);
-
+            let bet0 = beta.0[j].0;
+            let bet1 = beta.0[j].1;
+            // println!("p_val: {:?}", p_val);
+            // println!("beta0: {:?}", bet0);
+            // println!("beta1: {:?}", bet1);
             if p_val != beta.0[j].0 && p_val != beta.0[j].1 {
-              eprintln!("Fri check consistency first round fail {}", j);
+              let a = p_val != beta.0[j].0;
+              let b = p_val != beta.0[j].1;
+              eprintln!(
+                "a: {}, b:{}, Fri check consistency first round fail {}",
+                a, b, j
+              );
               return false;
             }
 
@@ -640,7 +650,7 @@ impl PolyCommitVerifier {
           *v_time += time_span;
 
           alpha = beta.clone();
-          beta = request_step_commit(i, (pow / 2).try_into().unwrap(), new_size, &mut fri_ctx);
+          (beta, new_size) = request_step_commit(i, (pow / 2).try_into().unwrap(), &mut fri_ctx);
 
           *proof_size += new_size;
 
@@ -670,7 +680,7 @@ impl PolyCommitVerifier {
               && p_val_1 != beta.0[j].0
               && p_val_1 != beta.0[j].1
             {
-              eprintln!("Fri check consistency first round fail {}", j);
+              eprintln!("Fri check consistency {} round fail", i);
               return false;
             }
           }

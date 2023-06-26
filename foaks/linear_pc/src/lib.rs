@@ -1,10 +1,9 @@
 use std::{collections::HashMap, fs::read_to_string, time::Instant};
 
-#[allow(unused)]
 use infrastructure::{
   merkle_tree::{self, create_tree},
   my_hash::HashDigest,
-  utility::{max, my_log},
+  utility::my_log,
 };
 use linear_code::{
   linear_code_encode::LinearCodeEncodeContext,
@@ -328,11 +327,9 @@ impl LinearPC {
 
     // verifier samples query
     let mut q = vec![0; query_count.try_into().unwrap()];
-    // TODO Gian: Temporary change: Read q from Orion C++ for testing, later we have to use random provied by rust
-     for i in 0..query_count {
-       q[i] = rand::random::<usize>() % self.codeword_size[0];
-     }
-    //let mut q = read_random_file("q.txt");
+    for i in 0..query_count {
+      q[i] = rand::random::<usize>() % self.codeword_size[0];
+    }
     // generate circuit
 
     self.generate_circuit(
@@ -581,18 +578,3 @@ fn smallest_pow2_larger_or_equal_to(x: usize) -> usize {
 // 	CustomLinearComb = 14,
 // 	Input = 3isize
 // }
-
-pub fn read_random_file(path: &str) -> Vec<usize> {
-  let result_content = read_to_string(path).unwrap();
-  let result_lines = result_content.lines();
-  //let mut result = Vec::new();
-
-  result_lines
-    .into_iter()
-    .map(|x| {
-      let mut line = x.split_whitespace();
-      let ran = line.next().unwrap().parse().unwrap();
-      ran
-    })
-    .collect()
-}
