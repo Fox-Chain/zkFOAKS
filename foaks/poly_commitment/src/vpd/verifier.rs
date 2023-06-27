@@ -268,6 +268,12 @@ impl FRIContext {
     // NOTE: this assumption is solved by using slice_count from context
     let mut tmp: Vec<FieldElement> =
       vec![FieldElement::new_random(); nxt_witness_size * slice_count];
+    println!(
+      "nxt_witness_size: {}, slice_count: {}, len;{}",
+      nxt_witness_size,
+      slice_count,
+      tmp.len()
+    );
     self.cpd.rs_codeword_mapping[self.current_step_no] = vec![0; nxt_witness_size * slice_count];
 
     for i in 0..nxt_witness_size / 2 {
@@ -276,7 +282,6 @@ impl FRIContext {
         let b = (i + nxt_witness_size / 2) << LOG_SLICE_NUMBER | j;
         let c = (i) << log_leaf_size | (j << 1) | 0;
         let d = (i) << log_leaf_size | (j << 1) | 1;
-
         self.cpd.rs_codeword_mapping[self.current_step_no][a] = (i) << log_leaf_size | (j << 1) | 0;
         self.cpd.rs_codeword_mapping[self.current_step_no][b] = (i) << log_leaf_size | (j << 1) | 0;
 
@@ -284,13 +289,21 @@ impl FRIContext {
         tmp[d] = self.cpd.rs_codeword[self.current_step_no]
           [(i + nxt_witness_size / 2) << LOG_SLICE_NUMBER | j];
 
+        println!(
+          "a:{}, tmp[{}].real:{}, img:{} ",
+          a, c, tmp[c].real, tmp[c].img
+        );
+        println!(
+          "b:{}, tmp[{}].real:{}, img:{} ",
+          b, d, tmp[d].real, tmp[d].img
+        );
         assert!(a < nxt_witness_size * SLICE_NUMBER);
         assert!(b < nxt_witness_size * SLICE_NUMBER);
         assert!(c < nxt_witness_size * SLICE_NUMBER);
         assert!(d < nxt_witness_size * SLICE_NUMBER);
       }
     }
-
+    //panic!("stop here");
     self.cpd.rs_codeword[self.current_step_no] = tmp;
 
     self.visited[self.current_step_no] = vec![false; nxt_witness_size * 4 * slice_count];

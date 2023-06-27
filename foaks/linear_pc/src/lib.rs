@@ -326,7 +326,7 @@ impl LinearPC {
     // prover commit private input
 
     // verifier samples query
-    let mut q = vec![0; query_count.try_into().unwrap()];
+    let mut q = vec![0; query_count];
     for i in 0..query_count {
       q[i] = rand::random::<usize>() % self.codeword_size[0];
     }

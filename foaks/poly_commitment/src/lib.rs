@@ -360,13 +360,13 @@ impl PolyCommitProver {
     ret
   }
 
-  pub fn commit_phase(&mut self, log_length: usize) -> LdtCommitment {
-    self
-      .fri_ctx
-      .as_mut()
-      .unwrap()
-      .commit_phase(log_length, self.ctx.slice_count)
-  }
+  // pub fn commit_phase(&mut self, log_length: usize) -> LdtCommitment {
+  //   self
+  //     .fri_ctx
+  //     .as_mut()
+  //     .unwrap()
+  //     .commit_phase(log_length, self.ctx.slice_count)
+  // }
 }
 
 #[derive(Default, Debug)]
@@ -554,7 +554,7 @@ impl PolyCommitVerifier {
           }
 
           *v_time += t0.elapsed().as_secs_f64();
-          (beta, new_size) = request_step_commit(0, (pow / 2).try_into().unwrap(), &mut fri_ctx);
+          (beta, new_size) = request_step_commit(0, (pow / 2).try_into().unwrap(), fri_ctx);
 
           *proof_size += new_size;
 
@@ -621,12 +621,14 @@ impl PolyCommitVerifier {
               std::mem::swap(&mut a.0, &mut a.1);
             }
 
-            let p_val = gen_val(&alpha, inv_mu, i, j);
+            //let p_val = gen_val(&alpha, inv_mu, i, j);
+            let p_val = (alpha.0[j].0 + alpha.0[j].1) * inv_2
+              + (alpha.0[j].0 - alpha.0[j].1) * inv_2 * com.randomness[i] * inv_mu;
             let bet0 = beta.0[j].0;
             let bet1 = beta.0[j].1;
-            // println!("p_val: {:?}", p_val);
-            // println!("beta0: {:?}", bet0);
-            // println!("beta1: {:?}", bet1);
+            println!("p_val: {:?}", p_val);
+            println!("beta0: {:?}", bet0);
+            println!("beta1: {:?}", bet1);
             if p_val != beta.0[j].0 && p_val != beta.0[j].1 {
               let a = p_val != beta.0[j].0;
               let b = p_val != beta.0[j].1;
@@ -692,19 +694,6 @@ impl PolyCommitVerifier {
         let template =
           fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(0 << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0];
         for j in 0..(1 << (RS_CODE_RATE - 1)) {
-          //if i == 0 && j == 1 {
-          // println!(
-          //   "fri_ctx.cpd.rs_codeword[{}][{}]:{}, img:{}",
-          //   com.mx_depth - 1,
-          //   (j << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0,
-          //   fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(j << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0]
-          //     .real,
-          //   fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(j << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0]
-          //     .img
-          // );
-          // println!("template.real:{}, img:{}", template.real, template.img);
-          //}
-
           if fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(j << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0]
             != template
           {
