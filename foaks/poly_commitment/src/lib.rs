@@ -12,7 +12,7 @@ use prime_field::FieldElement;
 
 use crate::vpd::{
   fri::{
-    request_init_commit, request_init_value_with_merkle, request_step_commit, FRIContext, TripleVec,
+    FRIContext, request_init_commit, request_init_value_with_merkle, request_step_commit, TripleVec,
   },
   verifier::verify_merkle,
 };
@@ -425,7 +425,7 @@ impl PolyCommitVerifier {
     *p_time += p_time_fft;
     *proof_size += proof_size_fft;
 
-    let com = self.pc_prover.commit_phase(log_length);
+    let com = self.pc_prover.fri_ctx.as_mut().unwrap().commit_phase(log_length, self.pc_prover.ctx.slice_count);
     let coef_slice_size = 1 << (log_length - LOG_SLICE_NUMBER);
 
     for _ in 0..33 {
@@ -452,7 +452,7 @@ impl PolyCommitVerifier {
       let mut pow: u128 = 0;
       let mut max: u128 = 0;
 
-      for i in 0..log_length - LOG_SLICE_NUMBER {
+      for i in 0..(log_length - LOG_SLICE_NUMBER) {
         t0 = time::Instant::now();
 
         if i == 0 {
@@ -624,11 +624,11 @@ impl PolyCommitVerifier {
             //let p_val = gen_val(&alpha, inv_mu, i, j);
             let p_val = (alpha.0[j].0 + alpha.0[j].1) * inv_2
               + (alpha.0[j].0 - alpha.0[j].1) * inv_2 * com.randomness[i] * inv_mu;
-            let bet0 = beta.0[j].0;
-            let bet1 = beta.0[j].1;
-            println!("p_val: {:?}", p_val);
-            println!("beta0: {:?}", bet0);
-            println!("beta1: {:?}", bet1);
+            // let bet0 = beta.0[j].0;
+            // let bet1 = beta.0[j].1;
+            // println!("p_val: {:?}", p_val);
+            // println!("beta0: {:?}", bet0);
+            // println!("beta1: {:?}", bet1);
             if p_val != beta.0[j].0 && p_val != beta.0[j].1 {
               let a = p_val != beta.0[j].0;
               let b = p_val != beta.0[j].1;
@@ -658,6 +658,7 @@ impl PolyCommitVerifier {
 
           t0 = time::Instant::now();
 
+          println!("verify 661 {i} {} {} {} {}", beta.1.len(), pow, (pow / 2) as u128, beta.0.len());
           if !verify_merkle(
             com.commitment_hash[i],
             &beta.1,
@@ -665,6 +666,7 @@ impl PolyCommitVerifier {
             (pow / 2) as u128,
             &beta.0,
           ) {
+            println!("668");
             return false;
           }
 

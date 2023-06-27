@@ -208,7 +208,6 @@ impl LinearPC {
     let mut visited_combined_com = vec![false; n / COLUMN_SIZE * 4];
 
     let mut proof_size = 0;
-    // Todo: check log2
     let query_count = (-128f32 / (1f32 - 0.07f32).log2()) as usize;
     println!("Query count: {}", query_count);
     println!("Column size: {}", COLUMN_SIZE);
@@ -338,7 +337,7 @@ impl LinearPC {
       query_count,
       combined_message.clone(),
     );
-    //Todo: Check if is correct
+
     //self.verifier.get_prover(&p); //Refactored, inside of zk_verifier has not
     // zk_prover self.prover.get_circuit(self.verifier.aritmetic_circuit);
     // //Refactored, inside of zk_prover.init_array()
@@ -460,7 +459,6 @@ impl LinearPC {
       //   println!("478 neighbor_size {i}: {}, i: {}, g: {}", neighbor_size, input_depth + 1, output_size_so_far + i);
       // }
 
-      //Todo: check if this is correct
       self.verifier.a_c.circuit[input_depth + 1].gates[output_size_so_far + i].src =
         self.verifier.a_c.circuit[input_depth + 1].src_expander_c_mempool[mempool_ptr..].to_vec();
       self.verifier.a_c.circuit[input_depth + 1].gates[output_size_so_far + i].weight =
@@ -484,7 +482,6 @@ impl LinearPC {
     );
     let d_input_offset = output_size_so_far;
     let final_output_depth = output_depth_output_size.0 + 1;
-    //Todo: Check if this is correct
     let output_size_so_far = output_depth_output_size.1;
     mempool_ptr = 0;
 
@@ -509,7 +506,6 @@ impl LinearPC {
       //   println!("526 neighbor_size {i}: {}, i: {final_output_depth}, g: {}", neighbor_size, output_size_so_far + i);
       // }
 
-      //Todo: check if this is correct
       self.verifier.a_c.circuit[final_output_depth].gates[output_size_so_far + i].src =
         self.verifier.a_c.circuit[final_output_depth].src_expander_d_mempool[mempool_ptr..]
           .to_vec();

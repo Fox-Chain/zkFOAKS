@@ -1,16 +1,16 @@
 use std::mem;
 use std::time::Instant;
 
-use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
-use infrastructure::my_hash::my_hash;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, RS_CODE_RATE, SLICE_NUMBER},
   my_hash::{self, HashDigest},
 };
+use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
+use infrastructure::my_hash::my_hash;
 use prime_field::FieldElement;
 
-use crate::vpd::fri::FRIContext;
 use crate::LdtCommitment;
+use crate::vpd::fri::FRIContext;
 
 pub fn verify_merkle(
   hash_digest: HashDigest,
@@ -255,8 +255,8 @@ impl FRIContext {
         assert!((i << LOG_SLICE_NUMBER | j) < nxt_witness_size * slice_count);
         // we should check this since the original code has BUG comment
         self.cpd.rs_codeword[self.current_step_no][i << LOG_SLICE_NUMBER | j] = inv_2
-          * (previous_witness[real_pos] + previous_witness[real_pos | 1])
-          + inv_mu * r * (previous_witness[real_pos] - previous_witness[real_pos | 1]);
+          * ((previous_witness[real_pos] + previous_witness[real_pos | 1])
+          + inv_mu * r * (previous_witness[real_pos] - previous_witness[real_pos | 1]));
       }
     }
 
@@ -289,14 +289,14 @@ impl FRIContext {
         tmp[d] = self.cpd.rs_codeword[self.current_step_no]
           [(i + nxt_witness_size / 2) << LOG_SLICE_NUMBER | j];
 
-        println!(
-          "a:{}, tmp[{}].real:{}, img:{} ",
-          a, c, tmp[c].real, tmp[c].img
-        );
-        println!(
-          "b:{}, tmp[{}].real:{}, img:{} ",
-          b, d, tmp[d].real, tmp[d].img
-        );
+        // println!(
+        //   "a:{}, tmp[{}].real:{}, img:{} ",
+        //   a, c, tmp[c].real, tmp[c].img
+        // );
+        // println!(
+        //   "b:{}, tmp[{}].real:{}, img:{} ",
+        //   b, d, tmp[d].real, tmp[d].img
+        // );
         assert!(a < nxt_witness_size * SLICE_NUMBER);
         assert!(b < nxt_witness_size * SLICE_NUMBER);
         assert!(c < nxt_witness_size * SLICE_NUMBER);
@@ -313,8 +313,8 @@ impl FRIContext {
 
     unsafe {
       for i in 0..nxt_witness_size / 2 {
+        let mut data = [HashDigest::default(), HashDigest::default()];
         for j in 0..(1 << LOG_SLICE_NUMBER) {
-          let mut data = [HashDigest::default(), HashDigest::default()];
           let c = (i) << log_leaf_size | (j << 1) | 0;
           let d = (i) << log_leaf_size | (j << 1) | 1;
 
