@@ -60,20 +60,24 @@ impl LinearCodeEncodeContext {
     for i in 0..n {
       self.scratch[0][dep][i] = src[i];
     }
+   // self.scratch[0][dep].copy_from_slice(&src[..n]);
     let mut r: usize = (ALPHA * (n as f64)) as usize;
 
     for j in 0..r {
-      self.scratch[1][dep][j] = FieldElement::zero();
+     self.scratch[1][dep][j] = FieldElement::zero();
     }
+   // self.scratch[1][dep].iter_mut().for_each(|elem| *elem = FieldElement::zero());
+
     //expander mult
-    for i in 0..n {
+   for i in 0..n {
       let val = src[i];
       for d in 0..self.c[dep].degree {
-        let target = self.c[dep].neighbor[i][d];
-        self.scratch[1][dep][target] =
-          self.scratch[1][dep][target] + self.c[dep].weight[i][d] * val;
-      }
-    }
+       let target = self.c[dep].neighbor[i][d];
+       self.scratch[1][dep][target] =
+         self.scratch[1][dep][target] + self.c[dep].weight[i][d] * val;
+     }
+   }
+    
     let l: usize = self.encode_scratch(r, Some((n, dep + 1)));
 
     assert_eq!(self.d[dep].l, l);
