@@ -356,16 +356,18 @@ pub fn request_step_commit(lvl: usize, pow: usize, fri_ctx: &mut FRIContext) -> 
   let val_hhash = fri_ctx.cpd.merkle[lvl][pow_0];
 
   while pow_0 != 1 {
-    if !fri_ctx.visited[lvl][pow_0 ^ 1] {
+    let pow1 = pow_0 ^ 1;
+    println!("pow0:{}, pow1:{}", pow_0, pow1);
+    if !fri_ctx.visited[lvl][pow1] {
       new_size += size_of::<HashDigest>();
-      fri_ctx.visited[lvl][pow_0 ^ 1] = true;
+      fri_ctx.visited[lvl][pow1] = true;
       fri_ctx.visited[lvl][pow_0] = true;
     }
-    com_hhash.push(fri_ctx.cpd.merkle[lvl][pow_0 ^ 1]);
+    com_hhash.push(fri_ctx.cpd.merkle[lvl][pow1]);
     pow_0 /= 2;
   }
 
   com_hhash.push(val_hhash);
-
+  //panic!("stop here");
   ((value_vec, com_hhash), new_size)
 }

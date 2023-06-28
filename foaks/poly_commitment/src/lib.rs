@@ -12,7 +12,7 @@ use prime_field::FieldElement;
 
 use crate::vpd::{
   fri::{
-    FRIContext, request_init_commit, request_init_value_with_merkle, request_step_commit, TripleVec,
+    request_init_commit, request_init_value_with_merkle, request_step_commit, FRIContext, TripleVec,
   },
   verifier::verify_merkle,
 };
@@ -425,7 +425,12 @@ impl PolyCommitVerifier {
     *p_time += p_time_fft;
     *proof_size += proof_size_fft;
 
-    let com = self.pc_prover.fri_ctx.as_mut().unwrap().commit_phase(log_length, self.pc_prover.ctx.slice_count);
+    let com = self
+      .pc_prover
+      .fri_ctx
+      .as_mut()
+      .unwrap()
+      .commit_phase(log_length, self.pc_prover.ctx.slice_count);
     let coef_slice_size = 1 << (log_length - LOG_SLICE_NUMBER);
 
     for _ in 0..33 {
@@ -652,13 +657,19 @@ impl PolyCommitVerifier {
           *v_time += time_span;
 
           alpha = beta.clone();
-          (beta, new_size) = request_step_commit(i, (pow / 2).try_into().unwrap(), &mut fri_ctx);
+          (beta, new_size) = request_step_commit(i, (pow / 2).try_into().unwrap(), fri_ctx);
 
           *proof_size += new_size;
 
           t0 = time::Instant::now();
 
-          println!("verify 661 {i} {} {} {} {}", beta.1.len(), pow, (pow / 2) as u128, beta.0.len());
+          println!(
+            "i:{}, beta.1.len():{}, pow/2:{}, beta.0.len():{}",
+            i,
+            beta.1.len(),
+            (pow / 2) as u128,
+            beta.0.len()
+          );
           if !verify_merkle(
             com.commitment_hash[i],
             &beta.1,
