@@ -2,8 +2,8 @@ use std::{fs::read_to_string, vec::Vec};
 
 use prime_field::FieldElement;
 
-use crate::parameter::*;
 use crate::parameter::DISTANCE_THRESHOLD;
+use crate::parameter::*;
 
 #[derive(Default, Clone)]
 pub struct Graph {
@@ -54,30 +54,28 @@ impl LinearCodeEncodeContext {
         let size = (2 * n) >> i;
         self.scratch[0][i] = vec![FieldElement::default(); size];
         self.scratch[1][i] = vec![FieldElement::default(); size];
-        i = i + 1;
+        i += 1
       }
     }
-    for i in 0..n {
-      self.scratch[0][dep][i] = src[i];
-    }
-   // self.scratch[0][dep].copy_from_slice(&src[..n]);
+    self.scratch[0][dep][..n].copy_from_slice(&src[..n]);
+
     let mut r: usize = (ALPHA * (n as f64)) as usize;
 
     for j in 0..r {
-     self.scratch[1][dep][j] = FieldElement::zero();
+      self.scratch[1][dep][j] = FieldElement::zero();
     }
-   // self.scratch[1][dep].iter_mut().for_each(|elem| *elem = FieldElement::zero());
+    // self.scratch[1][dep].iter_mut().for_each(|elem| *elem = FieldElement::zero());
 
     //expander mult
-   for i in 0..n {
+    for i in 0..n {
       let val = src[i];
       for d in 0..self.c[dep].degree {
-       let target = self.c[dep].neighbor[i][d];
-       self.scratch[1][dep][target] =
-         self.scratch[1][dep][target] + self.c[dep].weight[i][d] * val;
-     }
-   }
-    
+        let target = self.c[dep].neighbor[i][d];
+        self.scratch[1][dep][target] =
+          self.scratch[1][dep][target] + self.c[dep].weight[i][d] * val;
+      }
+    }
+
     let l: usize = self.encode_scratch(r, Some((n, dep + 1)));
 
     assert_eq!(self.d[dep].l, l);
@@ -94,10 +92,7 @@ impl LinearCodeEncodeContext {
           self.scratch[0][dep][n + l + target] + val * self.d[dep].weight[i][d];
       }
     }
-
-    for i in 0..(n + l + r) {
-      dst[i] = self.scratch[0][dep][i];
-    }
+    dst[..(n + l + r)].copy_from_slice(&self.scratch[0][dep][..(n + l + r)]);
 
     return n + l + r;
   }

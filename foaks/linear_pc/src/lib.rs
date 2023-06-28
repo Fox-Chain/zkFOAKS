@@ -35,31 +35,35 @@ impl LinearPC {
     }
   }
   pub unsafe fn commit(&mut self, src: Vec<FieldElement>, n: usize) -> Vec<HashDigest> {
-    let mut stash = vec![HashDigest::new(); n / COLUMN_SIZE * 2];
-    self.codeword_size = vec![0; COLUMN_SIZE];
-    assert_eq!(n % COLUMN_SIZE, 0);
-    self.encoded_codeword = vec![vec![FieldElement::zero()]; COLUMN_SIZE];
-    self.coef = vec![Vec::new(); COLUMN_SIZE];
+    let num_columns = COLUMN_SIZE;
+    let num_blocks = n / num_columns * 2;
 
-    //new code
-    for i in 0..COLUMN_SIZE {
-      self.encoded_codeword[i] = vec![FieldElement::zero(); n / COLUMN_SIZE * 2];
-      self.coef[i] = vec![FieldElement::zero(); n / COLUMN_SIZE];
-      let src_slice = &src[(i * n / COLUMN_SIZE)..((i + 1) * n / COLUMN_SIZE)];
+    let mut stash = vec![HashDigest::new(); num_blocks];
+    self.codeword_size = vec![0; num_columns];
+    assert_eq!(n % num_columns, 0);
+
+    self.encoded_codeword = (0..num_columns)
+      .map(|i| vec![FieldElement::zero(); num_blocks])
+      .collect();
+
+    self.coef = (0..num_columns)
+      .map(|_| vec![FieldElement::zero(); n / num_columns])
+      .collect();
+
+    for i in 0..num_columns {
+      let src_slice = &src[i * n / num_columns..(i + 1) * n / num_columns];
       self.coef[i].copy_from_slice(src_slice);
-      //memset(encoded_codeword[i], 0, sizeof(prime_field::field_element) * n /
-      // COLUMN_SIZE * 2);
 
       self.codeword_size[i] = self.lce_ctx.encode(
-        (src[i * n / COLUMN_SIZE..]).to_vec(),
+        src[i * n / num_columns..].to_vec(),
         &mut self.encoded_codeword[i],
-        n / COLUMN_SIZE,
+        n / num_columns,
       );
     }
 
-    for i in 0..(n / COLUMN_SIZE * 2) {
+    for i in 0..num_blocks {
       stash[i] = HashDigest::default();
-      for j in 0..(COLUMN_SIZE / 2) {
+      for j in 0..(num_columns / 2) {
         stash[i] = merkle_tree::hash_double_field_element_merkle_damgard(
           self.encoded_codeword[2 * j][i],
           self.encoded_codeword[2 * j + 1][i],
@@ -68,13 +72,7 @@ impl LinearPC {
       }
     }
 
-    create_tree(
-      stash,
-      n / COLUMN_SIZE * 2,
-      &mut self.mt,
-      //Some(std::mem::size_of::<HashDigest>()),
-      Some(true),
-    );
+    create_tree(stash, num_blocks, &mut self.mt, Some(true));
     self.mt.clone()
   }
 
@@ -300,7 +298,7 @@ impl LinearPC {
         &mut proof_size,
       ));
       assert!(merkle_tree::verify_claim(
-        combined_codeword_mt[1].clone(),
+        combined_codeword_mt[1],
         combined_codeword_mt.clone(),
         merkle_tree::hash_single_field_element(combined_codeword[q]),
         q,
