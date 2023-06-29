@@ -1,16 +1,16 @@
 use std::mem;
 use std::time::Instant;
 
-use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
-use infrastructure::my_hash::my_hash;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, RS_CODE_RATE, SLICE_NUMBER},
   my_hash::{self, HashDigest},
 };
+use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
+use infrastructure::my_hash::my_hash;
 use prime_field::FieldElement;
 
-use crate::vpd::fri::FRIContext;
 use crate::LdtCommitment;
+use crate::vpd::fri::FRIContext;
 
 pub fn verify_merkle(
   hash_digest: HashDigest,
@@ -62,7 +62,7 @@ pub fn verify_merkle(
   data = unsafe { mem::zeroed() };
 
   let mut value_hash = HashDigest::new();
-  //let mut i = 0;
+
   unsafe {
     for value in values {
       let data_ele = [value.0, value.1];
@@ -74,13 +74,10 @@ pub fn verify_merkle(
     }
   }
 
-  // println!(
-  //   "hash_digest: {:?}\n current_hash:{:?}",
-  //   hash_digest, current_hash
-  // );
-
   println!(
-    "value_hash: {:?}\n merkle: {:?}",
+    "current_hash: {:?}\nhash_digest {:?}\nvalue_hash: {:?}\nmerkle: {:?}",
+    current_hash,
+    hash_digest,
     value_hash,
     merkle_path.last()
   );
@@ -313,7 +310,7 @@ impl FRIContext {
 
     self.visited[self.current_step_no] = vec![false; nxt_witness_size * 4 * slice_count];
 
-    let htmp: HashDigest = HashDigest::default();
+    let mut htmp: HashDigest = HashDigest::default();
     let mut hash_val: Vec<HashDigest> = vec![HashDigest::default(); nxt_witness_size / 2];
 
     unsafe {
@@ -330,6 +327,7 @@ impl FRIContext {
 
           data[0] = hash_single_field_element(data_ele[0]); // TODO check
           data[1] = htmp;
+          htmp = my_hash(data);
         }
         hash_val[i] = htmp;
       }
