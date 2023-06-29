@@ -575,8 +575,9 @@ impl PolyCommitVerifier {
           rou[0] = x[0].fast_pow((slice_size >> RS_CODE_RATE) as u128);
           rou[1] = x[1].fast_pow((slice_size >> RS_CODE_RATE) as u128);
 
-          inv_x[0] = x[0].clone().inverse();
-          inv_x[1] = x[1].clone().inverse();
+          inv_x[0] = x[0].inverse();
+          inv_x[1] = x[1].inverse();
+
 
           alpha.0.resize(
             slice_count,
@@ -640,7 +641,7 @@ impl PolyCommitVerifier {
           *v_time += time_span;
 
           alpha = beta.clone();
-          beta = request_step_commit(i, (pow / 2).try_into().unwrap(), new_size, &mut fri_ctx);
+          beta = request_step_commit(i, (pow / 2).try_into().unwrap(), new_size, fri_ctx);
 
           *proof_size += new_size;
 

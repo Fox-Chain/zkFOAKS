@@ -170,15 +170,14 @@ impl ZkVerifier {
             );
             process::exit(1)
           }
-        } else {
-          if g != 0 {
+        } else if g != 0 {
             eprintln!(
               "Error, gates must be in sorted order, and full [0, 2^n - 1]. {} {} {} -1",
               i, j, g
             );
             process::exit(1)
           }
-        }
+        
         previous_g = Some(g);
         if i != 1 {
           self.a_c.circuit[i].gates[g] = Gate::from_params(ty, u, v);
@@ -378,7 +377,7 @@ impl ZkVerifier {
     let mut a_0 = zk_prover.v_res(
       one_minus_r_0.clone(),
       r_0.clone(),
-      result.clone(),
+      result,
       capacity,
       1 << capacity,
     );
@@ -566,7 +565,7 @@ impl ZkVerifier {
         r.push(r_u[j].clone());
       }
       for j in 0..self.a_c.circuit[i - 1].bit_length {
-        r.push(r_v[j].clone());
+        r.push(r_v[j]);
       }
 
       if alpha_beta_sum
@@ -739,7 +738,7 @@ impl ZkVerifier {
       0,
       FieldElement::real_one(),
       r,
-      one_minus_r.clone(),
+      one_minus_r,
       0,
       log_length - LOG_SLICE_NUMBER,
     );
@@ -890,14 +889,14 @@ impl ZkVerifier {
     depth: usize,
     alpha: FieldElement,
     beta: FieldElement,
-    r_0: &Vec<FieldElement>,
-    r_1: &Vec<FieldElement>,
-    r_u: &Vec<FieldElement>,
-    r_v: &Vec<FieldElement>,
-    one_minus_r_0: &Vec<FieldElement>,
-    one_minus_r_1: &Vec<FieldElement>,
-    one_minus_r_u: &Vec<FieldElement>,
-    one_minus_r_v: &Vec<FieldElement>,
+    r_0: &[FieldElement],
+    r_1: &[FieldElement],
+    r_u: &[FieldElement],
+    r_v: &[FieldElement],
+    one_minus_r_0: &[FieldElement],
+    one_minus_r_1: &[FieldElement],
+    one_minus_r_u: &[FieldElement],
+    one_minus_r_v: &[FieldElement],
   ) {
     let debug_mode = false;
     if !self.a_c.circuit[depth].is_parallel || debug_mode {

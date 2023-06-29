@@ -132,7 +132,7 @@ impl LinearCodeEncodeContext {
       self.scratch[0][dep][n + l + i] = FieldElement::from_real(0);
     }
     for i in 0..l {
-      let val = self.scratch[0][dep][n + i].clone();
+      let val = self.scratch[0][dep][n + i];
       for d in 0..self.d[dep].degree {
         let target = self.d[dep].neighbor[i][d];
         self.scratch[0][dep][n + l + target] =

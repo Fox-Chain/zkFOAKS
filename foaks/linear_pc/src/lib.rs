@@ -43,8 +43,8 @@ impl LinearPC {
     assert_eq!(n % num_columns, 0);
 
     self.encoded_codeword = (0..num_columns)
-      .map(|i| vec![FieldElement::zero(); num_blocks])
-      .collect();
+    .map(|_i| vec![FieldElement::zero(); num_blocks])
+    .collect();
 
     self.coef = (0..num_columns)
       .map(|_| vec![FieldElement::zero(); n / num_columns])
@@ -78,7 +78,7 @@ impl LinearPC {
 
   fn generate_circuit(
     &mut self,
-    query: &mut Vec<usize>,
+    query: &mut [usize],
     n: usize,
     query_count: usize,
     input: Vec<FieldElement>,
