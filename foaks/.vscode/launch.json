@@ -160,7 +160,7 @@
           "kind": "bin"
         }
       },
-      "args": ["14", "text.txt"],
+      "args": ["15", "text.txt"],
       "cwd": "${workspaceFolder}"
     },
     {

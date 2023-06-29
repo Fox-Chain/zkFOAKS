@@ -507,7 +507,7 @@ impl PolyCommitVerifier {
             + (alpha.0[j].0 - alpha.0[j].1) * inv_2 * com.randomness[i] * inv_mu
         };
 
-        let mut fri_ctx = self.pc_prover.fri_ctx.as_mut().unwrap();
+        let fri_ctx = self.pc_prover.fri_ctx.as_mut().unwrap();
         if i == 0 {
           time_span = t0.elapsed().as_secs_f64();
           *v_time += time_span;
@@ -516,14 +516,14 @@ impl PolyCommitVerifier {
             s1_pow.try_into().unwrap(),
             new_size,
             0,
-            &mut fri_ctx,
+            fri_ctx,
           );
           alpha_h = request_init_value_with_merkle(
             s0_pow.try_into().unwrap(),
             s1_pow.try_into().unwrap(),
             new_size,
             1,
-            &mut fri_ctx,
+            fri_ctx,
           );
 
           *proof_size += new_size;
@@ -564,6 +564,17 @@ impl PolyCommitVerifier {
           *proof_size += new_size;
 
           t0 = time::Instant::now();
+
+          if !verify_merkle(
+            com.commitment_hash[0],
+            &beta.1,
+            beta.1.len(),
+            (pow / 2) as u128,
+            &beta.0,
+          ) {
+            println!("verify_merkle failed with beta.1, i:{}", i);
+            return false;
+          }
 
           let inv_mu = root_of_unity.fast_pow((pow / 2) as u128).inverse();
           alpha.0.clear();
@@ -629,11 +640,7 @@ impl PolyCommitVerifier {
             //let p_val = gen_val(&alpha, inv_mu, i, j);
             let p_val = (alpha.0[j].0 + alpha.0[j].1) * inv_2
               + (alpha.0[j].0 - alpha.0[j].1) * inv_2 * com.randomness[i] * inv_mu;
-            // let bet0 = beta.0[j].0;
-            // let bet1 = beta.0[j].1;
-            // println!("p_val: {:?}", p_val);
-            // println!("beta0: {:?}", bet0);
-            // println!("beta1: {:?}", bet1);
+
             if p_val != beta.0[j].0 && p_val != beta.0[j].1 {
               let a = p_val != beta.0[j].0;
               let b = p_val != beta.0[j].1;

@@ -1,16 +1,16 @@
 use std::mem;
 use std::time::Instant;
 
+use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
+use infrastructure::my_hash::my_hash;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, RS_CODE_RATE, SLICE_NUMBER},
   my_hash::{self, HashDigest},
 };
-use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
-use infrastructure::my_hash::my_hash;
 use prime_field::FieldElement;
 
-use crate::LdtCommitment;
 use crate::vpd::fri::FRIContext;
+use crate::LdtCommitment;
 
 pub fn verify_merkle(
   hash_digest: HashDigest,
@@ -75,9 +75,7 @@ pub fn verify_merkle(
   }
 
   println!(
-    "current_hash: {:?}\nhash_digest {:?}\nvalue_hash: {:?}\nmerkle: {:?}",
-    current_hash,
-    hash_digest,
+    "value_hash: {:?}\nmerkle: {:?}",
     value_hash,
     merkle_path.last()
   );
@@ -161,62 +159,6 @@ impl FRIContext {
     assert_eq!(pos, 1);
     (value, com_hhash)
   }
-
-  /// Request the merkle proof to lvl-th level oracle, at w^{pow}, will also
-  /// return it's quad residue's proof. returned value is unordered, meaning
-  /// that one of them is the requested value and the other one is it's qual
-  /// residue.
-  // pub fn request_step_commit(
-  //   &mut self,
-  //   lvl: usize,
-  //   pow: usize,
-  //   // new_size: i64,
-  // ) -> (Vec<(FieldElement, FieldElement)>, Vec<HashDigest>) {
-  //   //let mut new_size = 0;
-  //   let mut pow_0 = 0;
-
-  //   let mut value_vec: Vec<(FieldElement, FieldElement)> = vec![];
-  //   let mut visited_element = false;
-
-  //   for i in 0..SLICE_NUMBER {
-  //     pow_0 = self.cpd.rs_codeword_mapping[lvl][pow << LOG_SLICE_NUMBER | i];
-  //     pow_0 /= 2;
-  //     if !self.visited[lvl][pow_0 * 2] {
-  //       self.visited[lvl][pow_0 * 2] = true;
-  //     } else {
-  //       visited_element = true
-  //     }
-
-  //     value_vec.push((
-  //       self.cpd.rs_codeword[lvl][pow_0 * 2],
-  //       self.cpd.rs_codeword[lvl][pow_0 * 2 + 1],
-  //     ));
-  //   }
-
-  //   // this can be compressed into one by random linear combination
-  //   // if !visited_element {
-  //   //   new_size += mem::size_of::<FieldElement>();
-  //   // }
-
-  //   let mut com_hhash: Vec<HashDigest> = vec![];
-  //   let merkle_size = self.cpd.merkle_size[lvl];
-  //   let val_hhash = self.cpd.merkle[lvl][pow_0];
-  //   pow_0 = (self.cpd.rs_codeword_mapping[lvl][pow << LOG_SLICE_NUMBER] >> (LOG_SLICE_NUMBER + 1))
-  //     + merkle_size;
-
-  //   while pow_0 != 1 {
-  //     if !self.visited[lvl][pow_0 ^ 1] {
-  //       //new_size += mem::size_of::<HashDigest>();
-  //       self.visited[lvl][pow_0 ^ 1] = true;
-  //       self.visited[lvl][pow_0] = true;
-  //     }
-  //     com_hhash.push(self.cpd.merkle[lvl][pow_0 ^ 1]);
-  //     pow_0 /= 2;
-  //   }
-
-  //   com_hhash.push(val_hhash);
-  //   (value_vec, com_hhash)
-  // }
 
   /// Given fold parameter r, return the root of the merkle tree of next level.
   pub fn commit_phase_step(&mut self, r: FieldElement, slice_count: usize) -> HashDigest {
