@@ -1,22 +1,22 @@
 use std::{fs, fs::read_to_string, process, time::Instant};
 use std::{
-    fs::File,
-    io::{Error, Write},
-    mem,
+  fs::File,
+  io::{Error, Write},
+  mem,
 };
 
-use infrastructure::{
-    constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
-    rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
-};
 use infrastructure::my_hash::HashDigest;
+use infrastructure::{
+  constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
+  rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
+};
 use poly_commitment::PolyCommitVerifier;
 use prime_field::FieldElement;
 
 use crate::{
-    circuit_fast_track::{Gate, Layer, LayeredCircuit},
-    polynomial::QuadraticPoly,
-    prover::ZkProver,
+  circuit_fast_track::{Gate, Layer, LayeredCircuit},
+  polynomial::QuadraticPoly,
+  prover::ZkProver,
 };
 
 #[derive(Default, Debug)]
@@ -171,13 +171,13 @@ impl ZkVerifier {
             process::exit(1)
           }
         } else if g != 0 {
-            eprintln!(
-              "Error, gates must be in sorted order, and full [0, 2^n - 1]. {} {} {} -1",
-              i, j, g
-            );
-            process::exit(1)
-          }
-        
+          eprintln!(
+            "Error, gates must be in sorted order, and full [0, 2^n - 1]. {} {} {} -1",
+            i, j, g
+          );
+          process::exit(1)
+        }
+
         previous_g = Some(g);
         if i != 1 {
           self.a_c.circuit[i].gates[g] = Gate::from_params(ty, u, v);

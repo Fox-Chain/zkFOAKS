@@ -43,8 +43,8 @@ impl LinearPC {
     assert_eq!(n % num_columns, 0);
 
     self.encoded_codeword = (0..num_columns)
-    .map(|_i| vec![FieldElement::zero(); num_blocks])
-    .collect();
+      .map(|_i| vec![FieldElement::zero(); num_blocks])
+      .collect();
 
     self.coef = (0..num_columns)
       .map(|_| vec![FieldElement::zero(); n / num_columns])
@@ -289,7 +289,7 @@ impl LinearPC {
       }
 
       assert!(merkle_tree::verify_claim(
-        com_mt[1].clone(),
+        com_mt[1],
         com_mt.clone(),
         column_hash,
         q,
@@ -580,15 +580,9 @@ fn smallest_pow2_larger_or_equal_to(x: usize) -> usize {
 
 pub fn read_random_file(path: &str) -> Vec<usize> {
   let result_content = read_to_string(path).unwrap();
-  let result_lines = result_content.lines();
-  //let mut result = Vec::new();
 
-  result_lines
-    .into_iter()
-    .map(|x| {
-      let mut line = x.split_whitespace();
-      let ran = line.next().unwrap().parse().unwrap();
-      ran
-    })
+  result_content
+    .split_whitespace()
+    .map(|x| x.parse().unwrap())
     .collect()
 }
