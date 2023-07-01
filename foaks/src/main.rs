@@ -14,7 +14,7 @@ enum Error {
 
 fn main() -> Result<(), Error> {
   let args: Vec<String> = env::args().collect();
-  let lg_n = match args.iter().nth(1) {
+  let lg_n = match args.get(1) {
     Some(number) => number.parse::<usize>().unwrap(),
     _ => return Err(Error::ParseParamsError),
   };

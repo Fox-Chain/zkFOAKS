@@ -439,12 +439,15 @@ impl ZkVerifier {
       let mut one_minus_r_u = vec![FieldElement::zero(); self.a_c.circuit[i - 1].bit_length];
       let mut one_minus_r_v = vec![FieldElement::zero(); self.a_c.circuit[i - 1].bit_length];
 
-      for j in 0..(self.a_c.circuit[i - 1].bit_length) {
-        one_minus_r_u[j] = FieldElement::from_real(1) - r_u[j];
-        one_minus_r_v[j] = FieldElement::from_real(1) - r_v[j];
-        //one_minus_r_u.push(FieldElement::from_real(1) - r_u[j]);
-        //one_minus_r_v.push(FieldElement::from_real(1) - r_v[j]);
-      }
+      let one_minus_r_u: Vec<_> = r_u
+        .iter()
+        .map(|&element| FieldElement::from_real(1) - element)
+        .collect();
+
+      let one_minus_r_v: Vec<_> = r_v
+        .iter()
+        .map(|&element| FieldElement::from_real(1) - element)
+        .collect();
 
       for j in 0..(self.a_c.circuit[i - 1].bit_length) {
         let poly = zk_prover.sumcheck_phase1_update(previous_random, j);
@@ -560,13 +563,12 @@ impl ZkVerifier {
       let bit_test_value = predicates_value[13];
       let custom_comb_value = predicates_value[14];
 
-      let mut r = Vec::new();
-      for j in 0..self.a_c.circuit[i - 1].bit_length {
-        r.push(r_u[j].clone());
-      }
-      for j in 0..self.a_c.circuit[i - 1].bit_length {
-        r.push(r_v[j]);
-      }
+      let r: Vec<_> = r_u
+        .iter()
+        .take(self.a_c.circuit[i - 1].bit_length)
+        .chain(r_v.iter().take(self.a_c.circuit[i - 1].bit_length))
+        .cloned()
+        .collect();
 
       if alpha_beta_sum
         != (add_value * (v_u + v_v)

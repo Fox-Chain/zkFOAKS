@@ -61,10 +61,9 @@ impl LinearCodeEncodeContext {
 
     let mut r: usize = (ALPHA * (n as f64)) as usize;
 
-    for j in 0..r {
-      self.scratch[1][dep][j] = FieldElement::zero();
-    }
-    // self.scratch[1][dep].iter_mut().for_each(|elem| *elem = FieldElement::zero());
+    self.scratch[1][dep].iter_mut().for_each(|item| {
+      *item = FieldElement::zero();
+    });
 
     //expander mult
     for i in 0..n {

@@ -50,7 +50,7 @@ impl LinearPC {
       .map(|_| vec![FieldElement::zero(); n / num_columns])
       .collect();
 
-    for i in 0..num_columns {
+    (0..num_columns).for_each(|i| {
       let src_slice = &src[i * n / num_columns..(i + 1) * n / num_columns];
       self.coef[i].copy_from_slice(src_slice);
 
@@ -59,7 +59,7 @@ impl LinearPC {
         &mut self.encoded_codeword[i],
         n / num_columns,
       );
-    }
+    });
 
     for i in 0..num_blocks {
       stash[i] = HashDigest::default();
