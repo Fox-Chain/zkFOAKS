@@ -560,7 +560,6 @@ impl ZkProver {
     current_bit: usize,
   ) -> QuadraticPoly {
     let t0 = time::Instant::now();
-    let ret;
 
     for i in 0..self.total_uv >> 1 {
       let g_zero = i << 1;
@@ -622,7 +621,7 @@ impl ZkProver {
       swap(&mut self.ctx.rets_prev, &mut self.ctx.rets_cur);
       iter += 1;
     }
-    ret = self.ctx.rets_prev[0];
+    let ret = self.ctx.rets_prev[0];
 
     self.total_uv >>= 1;
 

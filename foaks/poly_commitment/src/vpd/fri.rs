@@ -3,7 +3,7 @@ use std::{mem::size_of, time, usize, vec};
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, MAX_BIT_LENGTH, MAX_FRI_DEPTH, RS_CODE_RATE, SLICE_NUMBER},
   merkle_tree,
-  my_hash::{HashDigest, my_hash},
+  my_hash::{my_hash, HashDigest},
 };
 use prime_field::FieldElement;
 
@@ -296,7 +296,7 @@ pub fn request_init_value_with_merkle(
   com_hhash[depth] = fri_ctx.witness_merkle[oracle_indicator][pos];
   let mut data = [HashDigest::default(); 2];
 
-  for i in 0..depth {
+  (0..depth).for_each(|i| {
     if !fri_ctx.visited_init[oracle_indicator][pos ^ 1] {
       new_size += size_of::<HashDigest>();
     }
@@ -304,19 +304,17 @@ pub fn request_init_value_with_merkle(
     fri_ctx.visited_init[oracle_indicator][pos] = true;
     fri_ctx.visited_init[oracle_indicator][pos ^ 1] = true;
 
-    if (pos & 1) == 1 {
-      data[0] = fri_ctx.witness_merkle[oracle_indicator][pos ^ 1];
-      data[1] = test_hash;
+    let data = if (pos & 1) == 1 {
+      [fri_ctx.witness_merkle[oracle_indicator][pos ^ 1], test_hash]
     } else {
-      data[0] = test_hash;
-      data[1] = fri_ctx.witness_merkle[oracle_indicator][pos ^ 1];
-    }
+      [test_hash, fri_ctx.witness_merkle[oracle_indicator][pos ^ 1]]
+    };
     test_hash = my_hash(data);
 
     com_hhash[i] = fri_ctx.witness_merkle[oracle_indicator][pos ^ 1];
     pos /= 2;
     assert_eq!(test_hash, fri_ctx.witness_merkle[oracle_indicator][pos]);
-  }
+  });
 
   //println!("324 -> {:?} {:?}", value[0], com_hhash[0]);
   assert_eq!(pos, 1);

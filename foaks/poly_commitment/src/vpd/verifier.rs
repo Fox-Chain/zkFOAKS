@@ -49,16 +49,15 @@ pub fn verify_merkle(
   let mut data: [HashDigest; 2];
   // don't mutate the current_hash, this is the output of the loop following
 
-  for i in 0..(len - 1) {
-    data = [current_hash, merkle_path[i]];
-
-    if (pow & 1_u128) != 0 {
-      data = [merkle_path[i], current_hash];
-    }
+  current_hash = (0..(len - 1)).fold(current_hash, |hash, i| {
+    let data = if (pow & 1_u128) != 0 {
+      [merkle_path[i], hash]
+    } else {
+      [hash, merkle_path[i]]
+    };
     pow /= 2;
-
-    current_hash = my_hash(data);
-  }
+    my_hash(data)
+  });
 
   data = unsafe { mem::zeroed() };
 
