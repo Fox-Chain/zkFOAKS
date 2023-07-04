@@ -151,11 +151,14 @@ impl LinearCodeEncodeContext {
       n
     } else {
       let dep = dep.unwrap_or(0);
-      self.c[dep] = generate_random_expander(n, (ALPHA * (n as f64)) as usize, CN);
-      let l = self.expander_init((ALPHA * (n as f64)) as usize, Some(dep + 1));
-      self.d[dep] =
-        generate_random_expander(l, ((n as f64) * (R - 1f64) - (l as f64)) as usize, DN);
-      n + l + (((n as f64) * (R - 1.0) - (l as f64)) as usize)
+      let alpha_n = (ALPHA * (n as f64)) as usize;
+      let l = self.expander_init(alpha_n, Some(dep + 1));
+      let expander_size = ((n as f64) * (R - 1.0) - (l as f64)) as usize;
+
+      self.c[dep] = generate_random_expander(n, alpha_n, CN);
+      self.d[dep] = generate_random_expander(l, expander_size, DN);
+
+      n + l + expander_size
     }
   }
 }

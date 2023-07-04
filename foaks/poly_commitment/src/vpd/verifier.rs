@@ -110,23 +110,25 @@ impl FRIContext {
     let log_leaf_size = LOG_SLICE_NUMBER + 1;
 
     //let mut new_size: usize = 0;
-    for i in 0..SLICE_NUMBER {
-      let element_1 =
-        self.witness_rs_codeword_interleaved[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 0];
+    let value = (0..SLICE_NUMBER)
+      .map(|i| {
+        let element_1 = self.witness_rs_codeword_interleaved[oracle_indicator]
+          [pow_0 << log_leaf_size | i << 1 | 0];
 
-      let element_2 =
-        self.witness_rs_codeword_interleaved[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 1];
+        let element_2 = self.witness_rs_codeword_interleaved[oracle_indicator]
+          [pow_0 << log_leaf_size | i << 1 | 1];
 
-      value.push((element_1, element_2));
+        if !self.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 0] {
+          self.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 0] = true;
+        }
+        if !self.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 1] {
+          self.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 1] = true;
+        }
+        //new_size += mem::size_of::<FieldElement>();
 
-      if !self.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 0] {
-        self.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 0] = true;
-      }
-      if !self.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 1] {
-        self.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 1] = true;
-      }
-      //new_size += mem::size_of::<FieldElement>();
-    }
+        (element_1, element_2)
+      })
+      .collect::<Vec<_>>();
 
     let depth = self.log_current_witness_size_per_slice - 1;
     let mut com_hhash: Vec<HashDigest> = Vec::with_capacity(depth);
@@ -137,25 +139,25 @@ impl FRIContext {
     let mut test_hash = self.witness_merkle[oracle_indicator][pos];
     com_hhash[depth] = test_hash;
 
-    for i in 0..depth {
-      // if !self.visited_init[oracle_indicator][pos ^ 1] {
-      //   new_size += mem::size_of::<HashDigest>();
-      // }
-      self.visited_init[oracle_indicator][pos] = true;
-      self.visited_init[oracle_indicator][pos ^ 1] = true;
+    (0..depth)
+      .map(|i| {
+        self.visited_init[oracle_indicator][pos] = true;
+        self.visited_init[oracle_indicator][pos ^ 1] = true;
 
-      let data = if (pos & 1) == 1 {
-        [self.witness_merkle[oracle_indicator][pos ^ 1], test_hash]
-      } else {
-        [test_hash, self.witness_merkle[oracle_indicator][pos ^ 1]]
-      };
-      test_hash = my_hash::my_hash(data);
+        let data = if (pos & 1) == 1 {
+          [self.witness_merkle[oracle_indicator][pos ^ 1], test_hash]
+        } else {
+          [test_hash, self.witness_merkle[oracle_indicator][pos ^ 1]]
+        };
+        test_hash = my_hash::my_hash(data);
 
-      com_hhash[i] = self.witness_merkle[oracle_indicator][pos ^ 1];
-      pos /= 2;
+        com_hhash[i] = self.witness_merkle[oracle_indicator][pos ^ 1];
+        pos /= 2;
 
-      assert_eq!(test_hash, self.witness_merkle[oracle_indicator][pos]);
-    }
+        assert_eq!(test_hash, self.witness_merkle[oracle_indicator][pos]);
+      })
+      .collect::<Vec<_>>();
+
     assert_eq!(pos, 1);
     (value, com_hhash)
   }
