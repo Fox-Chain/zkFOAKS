@@ -1,16 +1,16 @@
-use std::mem;
+use std::{env, mem};
 use std::time::Instant;
 
-use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
-use infrastructure::my_hash::my_hash;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, RS_CODE_RATE, SLICE_NUMBER},
   my_hash::{self, HashDigest},
 };
+use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
+use infrastructure::my_hash::my_hash;
 use prime_field::FieldElement;
 
-use crate::vpd::fri::FRIContext;
 use crate::LdtCommitment;
+use crate::vpd::fri::FRIContext;
 
 pub fn verify_merkle(
   hash_digest: HashDigest,
@@ -289,8 +289,7 @@ impl FRIContext {
     self.log_current_witness_size_per_slice -= 1;
 
     self.current_step_no += 1;
-    self.cpd.merkle[self.current_step_no - 1][1] // since we increment
-                                                 // current_step_no up there
+    self.cpd.merkle[self.current_step_no - 1][1] // since we increment current_step_no up there
   }
 
   /// Return the final rs code since it is only constant size
@@ -309,10 +308,17 @@ impl FRIContext {
     let mut randomness: Vec<FieldElement> =
       vec![FieldElement::default(); log_length + RS_CODE_RATE - LOG_SLICE_NUMBER];
 
+    let is_not_random = env::args().nth(3).is_none();
     let mut ptr = 0;
     while codeword_size > 1 << RS_CODE_RATE {
       assert!(ptr < log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
-      randomness[ptr] = FieldElement::new_random();
+
+      if is_not_random {
+        randomness[ptr] = FieldElement::new_random();
+      } else {
+        randomness[ptr] = FieldElement { real: 1445952529, img: 527239191 };
+      }
+
       ret[ptr] = self.commit_phase_step(randomness[ptr], slice_count);
       codeword_size /= 2;
       ptr += 1;
