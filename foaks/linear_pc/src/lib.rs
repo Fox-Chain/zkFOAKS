@@ -60,19 +60,19 @@ impl LinearPC {
         n / num_columns,
       );
     });
-
-    for i in 0..num_blocks {
-      stash[i] = HashDigest::default();
-      for j in 0..(num_columns / 2) {
-        stash[i] = merkle_tree::hash_double_field_element_merkle_damgard(
+    let stash = (0..num_blocks).fold(vec![HashDigest::default(); num_blocks], |mut stash, i| {
+      let updated_stash = (0..(num_columns / 2)).fold(stash[i], |acc, j| {
+        merkle_tree::hash_double_field_element_merkle_damgard(
           self.encoded_codeword[2 * j][i],
           self.encoded_codeword[2 * j + 1][i],
-          stash[i],
-        );
-      }
-    }
+          acc,
+        )
+      });
+      stash[i] = updated_stash;
+      stash
+    });
 
-    create_tree(stash, num_blocks, &mut self.mt, Some(true));
+    create_tree(stash.clone(), num_blocks, &mut self.mt, Some(true));
     self.mt.clone()
   }
 
@@ -115,11 +115,32 @@ impl LinearPC {
     self.verifier.a_c.circuit[self.gates_count.len() + 1].gates =
       vec![Gate::new(); 1 << self.verifier.a_c.circuit[self.gates_count.len() + 1].bit_length];
 
-    for i in 0..n {
-      self.verifier.a_c.inputs[i] = input[i];
-      self.verifier.a_c.circuit[0].gates[i] = Gate::from_params(3, 0, 0);
-      self.verifier.a_c.circuit[1].gates[i] = Gate::from_params(4, i, 0);
-    }
+    self
+      .verifier
+      .a_c
+      .inputs
+      .iter_mut()
+      .zip(input.iter())
+      .for_each(|(input_elem, &input_value)| {
+        *input_elem = input_value;
+      });
+
+    self.verifier.a_c.circuit[0]
+      .gates
+      .iter_mut()
+      .enumerate()
+      .for_each(|(i, gate)| {
+        *gate = Gate::from_params(3, 0, 0);
+      });
+
+    self.verifier.a_c.circuit[1]
+      .gates
+      .iter_mut()
+      .enumerate()
+      .for_each(|(i, gate)| {
+        *gate = Gate::from_params(4, i, 0);
+      });
+
     //Todo: improve gate_types::input with constant values
     for i in 0..n {
       self.verifier.a_c.circuit[2].gates[i] = Gate::from_params(10, i, 0);
