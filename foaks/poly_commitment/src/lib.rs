@@ -562,7 +562,6 @@ impl PolyCommitVerifier {
           ) {
             return false;
           }
-          println!("verify_merkle passed with alpha_l.1, i:{}", i);
           if !verify_merkle(
             merkle_tree_h,
             &alpha_h.1,
@@ -572,7 +571,6 @@ impl PolyCommitVerifier {
           ) {
             return false;
           }
-          println!("verify_merkle passed with alpha_h.1, i:{}", i);
 
           *v_time += t0.elapsed().as_secs_f64();
           (beta, new_size) = request_step_commit(0, (pow / 2).try_into().unwrap(), fri_ctx);
@@ -580,7 +578,7 @@ impl PolyCommitVerifier {
           *proof_size += new_size;
 
           t0 = time::Instant::now();
-          println!("Before beta");
+          println!("Before verify_merkle with beta.1");
 
           if !verify_merkle(
             com.commitment_hash[0],
