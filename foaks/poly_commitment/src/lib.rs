@@ -1,5 +1,12 @@
 use std::{
-  env, ffi::OsStr, fs::File, io::Read, os::unix::prelude::OsStrExt, process::Command, time,
+  env,
+  ffi::OsStr,
+  fs::{read_to_string, File},
+  io::Read,
+  ops::Deref,
+  os::unix::prelude::OsStrExt,
+  process::Command,
+  time,
 };
 
 use infrastructure::{
@@ -391,6 +398,9 @@ impl PolyCommitVerifier {
       log_length - LOG_SLICE_NUMBER
     );
 
+    let binding = read_random_file("pow.txt");
+    let mut pow_vec = binding.iter();
+
     let _output = Command::new("sh")
       .arg("-c")
       .arg(OsStr::from_bytes(command.as_bytes()))
@@ -433,7 +443,8 @@ impl PolyCommitVerifier {
       .commit_phase(log_length, self.pc_prover.ctx.slice_count);
     let coef_slice_size = 1 << (log_length - LOG_SLICE_NUMBER);
 
-    for _ in 0..33 {
+    for rep in 0..33 {
+      println!("rep: {}", rep);
       let slice_count = 1 << LOG_SLICE_NUMBER;
       let slice_size = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
 
@@ -454,7 +465,7 @@ impl PolyCommitVerifier {
       let mut y = FieldElement::default();
       // let mut equ_beta: bool; not used in C++
       assert!(log_length - LOG_SLICE_NUMBER > 0);
-      let mut pow: u128 = 0;
+      let mut pow = 0_u128;
       let mut max: u128 = 0;
 
       for i in 0..(log_length - LOG_SLICE_NUMBER) {
@@ -462,11 +473,14 @@ impl PolyCommitVerifier {
 
         if i == 0 {
           max = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i);
-          pow = rand::random::<u128>() % max;
+          //hard code for now
+          //pow = rand::random::<u128>() % max;
+          pow = *pow_vec.next().unwrap();
+          println!("pow =  {}", pow);
 
           while pow < (1 << (log_length - LOG_SLICE_NUMBER - i)) || pow % 2 == 1 {
-            pow =
-              rand::random::<u128>() % (1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i));
+            pow = *pow_vec.next().unwrap(); //Fix here
+            println!("pow =  {}", pow);
           }
           root_of_unity =
             FieldElement::get_root_of_unity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i)
@@ -475,6 +489,8 @@ impl PolyCommitVerifier {
         } else {
           root_of_unity = root_of_unity * root_of_unity;
           pow = pow % (1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i));
+          println!("pow =  {}", pow);
+
           pre_y = y;
           y = y * y;
         }
@@ -537,7 +553,6 @@ impl PolyCommitVerifier {
               s1
             }
           };
-
           if !verify_merkle(
             merkle_tree_l,
             &alpha_l.1,
@@ -547,7 +562,7 @@ impl PolyCommitVerifier {
           ) {
             return false;
           }
-
+          println!("verify_merkle passed with alpha_l.1, i:{}", i);
           if !verify_merkle(
             merkle_tree_h,
             &alpha_h.1,
@@ -557,6 +572,7 @@ impl PolyCommitVerifier {
           ) {
             return false;
           }
+          println!("verify_merkle passed with alpha_h.1, i:{}", i);
 
           *v_time += t0.elapsed().as_secs_f64();
           (beta, new_size) = request_step_commit(0, (pow / 2).try_into().unwrap(), fri_ctx);
@@ -564,6 +580,7 @@ impl PolyCommitVerifier {
           *proof_size += new_size;
 
           t0 = time::Instant::now();
+          println!("Before beta");
 
           if !verify_merkle(
             com.commitment_hash[0],
@@ -726,4 +743,19 @@ impl PolyCommitVerifier {
     }
     true
   }
+}
+
+pub fn read_random_file(path: &str) -> Vec<u128> {
+  let result_content = read_to_string(path).unwrap();
+  let result_lines = result_content.lines();
+  //let mut result = Vec::new();
+
+  result_lines
+    .into_iter()
+    .map(|x| {
+      let mut line = x.split_whitespace();
+      let ran = line.next().unwrap().parse().unwrap();
+      ran
+    })
+    .collect()
 }

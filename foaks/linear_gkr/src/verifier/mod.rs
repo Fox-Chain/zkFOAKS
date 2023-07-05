@@ -5,11 +5,11 @@ use std::{
   mem,
 };
 
+use infrastructure::my_hash::HashDigest;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
   rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
 };
-use infrastructure::my_hash::HashDigest;
 use poly_commitment::PolyCommitVerifier;
 use prime_field::FieldElement;
 
@@ -608,13 +608,13 @@ impl ZkVerifier {
       let mut tmp_alpha;
       let mut tmp_beta;
 
-        if is_not_random {
-            tmp_alpha = generate_randomness(1);
-            tmp_beta = generate_randomness(1);
-        } else {
-            tmp_alpha = vec![rand_tmp_alpha[i - 1]];
-            tmp_beta = vec![rand_tmp_beta[i - 1]];
-        }
+      if is_not_random {
+        tmp_alpha = generate_randomness(1);
+        tmp_beta = generate_randomness(1);
+      } else {
+        tmp_alpha = vec![rand_tmp_alpha[i - 1]];
+        tmp_beta = vec![rand_tmp_beta[i - 1]];
+      }
       alpha = tmp_alpha[0];
       beta = tmp_beta[0];
 

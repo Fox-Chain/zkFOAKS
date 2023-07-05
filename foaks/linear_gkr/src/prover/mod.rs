@@ -245,12 +245,12 @@ impl ZkProver {
 
   //Todo: Improve this function with Rust features
   pub fn get_witness(&mut self, inputs: Vec<FieldElement>, n: usize) {
-    //let res = read_vec_fe_file("witness.txt");
+    let res = read_vec_fe_file("witness.txt");
     self.circuit_value[0] = vec![FieldElement::zero(); 1 << self.a_c.circuit[0].bit_length];
     for i in 0..n {
       // Tempary change. Use res insted of inputs
-      //self.circuit_value[0][i] = res[i];
-      self.circuit_value[0][i] = inputs[i];
+      self.circuit_value[0][i] = res[i];
+      //self.circuit_value[0][i] = inputs[i];
     }
   }
 

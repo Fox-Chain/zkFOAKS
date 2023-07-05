@@ -324,11 +324,14 @@ impl LinearPC {
 
     // prover commit private input
 
-    // verifier samples query
-    let mut q = vec![0; query_count];
-    for i in 0..query_count {
-      q[i] = rand::random::<usize>() % self.codeword_size[0];
-    }
+    // verifier samples query //Temporary random hardcode
+    // let mut q = vec![0; query_count];
+    // for i in 0..query_count {
+    //   q[i] = rand::random::<usize>() % self.codeword_size[0];
+    // }
+
+    let mut q = read_random_file("q.txt");
+
     // generate circuit
 
     self.generate_circuit(
@@ -574,3 +577,18 @@ fn smallest_pow2_larger_or_equal_to(x: usize) -> usize {
 // 	CustomLinearComb = 14,
 // 	Input = 3isize
 // }
+
+pub fn read_random_file(path: &str) -> Vec<usize> {
+  let result_content = read_to_string(path).unwrap();
+  let result_lines = result_content.lines();
+  //let mut result = Vec::new();
+
+  result_lines
+    .into_iter()
+    .map(|x| {
+      let mut line = x.split_whitespace();
+      let ran = line.next().unwrap().parse().unwrap();
+      ran
+    })
+    .collect()
+}
