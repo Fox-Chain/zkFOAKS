@@ -228,7 +228,7 @@ pub fn request_init_commit(
     1 << (*log_current_witness_size_per_slice - 1),
     &mut witness_merkle[oracle_indicator],
     //Some(size_of::<HashDigest>()),
-    Some(true),
+    true,
   );
 
   visited_init[oracle_indicator] = vec![false; 1 << *log_current_witness_size_per_slice];
@@ -242,10 +242,10 @@ pub fn request_init_commit(
 pub fn request_init_value_with_merkle(
   mut pow_0: usize,
   mut pow_1: usize,
-  mut new_size: usize,
+  //mut new_size: usize, this value is always initialized with 0
   oracle_indicator: usize,
   fri_ctx: &mut FRIContext,
-) -> TripleVec {
+) -> (TripleVec, usize) {
   if pow_0 > pow_1 {
     std::mem::swap(&mut pow_0, &mut pow_1);
   }
@@ -257,7 +257,7 @@ pub fn request_init_value_with_merkle(
 
   let mut value: Vec<(FieldElement, FieldElement)> = vec![];
   let log_leaf_size = LOG_SLICE_NUMBER + 1;
-  new_size = 0;
+  let mut new_size = 0;
 
   for i in 0..SLICE_NUMBER {
     value.push((
@@ -319,7 +319,7 @@ pub fn request_init_value_with_merkle(
 
   //println!("324 -> {:?} {:?}", value[0], com_hhash[0]);
   assert_eq!(pos, 1);
-  (value, com_hhash)
+  ((value, com_hhash), new_size)
 }
 
 pub fn request_step_commit(lvl: usize, pow: usize, fri_ctx: &mut FRIContext) -> (TripleVec, usize) {
@@ -331,6 +331,7 @@ pub fn request_step_commit(lvl: usize, pow: usize, fri_ctx: &mut FRIContext) -> 
 
   for i in 0..SLICE_NUMBER {
     pow_0 = fri_ctx.cpd.rs_codeword_mapping[lvl][pow << LOG_SLICE_NUMBER | i];
+    //println!(" pow_0: {}", pow_0);
     pow_0 /= 2;
 
     if !fri_ctx.visited[lvl][pow_0 * 2] {
@@ -357,7 +358,7 @@ pub fn request_step_commit(lvl: usize, pow: usize, fri_ctx: &mut FRIContext) -> 
 
   while pow_0 != 1 {
     let pow1 = pow_0 ^ 1;
-    println!("pow0:{}, pow1:{}", pow_0, pow1);
+    println!("lvl:{}, pow0:{}, pow1:{}", lvl, pow_0, pow1);
     if !fri_ctx.visited[lvl][pow1] {
       new_size += size_of::<HashDigest>();
       fri_ctx.visited[lvl][pow1] = true;

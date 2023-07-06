@@ -74,7 +74,7 @@ impl LinearPC {
       n / COLUMN_SIZE * 2,
       &mut self.mt,
       //Some(std::mem::size_of::<HashDigest>()),
-      Some(true),
+      true,
     );
     self.mt.clone()
   }
@@ -239,7 +239,7 @@ impl LinearPC {
       combined_codeword_hash,
       (n / COLUMN_SIZE * 2).try_into().unwrap(),
       &mut combined_codeword_mt,
-      Some(false),
+      false,
     );
 
     //prover construct the combined original message

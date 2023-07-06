@@ -1,16 +1,16 @@
-use std::{env, mem};
 use std::time::Instant;
+use std::{env, mem};
 
+use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
+use infrastructure::my_hash::my_hash;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, RS_CODE_RATE, SLICE_NUMBER},
   my_hash::{self, HashDigest},
 };
-use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
-use infrastructure::my_hash::my_hash;
 use prime_field::FieldElement;
 
-use crate::LdtCommitment;
 use crate::vpd::fri::FRIContext;
+use crate::LdtCommitment;
 
 pub fn verify_merkle(
   hash_digest: HashDigest,
@@ -75,10 +75,18 @@ pub fn verify_merkle(
   }
 
   println!(
-    "value_hash: {:?}\nmerkle: {:?}",
+    "value_hash: {:?}, \nmerkle: {:?}",
     value_hash,
     merkle_path.last()
   );
+  // let prev_hash = HashDigest::new_from_c(
+  //   0xaf90be7d208a0b3b,
+  //   0xf021a37c0517b627,
+  //   0x7781c787bbbf2db5,
+  //   0xbb7bb15639bedf96,
+  // );
+
+  //println!("prev_hash: {:?}", prev_hash);
 
   hash_digest == current_hash && Some(&value_hash) == merkle_path.last()
 }
@@ -87,78 +95,79 @@ impl FRIContext {
   /// Request two values w^{pow0} and w^{pow1}, with merkle tree proof, where w
   /// is the root of unity and w^{pow0} and w^{pow1} are quad residue. Repeat
   /// ldt_repeat_num times, storing all result in vector.
-  pub fn request_init_value_with_merkle(
-    &mut self,
-    pow_0: usize,
-    pow_1: usize,
-    // new_size: &i64,
-    oracle_indicator: usize,
-  ) -> (Vec<(FieldElement, FieldElement)>, Vec<HashDigest>) {
-    // we swap pow_0 and pow_1 when pow_0 > pow_1
-    let (pow_0, pow_1) = if pow_0 > pow_1 {
-      (pow_1, pow_0)
-    } else {
-      (pow_0, pow_1)
-    };
+  ///
+  // pub fn request_init_value_with_merkle(
+  //   &mut self,
+  //   pow_0: usize,
+  //   pow_1: usize,
+  //   // new_size: &i64,
+  //   oracle_indicator: usize,
+  // ) -> (Vec<(FieldElement, FieldElement)>, Vec<HashDigest>) {
+  //   // we swap pow_0 and pow_1 when pow_0 > pow_1
+  //   let (pow_0, pow_1) = if pow_0 > pow_1 {
+  //     (pow_1, pow_0)
+  //   } else {
+  //     (pow_0, pow_1)
+  //   };
 
-    assert_eq!(
-      pow_0 + (1 << self.log_current_witness_size_per_slice) / 2,
-      pow_1
-    );
+  //   assert_eq!(
+  //     pow_0 + (1 << self.log_current_witness_size_per_slice) / 2,
+  //     pow_1
+  //   );
 
-    let mut value: Vec<(FieldElement, FieldElement)> = vec![];
-    let log_leaf_size = LOG_SLICE_NUMBER + 1;
+  //   let mut value: Vec<(FieldElement, FieldElement)> = vec![];
+  //   let log_leaf_size = LOG_SLICE_NUMBER + 1;
 
-    //let mut new_size: usize = 0;
-    for i in 0..SLICE_NUMBER {
-      let element_1 =
-        self.witness_rs_codeword_interleaved[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 0];
+  //   //let mut new_size: usize = 0;
+  //   for i in 0..SLICE_NUMBER {
+  //     let element_1 =
+  //       self.witness_rs_codeword_interleaved[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 0];
 
-      let element_2 =
-        self.witness_rs_codeword_interleaved[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 1];
+  //     let element_2 =
+  //       self.witness_rs_codeword_interleaved[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 1];
 
-      value.push((element_1, element_2));
+  //     value.push((element_1, element_2));
 
-      if !self.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 0] {
-        self.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 0] = true;
-      }
-      if !self.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 1] {
-        self.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 1] = true;
-      }
-      //new_size += mem::size_of::<FieldElement>();
-    }
+  //     if !self.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 0] {
+  //       self.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 0] = true;
+  //     }
+  //     if !self.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 1] {
+  //       self.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 1] = true;
+  //     }
+  //     //new_size += mem::size_of::<FieldElement>();
+  //   }
 
-    let depth = self.log_current_witness_size_per_slice - 1;
-    let mut com_hhash: Vec<HashDigest> = Vec::with_capacity(depth);
+  //   let depth = self.log_current_witness_size_per_slice - 1;
+  //   let mut com_hhash: Vec<HashDigest> = Vec::with_capacity(depth);
 
-    // minus 1 since each leaf have 2 values (qual resi)
-    let mut pos = pow_0 + (1 << (self.log_current_witness_size_per_slice - 1));
+  //   // minus 1 since each leaf have 2 values (qual resi)
+  //   let mut pos = pow_0 + (1 << (self.log_current_witness_size_per_slice - 1));
 
-    let mut test_hash = self.witness_merkle[oracle_indicator][pos];
-    com_hhash[depth] = test_hash;
+  //   let mut test_hash = self.witness_merkle[oracle_indicator][pos];
+  //   com_hhash[depth] = test_hash;
 
-    for i in 0..depth {
-      // if !self.visited_init[oracle_indicator][pos ^ 1] {
-      //   new_size += mem::size_of::<HashDigest>();
-      // }
-      self.visited_init[oracle_indicator][pos] = true;
-      self.visited_init[oracle_indicator][pos ^ 1] = true;
+  //   for i in 0..depth {
+  //     // if !self.visited_init[oracle_indicator][pos ^ 1] {
+  //     //   new_size += mem::size_of::<HashDigest>();
+  //     // }
+  //     self.visited_init[oracle_indicator][pos] = true;
+  //     self.visited_init[oracle_indicator][pos ^ 1] = true;
 
-      let data = if (pos & 1) == 1 {
-        [self.witness_merkle[oracle_indicator][pos ^ 1], test_hash]
-      } else {
-        [test_hash, self.witness_merkle[oracle_indicator][pos ^ 1]]
-      };
-      test_hash = my_hash::my_hash(data);
+  //     let data = if (pos & 1) == 1 {
+  //       [self.witness_merkle[oracle_indicator][pos ^ 1], test_hash]
+  //     } else {
+  //       [test_hash, self.witness_merkle[oracle_indicator][pos ^ 1]]
+  //     };
+  //     test_hash = my_hash::my_hash(data);
 
-      com_hhash[i] = self.witness_merkle[oracle_indicator][pos ^ 1];
-      pos /= 2;
+  //     com_hhash[i] = self.witness_merkle[oracle_indicator][pos ^ 1];
+  //     pos /= 2;
 
-      assert_eq!(test_hash, self.witness_merkle[oracle_indicator][pos]);
-    }
-    assert_eq!(pos, 1);
-    (value, com_hhash)
-  }
+  //     assert_eq!(test_hash, self.witness_merkle[oracle_indicator][pos]);
+  //   }
+  //   assert_eq!(pos, 1);
+  //   (value, com_hhash)
+  // }
 
   /// Given fold parameter r, return the root of the merkle tree of next level.
   pub fn commit_phase_step(&mut self, r: FieldElement, slice_count: usize) -> HashDigest {
@@ -258,6 +267,7 @@ impl FRIContext {
     unsafe {
       for i in 0..nxt_witness_size / 2 {
         let mut data = [HashDigest::default(), HashDigest::default()];
+        htmp = HashDigest::default();
         for j in 0..(1 << LOG_SLICE_NUMBER) {
           let c = (i) << log_leaf_size | (j << 1) | 0;
           let d = (i) << log_leaf_size | (j << 1) | 1;
@@ -281,7 +291,7 @@ impl FRIContext {
         nxt_witness_size / 2,
         self.cpd.merkle[self.current_step_no].as_mut(),
         //Some(std::mem::size_of::<HashDigest>()),
-        Some(current_step_no.is_empty()),
+        current_step_no.is_empty(),
       )
     }
 
@@ -316,10 +326,14 @@ impl FRIContext {
       if is_not_random {
         randomness[ptr] = FieldElement::new_random();
       } else {
-        randomness[ptr] = FieldElement { real: 1445952529, img: 527239191 };
+        randomness[ptr] = FieldElement {
+          real: 1445952529,
+          img: 527239191,
+        };
       }
 
       ret[ptr] = self.commit_phase_step(randomness[ptr], slice_count);
+      println!("ret[{}]: {:?}", ptr, ret[ptr]);
       codeword_size /= 2;
       ptr += 1;
     }

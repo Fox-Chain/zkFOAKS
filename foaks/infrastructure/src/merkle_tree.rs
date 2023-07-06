@@ -42,11 +42,11 @@ pub fn create_tree(
   src_data: Vec<HashDigest>,
   element_num: usize,
   dst: &mut Vec<HashDigest>,
-  alloc_required_: Option<bool>,
+  alloc_required: bool,
 ) {
   // ToDo: Check this, do not need element_size_
-  //let element_size = element_size_.unwrap_or(256 / 8);
-  let alloc_required = alloc_required_.unwrap_or(false);
+  //let element_num = element_num.unwrap_or(256 / 8);
+  //let alloc_required = alloc_required_.unwrap_or(false);
 
   let mut size_after_padding = 1;
   while size_after_padding < element_num {
@@ -54,6 +54,7 @@ pub fn create_tree(
   }
   if alloc_required {
     *dst = vec![HashDigest::default(); size_after_padding * 2];
+    println!("dst size: {}", dst.len());
   }
   let mut start_idx = size_after_padding;
   let mut current_lvl_size = size_after_padding;

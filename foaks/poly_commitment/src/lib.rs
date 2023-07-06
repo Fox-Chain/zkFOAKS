@@ -527,17 +527,15 @@ impl PolyCommitVerifier {
         if i == 0 {
           time_span = t0.elapsed().as_secs_f64();
           *v_time += time_span;
-          alpha_l = request_init_value_with_merkle(
+          (alpha_l, new_size) = request_init_value_with_merkle(
             s0_pow.try_into().unwrap(),
             s1_pow.try_into().unwrap(),
-            new_size,
             0,
             fri_ctx,
           );
-          alpha_h = request_init_value_with_merkle(
+          (alpha_h, new_size) = request_init_value_with_merkle(
             s0_pow.try_into().unwrap(),
             s1_pow.try_into().unwrap(),
-            new_size,
             1,
             fri_ctx,
           );
