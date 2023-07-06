@@ -79,14 +79,14 @@ pub fn verify_merkle(
     value_hash,
     merkle_path.last()
   );
-  // let prev_hash = HashDigest::new_from_c(
-  //   0xaf90be7d208a0b3b,
-  //   0xf021a37c0517b627,
-  //   0x7781c787bbbf2db5,
-  //   0xbb7bb15639bedf96,
-  // );
+  let prev_hash = HashDigest::new_from_c(
+    0xaf90be7d208a0b3b,
+    0xf021a37c0517b627,
+    0x7781c787bbbf2db5,
+    0xbb7bb15639bedf96,
+  );
 
-  //println!("prev_hash: {:?}", prev_hash);
+  println!("prev_hash: {:?}", prev_hash);
 
   hash_digest == current_hash && Some(&value_hash) == merkle_path.last()
 }
