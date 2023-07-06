@@ -3,7 +3,7 @@ use std::{mem::size_of, time, usize, vec};
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, MAX_BIT_LENGTH, MAX_FRI_DEPTH, RS_CODE_RATE, SLICE_NUMBER},
   merkle_tree,
-  my_hash::{my_hash, HashDigest},
+  my_hash::{HashDigest, my_hash},
 };
 use prime_field::FieldElement;
 
@@ -205,15 +205,9 @@ pub fn request_init_commit(
     let mut j = 0;
     let end = 1 << log_leaf_size;
     while j < end {
-      unsafe {
-        let x = witness_rs_codeword_interleaved[oracle_indicator][(i << log_leaf_size | j)];
-        let y = witness_rs_codeword_interleaved[oracle_indicator][(i << log_leaf_size | j) + 1];
-        let element = [x, y];
-
-        let src = std::ptr::addr_of!(element) as *const HashDigest;
-        let dst = std::ptr::addr_of_mut!(data[0]);
-        std::ptr::copy_nonoverlapping(src, dst, 1);
-      }
+      let x = witness_rs_codeword_interleaved[oracle_indicator][(i << log_leaf_size | j)];
+      let y = witness_rs_codeword_interleaved[oracle_indicator][(i << log_leaf_size | j) + 1];
+      data[0] = HashDigest::memcpy_from_field_elements([x, y]);
 
       data[1] = tmp_hash;
       tmp_hash = my_hash(data);

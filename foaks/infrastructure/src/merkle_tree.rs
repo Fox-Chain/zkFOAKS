@@ -6,15 +6,15 @@ use std::{
 
 use prime_field::FieldElement;
 
-use crate::my_hash::{my_hash, HashDigest};
+use crate::my_hash::{HashDigest, my_hash};
 
 // Todo: Debug coppy no overlapping
 pub unsafe fn hash_single_field_element(x: FieldElement) -> HashDigest {
   let mut data = [HashDigest::default(); 2];
-  let src = std::ptr::addr_of!(x) as *const u128;
-  let dst = std::ptr::addr_of_mut!(data[0].h0);
-  copy_nonoverlapping(src, dst, 1);
+  data[0].h0 = HashDigest::memcpy_from_field_element(x).h0; // merkle_tree.cpp 9
   assert_eq!(size_of_val(&x), size_of_val(&data[0].h0));
+  data[0].print_c();
+  data[1].print_c();
   my_hash(data)
 }
 
@@ -27,13 +27,7 @@ pub unsafe fn hash_double_field_element_merkle_damgard(
   let mut data = [HashDigest::default(); 2];
   data[0] = prev_hash;
   let element = [x, y];
-  //println!("Inside hash_double_field_element_merkle_damgard");
-  let src = std::ptr::addr_of!(element) as *const HashDigest;
-  let dst = std::ptr::addr_of_mut!(data[1]);
-  let count = 1;
-  //print!("{} ", count);
-  copy_nonoverlapping(src, dst, count);
-
+  data[1] = HashDigest::memcpy_from_field_elements(element); // merkle_tree.cpp 22
   assert_eq!(size_of::<HashDigest>(), 2 * size_of::<FieldElement>());
   my_hash(data)
 }

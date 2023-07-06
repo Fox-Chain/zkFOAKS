@@ -1,16 +1,16 @@
-use std::time::Instant;
 use std::{env, mem};
+use std::time::Instant;
 
-use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
-use infrastructure::my_hash::my_hash;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, RS_CODE_RATE, SLICE_NUMBER},
   my_hash::{self, HashDigest},
 };
+use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
+use infrastructure::my_hash::my_hash;
 use prime_field::FieldElement;
 
-use crate::vpd::fri::FRIContext;
 use crate::LdtCommitment;
+use crate::vpd::fri::FRIContext;
 
 pub fn verify_merkle(
   hash_digest: HashDigest,
@@ -65,10 +65,7 @@ pub fn verify_merkle(
 
   unsafe {
     for value in values {
-      let data_ele = [value.0, value.1];
-      let src = std::ptr::addr_of!(data_ele) as *const HashDigest;
-      let dst = std::ptr::addr_of_mut!(data[0]);
-      std::ptr::copy_nonoverlapping(src, dst, 1);
+      data[0] = HashDigest::memcpy_from_field_elements([value.0, value.1]); // vpd_verifier 52
       data[1] = value_hash;
       value_hash = my_hash::my_hash(data);
     }
@@ -277,7 +274,7 @@ impl FRIContext {
             self.cpd.rs_codeword[self.current_step_no][d],
           ];
 
-          data[0] = hash_single_field_element(data_ele[0]); // TODO check
+          data[0] = HashDigest::memcpy_from_field_elements(data_ele);
           data[1] = htmp;
           htmp = my_hash(data);
         }
