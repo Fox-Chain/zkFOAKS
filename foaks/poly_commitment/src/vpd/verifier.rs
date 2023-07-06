@@ -139,24 +139,22 @@ impl FRIContext {
     let mut test_hash = self.witness_merkle[oracle_indicator][pos];
     com_hhash[depth] = test_hash;
 
-    (0..depth)
-      .map(|i| {
-        self.visited_init[oracle_indicator][pos] = true;
-        self.visited_init[oracle_indicator][pos ^ 1] = true;
+    (0..depth).for_each(|i| {
+      self.visited_init[oracle_indicator][pos] = true;
+      self.visited_init[oracle_indicator][pos ^ 1] = true;
 
-        let data = if (pos & 1) == 1 {
-          [self.witness_merkle[oracle_indicator][pos ^ 1], test_hash]
-        } else {
-          [test_hash, self.witness_merkle[oracle_indicator][pos ^ 1]]
-        };
-        test_hash = my_hash::my_hash(data);
+      let data = if (pos & 1) == 1 {
+        [self.witness_merkle[oracle_indicator][pos ^ 1], test_hash]
+      } else {
+        [test_hash, self.witness_merkle[oracle_indicator][pos ^ 1]]
+      };
+      test_hash = my_hash::my_hash(data);
 
-        com_hhash[i] = self.witness_merkle[oracle_indicator][pos ^ 1];
-        pos /= 2;
+      com_hhash[i] = self.witness_merkle[oracle_indicator][pos ^ 1];
+      pos /= 2;
 
-        assert_eq!(test_hash, self.witness_merkle[oracle_indicator][pos]);
-      })
-      .collect::<Vec<_>>();
+      assert_eq!(test_hash, self.witness_merkle[oracle_indicator][pos]);
+    });
 
     assert_eq!(pos, 1);
     (value, com_hhash)

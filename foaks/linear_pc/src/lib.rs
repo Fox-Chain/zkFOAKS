@@ -169,14 +169,16 @@ impl LinearPC {
         self.verifier.a_c.circuit[2].gates[i + n].weight[j] = weight;
       }
     }
-
     let output_depth_output_size =
       self.generate_enc_circuit(self.lce_ctx.c[0].r, n + self.lce_ctx.c[0].r, 1, 2);
+
     // add final output
     let final_output_depth = output_depth_output_size.0 + 1;
-    for i in 0..output_depth_output_size.1 {
+
+    for (i, _) in (0..output_depth_output_size.1).enumerate() {
       self.verifier.a_c.circuit[final_output_depth].gates[i] = Gate::from_params(10, i, 0);
     }
+
     //let d_input_offset = n; //Never used
     let output_so_far = output_depth_output_size.1;
     self.verifier.a_c.circuit[final_output_depth].src_expander_d_mempool =
@@ -196,11 +198,16 @@ impl LinearPC {
         self.verifier.a_c.circuit[final_output_depth].weight_expander_d_mempool[d_mempool_ptr..]
           .to_vec();
       d_mempool_ptr += self.lce_ctx.d[0].r_neighbor[i].len();
-      for j in 0..self.lce_ctx.d[0].r_neighbor[i].len() {
-        self.verifier.a_c.circuit[final_output_depth].gates[output_so_far + i].src[j] =
-          self.lce_ctx.d[0].r_neighbor[i][j] + n;
-        self.verifier.a_c.circuit[final_output_depth].gates[output_so_far + i].weight[j] =
-          self.lce_ctx.d[0].r_weight[i][j];
+      for (j, (&neighbor, &weight)) in self.lce_ctx.d[0].r_neighbor[i]
+        .iter()
+        .zip(self.lce_ctx.d[0].r_weight[i].iter())
+        .enumerate()
+      {
+        let gate_index = output_so_far + i;
+        let gate = &mut self.verifier.a_c.circuit[final_output_depth].gates[gate_index];
+
+        gate.src[j] = neighbor + n;
+        gate.weight[j] = weight;
       }
     }
     for i in 0..query_count {
@@ -264,12 +271,9 @@ impl LinearPC {
     //prover construct the combined original message
     let mut combined_message = vec![FieldElement::zero(); n];
 
-    for i in 0..COLUMN_SIZE {
-      for j in 0..self.codeword_size[0] {
-        if self.coef[i].len() <= j {
-          continue;
-        } // We realized that beyond 512 the C++ code multiply garbage values
-        combined_message[j] = combined_message[j] + r0[i] * self.coef[i][j];
+    for (i, coef_i) in self.coef.iter().enumerate().take(COLUMN_SIZE) {
+      for (j, &coef_ij) in coef_i.iter().enumerate().take(self.codeword_size[0]) {
+        combined_message[j] = combined_message[j] + r0[i] * coef_ij;
       }
     }
 
