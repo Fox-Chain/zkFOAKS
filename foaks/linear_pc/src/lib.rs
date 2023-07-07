@@ -325,12 +325,12 @@ impl LinearPC {
     // prover commit private input
 
     // verifier samples query //Temporary random hardcode
-    // let mut q = vec![0; query_count];
-    // for i in 0..query_count {
-    //   q[i] = rand::random::<usize>() % self.codeword_size[0];
-    // }
+    let mut q = vec![0; query_count];
+    for i in 0..query_count {
+      q[i] = rand::random::<usize>() % self.codeword_size[0];
+    }
 
-    let mut q = read_random_file("q.txt");
+    //let mut q = read_random_file("q.txt");
 
     // generate circuit
 

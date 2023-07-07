@@ -1,16 +1,16 @@
-use std::{env, mem};
 use std::time::Instant;
+use std::{env, mem};
 
+use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
+use infrastructure::my_hash::my_hash;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, RS_CODE_RATE, SLICE_NUMBER},
   my_hash::{self, HashDigest},
 };
-use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
-use infrastructure::my_hash::my_hash;
 use prime_field::FieldElement;
 
-use crate::LdtCommitment;
 use crate::vpd::fri::FRIContext;
+use crate::LdtCommitment;
 
 pub fn verify_merkle(
   hash_digest: HashDigest,
@@ -76,14 +76,15 @@ pub fn verify_merkle(
     value_hash,
     merkle_path.last()
   );
-  let prev_hash = HashDigest::new_from_c(
-    0xaf90be7d208a0b3b,
-    0xf021a37c0517b627,
-    0x7781c787bbbf2db5,
-    0xbb7bb15639bedf96,
-  );
+  // let c_hash = HashDigest::new_from_c(
+  //   0xaf90be7d208a0b3b,
+  //   0xf021a37c0517b627,
+  //   0x7781c787bbbf2db5,
+  //   0xbb7bb15639bedf96,
+  // );
 
-  println!("prev_hash: {:?}", prev_hash);
+  // println!("c_hash: {:?}", c_hash);
+  // value_hash.print_c();
 
   hash_digest == current_hash && Some(&value_hash) == merkle_path.last()
 }

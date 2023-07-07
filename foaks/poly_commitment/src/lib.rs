@@ -398,8 +398,8 @@ impl PolyCommitVerifier {
       log_length - LOG_SLICE_NUMBER
     );
 
-    let binding = read_random_file("pow.txt");
-    let mut pow_vec = binding.iter();
+    // let binding = read_random_file("pow.txt");
+    // let mut pow_vec = binding.iter();
 
     let _output = Command::new("sh")
       .arg("-c")
@@ -474,12 +474,13 @@ impl PolyCommitVerifier {
         if i == 0 {
           max = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i);
           //hard code for now
-          //pow = rand::random::<u128>() % max;
-          pow = *pow_vec.next().unwrap();
+          pow = rand::random::<u128>() % max;
+          //pow = *pow_vec.next().unwrap();
           println!("pow =  {}", pow);
 
           while pow < (1 << (log_length - LOG_SLICE_NUMBER - i)) || pow % 2 == 1 {
-            pow = *pow_vec.next().unwrap(); //Fix here
+            pow = rand::random::<u128>() % max;
+            //pow = *pow_vec.next().unwrap(); //Fix here
             println!("pow =  {}", pow);
           }
           root_of_unity =
@@ -588,6 +589,7 @@ impl PolyCommitVerifier {
             println!("verify_merkle failed with beta.1, i:{}", i);
             return false;
           }
+          println!("Passed verify_merkle with beta.1");
 
           let inv_mu = root_of_unity.fast_pow((pow / 2) as u128).inverse();
           alpha.0.clear();
