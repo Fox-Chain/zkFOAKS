@@ -1,7 +1,9 @@
-use std::{env, time::Instant};
 use std::fs::read_to_string;
+use std::vec;
+use std::{env, time::Instant};
 
 use linear_code::parameter::COLUMN_SIZE;
+use linear_gkr::verifier::generate_randomness;
 use linear_pc::LinearPC;
 use prime_field::FieldElement;
 
@@ -35,9 +37,12 @@ fn main() -> Result<(), Error> {
   let commit_time_diff = commit_t0.elapsed();
   let open_t0 = Instant::now();
 
+  let r = generate_randomness(n);
+
   let result;
   if random.is_none() {
     result = linear_pc.open_and_verify(FieldElement::new_random(), n, h);
+    //result = linear_pc.open_and_verify_multi(&r, lg_n, n, h);
   } else {
     result = linear_pc.open_and_verify(FieldElement::new(1231184716, 414754966), n, h);
   }
@@ -53,12 +58,15 @@ fn read_array_field_element(path: &str) -> Vec<FieldElement> {
   let result_content = read_to_string(path).unwrap();
   let result_lines = result_content.lines();
 
-  result_lines.into_iter().map(|r| {
-    let mut elements = r.split_whitespace();
+  result_lines
+    .into_iter()
+    .map(|r| {
+      let mut elements = r.split_whitespace();
 
-    FieldElement::new(
-      elements.next().unwrap().parse::<u64>().unwrap(),
-      elements.next().unwrap().parse::<u64>().unwrap()
-    )
-  }).collect()
+      FieldElement::new(
+        elements.next().unwrap().parse::<u64>().unwrap(),
+        elements.next().unwrap().parse::<u64>().unwrap(),
+      )
+    })
+    .collect()
 }

@@ -551,6 +551,41 @@ impl LinearPC {
     }
     unsafe { self.tensor_product_protocol(r0, r1, COLUMN_SIZE, n / COLUMN_SIZE, n, com_mt) }
   }
+
+  pub fn open_and_verify_multi(
+    &mut self,
+    r: &[FieldElement],
+    size_r: usize,
+    n: usize,
+    com_mt: Vec<HashDigest>,
+  ) -> (FieldElement, bool) {
+    println!("open_and_verify_multi");
+    assert_eq!(n % COLUMN_SIZE, 0);
+    //tensor product of r0 otimes r1
+    let mut r0 = [FieldElement::zero(); COLUMN_SIZE];
+    let mut r1 = vec![FieldElement::zero(); n / COLUMN_SIZE];
+    let mut log_column_size = 0;
+
+    while true {
+      if (1 << log_column_size) == COLUMN_SIZE {
+        break;
+      }
+      log_column_size += 1;
+    }
+
+    dfs(&mut r0, r, COLUMN_SIZE, 0, FieldElement::real_one());
+    dfs(
+      &mut r1,
+      &r[log_column_size..],
+      n / COLUMN_SIZE,
+      0,
+      FieldElement::real_one(),
+    );
+
+    unsafe {
+      self.tensor_product_protocol(r0.to_vec(), r1, COLUMN_SIZE, n / COLUMN_SIZE, n, com_mt)
+    }
+  }
 }
 fn smallest_pow2_larger_or_equal_to(x: usize) -> usize {
   for i in 0..32 {
@@ -559,6 +594,21 @@ fn smallest_pow2_larger_or_equal_to(x: usize) -> usize {
     }
   }
   panic!();
+}
+
+fn dfs(dst: &mut [FieldElement], r: &[FieldElement], size: usize, depth: usize, val: FieldElement) {
+  if size == 1 {
+    dst[0] = val;
+  } else {
+    dfs(
+      &mut dst[..size / 2],
+      r,
+      size / 2,
+      depth + 1,
+      val * (FieldElement::real_one() - r[depth]),
+    );
+    dfs(&mut dst[size / 2..], r, size / 2, depth, val * r[depth]);
+  }
 }
 
 // enum GateTypes
