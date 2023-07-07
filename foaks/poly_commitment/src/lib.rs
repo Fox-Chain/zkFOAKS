@@ -444,7 +444,7 @@ impl PolyCommitVerifier {
     let coef_slice_size = 1 << (log_length - LOG_SLICE_NUMBER);
 
     for rep in 0..33 {
-      println!("rep: {}", rep);
+      //println!("rep: {}", rep);
       let slice_count = 1 << LOG_SLICE_NUMBER;
       let slice_size = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
 
@@ -476,12 +476,12 @@ impl PolyCommitVerifier {
           //hard code for now
           pow = rand::random::<u128>() % max;
           //pow = *pow_vec.next().unwrap();
-          println!("pow =  {}", pow);
+          //println!("pow =  {}", pow);
 
           while pow < (1 << (log_length - LOG_SLICE_NUMBER - i)) || pow % 2 == 1 {
             pow = rand::random::<u128>() % max;
             //pow = *pow_vec.next().unwrap(); //Fix here
-            println!("pow =  {}", pow);
+            //println!("pow =  {}", pow);
           }
           root_of_unity =
             FieldElement::get_root_of_unity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i)
@@ -490,7 +490,7 @@ impl PolyCommitVerifier {
         } else {
           root_of_unity = root_of_unity * root_of_unity;
           pow = pow % (1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i));
-          println!("pow =  {}", pow);
+          //println!("pow =  {}", pow);
 
           pre_y = y;
           y = y * y;
@@ -577,7 +577,7 @@ impl PolyCommitVerifier {
           *proof_size += new_size;
 
           t0 = time::Instant::now();
-          println!("Before verify_merkle with beta.1");
+          //println!("Before verify_merkle with beta.1");
 
           if !verify_merkle(
             com.commitment_hash[0],
@@ -586,10 +586,10 @@ impl PolyCommitVerifier {
             (pow / 2) as u128,
             &beta.0,
           ) {
-            println!("verify_merkle failed with beta.1, i:{}", i);
+            //println!("verify_merkle failed with beta.1, i:{}", i);
             return false;
           }
-          println!("Passed verify_merkle with beta.1");
+          //println!("Passed verify_merkle with beta.1");
 
           let inv_mu = root_of_unity.fast_pow((pow / 2) as u128).inverse();
           alpha.0.clear();
@@ -685,13 +685,13 @@ impl PolyCommitVerifier {
 
           t0 = time::Instant::now();
 
-          println!(
-            "i:{}, beta.1.len():{}, pow/2:{}, beta.0.len():{}",
-            i,
-            beta.1.len(),
-            (pow / 2) as u128,
-            beta.0.len()
-          );
+          // println!(
+          //   "i:{}, beta.1.len():{}, pow/2:{}, beta.0.len():{}",
+          //   i,
+          //   beta.1.len(),
+          //   (pow / 2) as u128,
+          //   beta.0.len()
+          // );
           if !verify_merkle(
             com.commitment_hash[i],
             &beta.1,
@@ -699,7 +699,7 @@ impl PolyCommitVerifier {
             (pow / 2) as u128,
             &beta.0,
           ) {
-            println!("668");
+            //println!("668");
             return false;
           }
 

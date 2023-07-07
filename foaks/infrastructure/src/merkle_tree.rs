@@ -48,7 +48,7 @@ pub fn create_tree(
   }
   if alloc_required {
     *dst = vec![HashDigest::default(); size_after_padding * 2];
-    println!("dst size: {}", dst.len());
+    //println!("dst size: {}", dst.len());
   }
   let mut start_idx = size_after_padding;
   let mut current_lvl_size = size_after_padding;

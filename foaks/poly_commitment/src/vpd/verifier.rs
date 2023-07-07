@@ -71,11 +71,11 @@ pub fn verify_merkle(
     }
   }
 
-  println!(
-    "value_hash: {:?}, \nmerkle: {:?}",
-    value_hash,
-    merkle_path.last()
-  );
+  // println!(
+  //   "value_hash: {:?}, \nmerkle: {:?}",
+  //   value_hash,
+  //   merkle_path.last()
+  // );
   // let c_hash = HashDigest::new_from_c(
   //   0xaf90be7d208a0b3b,
   //   0xf021a37c0517b627,
@@ -219,12 +219,12 @@ impl FRIContext {
     // NOTE: this assumption is solved by using slice_count from context
     let mut tmp: Vec<FieldElement> =
       vec![FieldElement::new_random(); nxt_witness_size * slice_count];
-    println!(
-      "nxt_witness_size: {}, slice_count: {}, len;{}",
-      nxt_witness_size,
-      slice_count,
-      tmp.len()
-    );
+    // println!(
+    //   "nxt_witness_size: {}, slice_count: {}, len;{}",
+    //   nxt_witness_size,
+    //   slice_count,
+    //   tmp.len()
+    // );
     self.cpd.rs_codeword_mapping[self.current_step_no] = vec![0; nxt_witness_size * slice_count];
 
     for i in 0..nxt_witness_size / 2 {
@@ -331,7 +331,7 @@ impl FRIContext {
       }
 
       ret[ptr] = self.commit_phase_step(randomness[ptr], slice_count);
-      println!("ret[{}]: {:?}", ptr, ret[ptr]);
+      //println!("ret[{}]: {:?}", ptr, ret[ptr]);
       codeword_size /= 2;
       ptr += 1;
     }
