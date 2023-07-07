@@ -146,19 +146,22 @@ impl LinearCodeEncodeContext {
     return n + l + r;
   }
   pub unsafe fn expander_init(&mut self, n: usize, dep: Option<usize>) -> usize {
-    // random Graph
-    if n <= DISTANCE_THRESHOLD {
-      n
-    } else {
-      let dep = dep.unwrap_or(0);
-      let alpha_n = (ALPHA * (n as f64)) as usize;
-      let l = self.expander_init(alpha_n, Some(dep + 1));
-      let expander_size = ((n as f64) * (R - 1.0) - (l as f64)) as usize;
+    match n <= DISTANCE_THRESHOLD {
+      true => n,
+      false => {
+        let dep = dep.unwrap_or(0);
+        let alpha_n = (ALPHA * n as f64) as usize;
+        let (l, expander_size) = {
+          let l = self.expander_init(alpha_n, Some(dep + 1));
+          let expander_size = ((n as f64) * (R - 1.0) - l as f64) as usize;
+          (l, expander_size)
+        };
 
-      self.c[dep] = generate_random_expander(n, alpha_n, CN);
-      self.d[dep] = generate_random_expander(l, expander_size, DN);
+        self.c[dep] = generate_random_expander(n, alpha_n, CN);
+        self.d[dep] = generate_random_expander(l, expander_size, DN);
 
-      n + l + expander_size
+        n + l + expander_size
+      }
     }
   }
 }

@@ -173,23 +173,18 @@ impl FRIContext {
     //let mut new_size = 0;
     let mut pow_0 = 0;
 
-    let mut value_vec: Vec<(FieldElement, FieldElement)> = vec![];
-    let mut visited_element = false;
-
-    for i in 0..SLICE_NUMBER {
-      pow_0 = self.cpd.rs_codeword_mapping[lvl][pow << LOG_SLICE_NUMBER | i];
-      pow_0 /= 2;
-      if !self.visited[lvl][pow_0 * 2] {
+    let value_vec: Vec<(FieldElement, FieldElement)> = (0..SLICE_NUMBER)
+      .map(|i| {
+        let pow_0 = self.cpd.rs_codeword_mapping[lvl][pow << LOG_SLICE_NUMBER | i] / 2;
+        let visited_element = !self.visited[lvl][pow_0 * 2];
         self.visited[lvl][pow_0 * 2] = true;
-      } else {
-        visited_element = true
-      }
 
-      value_vec.push((
-        self.cpd.rs_codeword[lvl][pow_0 * 2],
-        self.cpd.rs_codeword[lvl][pow_0 * 2 + 1],
-      ));
-    }
+        (
+          self.cpd.rs_codeword[lvl][pow_0 * 2],
+          self.cpd.rs_codeword[lvl][pow_0 * 2 + 1],
+        )
+      })
+      .collect();
 
     // this can be compressed into one by random linear combination
     // if !visited_element {

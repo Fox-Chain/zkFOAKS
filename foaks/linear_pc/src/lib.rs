@@ -210,10 +210,12 @@ impl LinearPC {
         gate.weight[j] = weight;
       }
     }
-    for i in 0..query_count {
-      self.verifier.a_c.circuit[final_output_depth + 1].gates[i] =
-        Gate::from_params(10, query[i], 0);
-    }
+    self.verifier.a_c.circuit[final_output_depth + 1]
+      .gates
+      .iter_mut()
+      .zip(query.iter())
+      .for_each(|(gate, &q)| *gate = Gate::from_params(10, q, 0));
+
     assert_eq!(c_mempool_ptr, CN * self.lce_ctx.c[0].l);
   }
 

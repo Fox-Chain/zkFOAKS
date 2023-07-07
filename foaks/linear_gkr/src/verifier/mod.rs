@@ -869,21 +869,21 @@ impl ZkVerifier {
   pub fn direct_relay(
     &mut self,
     depth: usize,
-    r_g: &Vec<FieldElement>,
-    r_u: &Vec<FieldElement>,
+    r_g: &[FieldElement],
+    r_u: &[FieldElement],
   ) -> FieldElement {
-    return if depth != 1 {
-      let ret = FieldElement::from_real(0);
-      ret
+    if depth != 1 {
+      FieldElement::from_real(0)
     } else {
-      let mut ret = FieldElement::from_real(1);
-      for i in 0..(self.a_c.circuit[depth].bit_length) {
-        ret = ret
-          * (FieldElement::from_real(1) - r_g[i] - r_u[i]
-            + FieldElement::from_real(2) * r_g[i] * r_u[i]);
-      }
-      ret
-    };
+      let ret = FieldElement::from_real(1);
+      let result = ret
+        * r_g
+          .iter()
+          .zip(r_u.iter())
+          .map(|(&g, &u)| FieldElement::from_real(1) - g - u + FieldElement::from_real(2) * g * u)
+          .fold(FieldElement::from_real(1), |acc, val| acc * val);
+      result
+    }
   }
 
   pub fn beta_init(
