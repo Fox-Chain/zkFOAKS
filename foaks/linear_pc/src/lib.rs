@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs::read_to_string, time::Instant};
+use std::{collections::HashMap, env, fs::read_to_string, time::Instant};
 
 use infrastructure::{
   merkle_tree::{self, create_tree},
@@ -323,14 +323,16 @@ impl LinearPC {
     }
 
     // prover commit private input
-
-    // verifier samples query //Temporary random hardcode
     let mut q = vec![0; query_count];
-    for i in 0..query_count {
-      q[i] = rand::random::<usize>() % self.codeword_size[0];
+    let rnd = env::args().nth(3);
+    if rnd.is_none() {
+      q = vec![0; query_count];
+      for i in 0..query_count {
+        q[i] = rand::random::<usize>() % self.codeword_size[0];
+      }
+    } else {
+      q = read_random_file("q.txt");
     }
-
-    //let mut q = read_random_file("q.txt");
 
     // generate circuit
 

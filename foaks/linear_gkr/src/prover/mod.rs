@@ -1,4 +1,5 @@
 use std::{
+  env,
   mem::swap,
   time::{self, SystemTime},
 };
@@ -245,12 +246,19 @@ impl ZkProver {
 
   //Todo: Improve this function with Rust features
   pub fn get_witness(&mut self, inputs: Vec<FieldElement>, n: usize) {
-    //let res = read_vec_fe_file("witness.txt");
+    let random = env::args().nth(3);
+    let mut res = vec![];
+    if random.is_some() {
+      res = read_vec_fe_file("witness.txt");
+    }
+
     self.circuit_value[0] = vec![FieldElement::zero(); 1 << self.a_c.circuit[0].bit_length];
     for i in 0..n {
-      // Tempary change. Use res insted of inputs
-      //self.circuit_value[0][i] = res[i];
-      self.circuit_value[0][i] = inputs[i];
+      if random.is_some() {
+        self.circuit_value[0][i] = res[i];
+      } else {
+        self.circuit_value[0][i] = inputs[i];
+      }
     }
   }
 

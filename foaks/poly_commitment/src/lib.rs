@@ -398,9 +398,6 @@ impl PolyCommitVerifier {
       log_length - LOG_SLICE_NUMBER
     );
 
-    // let binding = read_random_file("pow.txt");
-    // let mut pow_vec = binding.iter();
-
     let _output = Command::new("sh")
       .arg("-c")
       .arg(OsStr::from_bytes(command.as_bytes()))
@@ -443,6 +440,14 @@ impl PolyCommitVerifier {
       .commit_phase(log_length, self.pc_prover.ctx.slice_count);
     let coef_slice_size = 1 << (log_length - LOG_SLICE_NUMBER);
 
+    let rnd = env::args().nth(3);
+
+    let mut binding = vec![];
+    let mut pow_vec = binding.iter();
+    if rnd.is_some() {
+      binding = read_random_file("pow.txt");
+      pow_vec = binding.iter();
+    }
     for rep in 0..33 {
       //println!("rep: {}", rep);
       let slice_count = 1 << LOG_SLICE_NUMBER;
@@ -472,16 +477,21 @@ impl PolyCommitVerifier {
         t0 = time::Instant::now();
 
         if i == 0 {
-          max = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i);
-          //hard code for now
-          pow = rand::random::<u128>() % max;
-          //pow = *pow_vec.next().unwrap();
-          //println!("pow =  {}", pow);
-
-          while pow < (1 << (log_length - LOG_SLICE_NUMBER - i)) || pow % 2 == 1 {
+          if rnd.is_none() {
+            max = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i);
             pow = rand::random::<u128>() % max;
-            //pow = *pow_vec.next().unwrap(); //Fix here
-            //println!("pow =  {}", pow);
+
+            while pow < (1 << (log_length - LOG_SLICE_NUMBER - i)) || pow % 2 == 1 {
+              pow = rand::random::<u128>() % max;
+            }
+          } else {
+            //hard code for now
+
+            pow = *pow_vec.next().unwrap();
+
+            while pow < (1 << (log_length - LOG_SLICE_NUMBER - i)) || pow % 2 == 1 {
+              pow = *pow_vec.next().unwrap(); //Fix here
+            }
           }
           root_of_unity =
             FieldElement::get_root_of_unity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i)
