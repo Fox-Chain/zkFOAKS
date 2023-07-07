@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, fs::read_to_string, time::Instant};
+use std::{collections::HashMap, fs::read_to_string, time::Instant};
 
 use infrastructure::{
   merkle_tree::{self, create_tree},
@@ -324,14 +324,8 @@ impl LinearPC {
 
     // prover commit private input
     let mut q = vec![0; query_count];
-    let rnd = env::args().nth(3);
-    if rnd.is_none() {
-      q = vec![0; query_count];
-      for i in 0..query_count {
-        q[i] = rand::random::<usize>() % self.codeword_size[0];
-      }
-    } else {
-      q = read_random_file("q.txt");
+    for i in 0..query_count {
+      q[i] = rand::random::<usize>() % self.codeword_size[0];
     }
 
     // generate circuit
@@ -557,7 +551,7 @@ impl LinearPC {
   pub fn open_and_verify_multi(
     &mut self,
     r: &[FieldElement],
-    size_r: usize,
+    _size_r: usize, // not used in C++
     n: usize,
     com_mt: Vec<HashDigest>,
   ) -> (FieldElement, bool) {
@@ -568,7 +562,7 @@ impl LinearPC {
     let mut r1 = vec![FieldElement::zero(); n / COLUMN_SIZE];
     let mut log_column_size = 0;
 
-    while true {
+    loop {
       if (1 << log_column_size) == COLUMN_SIZE {
         break;
       }

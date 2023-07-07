@@ -3,7 +3,7 @@ use std::{mem::size_of, time, usize, vec};
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, MAX_BIT_LENGTH, MAX_FRI_DEPTH, RS_CODE_RATE, SLICE_NUMBER},
   merkle_tree,
-  my_hash::{my_hash, HashDigest},
+  my_hash::{HashDigest, my_hash},
 };
 use prime_field::FieldElement;
 
@@ -126,7 +126,7 @@ pub fn request_init_commit(
   // let sliced_input_length_per_block = 1 << *witness_bit_length_per_slice; No
   // usages
   assert!(*witness_bit_length_per_slice >= 0);
-  let mut root_of_unity =
+  let root_of_unity =
     FieldElement::get_root_of_unity(*log_current_witness_size_per_slice).unwrap();
   if oracle_indicator == 0 {
     //l_group.reserve(1 << *log_current_witness_size_per_slice);
@@ -156,8 +156,7 @@ pub fn request_init_commit(
       (*log_current_witness_size_per_slice - RS_CODE_RATE) as i64,
       *witness_bit_length_per_slice
     );
-    root_of_unity =
-      FieldElement::get_root_of_unity((*witness_bit_length_per_slice).try_into().unwrap()).unwrap();
+    // root_of_unity = FieldElement::get_root_of_unity((*witness_bit_length_per_slice).try_into().unwrap()).unwrap();
 
     if oracle_indicator == 0 {
       witness_rs_codeword_before_arrange[0][i] = l_eval[i * slice_size..].to_vec();
@@ -165,7 +164,7 @@ pub fn request_init_commit(
       witness_rs_codeword_before_arrange[1][i] = h_eval_arr[i * slice_size..].to_vec();
     }
 
-    root_of_unity = FieldElement::get_root_of_unity(*log_current_witness_size_per_slice).unwrap();
+    //root_of_unity = FieldElement::get_root_of_unity(*log_current_witness_size_per_slice).unwrap();
 
     //witness_rs_mapping[oracle_indicator][i].reserve(1 <<
     // *log_current_witness_size_per_slice);

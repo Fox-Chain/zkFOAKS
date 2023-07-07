@@ -1,15 +1,15 @@
-use std::{env, fs, fs::read_to_string, process, time::Instant};
+use std::{fs, fs::read_to_string, process, time::Instant};
 use std::{
   fs::File,
   io::{Error, Write},
   mem,
 };
 
-use infrastructure::my_hash::HashDigest;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
   rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
 };
+use infrastructure::my_hash::HashDigest;
 use poly_commitment::PolyCommitVerifier;
 use prime_field::FieldElement;
 
@@ -324,10 +324,7 @@ impl ZkVerifier {
     //Below function is not implemented neither in virgo repo nor orion repo
     //self.prover.unwrap().proof_init();
 
-    // Todo: Fix evaluate();
     let result = zk_prover.evaluate();
-    // For now read data from Orion C++ generated result value
-    //let result = read_vec_fe_file("evaluate");
     let mut alpha = FieldElement::real_one();
     let mut beta = FieldElement::zero();
 
@@ -335,41 +332,8 @@ impl ZkVerifier {
     // later
     let capacity = self.a_c.circuit[self.a_c.total_depth - 1].bit_length;
 
-    let mut r_0;
-    let mut r_1;
-
-    let is_not_random = env::args().nth(3).is_none();
-    if is_not_random {
-      r_0 = generate_randomness(capacity);
-      r_1 = generate_randomness(capacity);
-    } else {
-      r_0 = vec![
-        FieldElement::new(1295282939, 1519611747),
-        FieldElement::new(565034012, 1898575994),
-        FieldElement::new(239123822, 1283202478),
-        FieldElement::new(1487119302, 676568365),
-        FieldElement::new(1686079993, 698127655),
-        FieldElement::new(1667178087, 1050708339),
-        FieldElement::new(2044725476, 320324893),
-        FieldElement::new(117745275, 1603165248),
-        FieldElement::new(313357634, 1272974217),
-        FieldElement::new(1266866546, 1041986953),
-        FieldElement::new(1088561576, 368111599),
-      ];
-      r_1 = vec![
-        FieldElement::new(1879022150, 1123913731),
-        FieldElement::new(995779937, 1005913971),
-        FieldElement::new(1020979477, 744133267),
-        FieldElement::new(2034586784, 857316601),
-        FieldElement::new(1244830025, 1182386075),
-        FieldElement::new(229444700, 1809864038),
-        FieldElement::new(933478422, 468568523),
-        FieldElement::new(945582868, 273114076),
-        FieldElement::new(1145136888, 484179213),
-        FieldElement::new(971241731, 664831327),
-        FieldElement::new(1534887552, 868483560),
-      ];
-    }
+    let mut r_0 = generate_randomness(capacity);
+    let mut r_1= generate_randomness(capacity);
 
     let mut one_minus_r_0 = Vec::with_capacity(capacity);
     let mut one_minus_r_1 = Vec::with_capacity(capacity);
@@ -419,14 +383,9 @@ impl ZkVerifier {
       let r_u;
       let mut r_v;
 
-      if is_not_random {
         //next level random
-        r_u = generate_randomness(self.a_c.circuit[i - 1].bit_length);
-        r_v = generate_randomness(self.a_c.circuit[i - 1].bit_length);
-      } else {
-        r_u = read_vec_fe_file(&format!("c++files/r_u_{}.txt", i));
-        r_v = read_vec_fe_file(&format!("c++files/r_v_{}.txt", i));
-      }
+      r_u = generate_randomness(self.a_c.circuit[i - 1].bit_length);
+      r_v = generate_randomness(self.a_c.circuit[i - 1].bit_length);
 
       direct_relay_value =
         alpha * self.direct_relay(i, &r_0, &r_u) + beta * self.direct_relay(i, &r_1, &r_u);
@@ -456,14 +415,6 @@ impl ZkVerifier {
         //one_minus_r_v.push(FieldElement::from_real(1) - r_v[j]);
       }
 
-      let mut rand_tmp_alpha = vec![];
-      let mut rand_tmp_beta = vec![];
-
-      if !is_not_random {
-        rand_tmp_alpha = read_vec_fe_file(&"c++files/tmp_alpha.txt");
-        rand_tmp_beta = read_vec_fe_file(&"c++files/tmp_beta.txt");
-      }
-
       for j in 0..(self.a_c.circuit[i - 1].bit_length) {
         let poly = zk_prover.sumcheck_phase1_update(previous_random, j);
         self.proof_size += mem::size_of::<QuadraticPoly>();
@@ -491,7 +442,6 @@ impl ZkVerifier {
         }
         alpha_beta_sum = poly.eval(&r_u[j].clone());
       }
-      //	std::cerr << "Bound v start" << std::endl;
 
       zk_prover.sumcheck_phase2_init(previous_random, r_u.clone(), one_minus_r_u.clone());
       let mut previous_random = FieldElement::zero();
@@ -605,18 +555,11 @@ impl ZkVerifier {
         return (false, 0.0);
       }
 
-      let mut tmp_alpha;
-      let mut tmp_beta;
+      // let tmp_alpha = generate_randomness(1); There's no need to generate a vector, assign random directly
+      // let tmp_beta= generate_randomness(1);
 
-      if is_not_random {
-        tmp_alpha = generate_randomness(1);
-        tmp_beta = generate_randomness(1);
-      } else {
-        tmp_alpha = vec![rand_tmp_alpha[i - 1]];
-        tmp_beta = vec![rand_tmp_beta[i - 1]];
-      }
-      alpha = tmp_alpha[0];
-      beta = tmp_beta[0];
+      alpha = FieldElement::new_random();
+      beta = FieldElement::new_random();
 
       if i != 1 {
         alpha_beta_sum = alpha * v_u + beta * v_v;

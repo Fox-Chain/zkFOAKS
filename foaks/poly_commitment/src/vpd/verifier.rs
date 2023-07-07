@@ -1,16 +1,16 @@
+use std::mem;
 use std::time::Instant;
-use std::{env, mem};
 
-use infrastructure::merkle_tree::{create_tree, hash_single_field_element};
-use infrastructure::my_hash::my_hash;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, RS_CODE_RATE, SLICE_NUMBER},
   my_hash::{self, HashDigest},
 };
+use infrastructure::merkle_tree::create_tree;
+use infrastructure::my_hash::my_hash;
 use prime_field::FieldElement;
 
-use crate::vpd::fri::FRIContext;
 use crate::LdtCommitment;
+use crate::vpd::fri::FRIContext;
 
 pub fn verify_merkle(
   hash_digest: HashDigest,
@@ -63,28 +63,11 @@ pub fn verify_merkle(
 
   let mut value_hash = HashDigest::new();
 
-  unsafe {
-    for value in values {
-      data[0] = HashDigest::memcpy_from_field_elements([value.0, value.1]); // vpd_verifier 52
-      data[1] = value_hash;
-      value_hash = my_hash::my_hash(data);
-    }
+  for value in values {
+    data[0] = HashDigest::memcpy_from_field_elements([value.0, value.1]); // vpd_verifier 52
+    data[1] = value_hash;
+    value_hash = my_hash::my_hash(data);
   }
-
-  // println!(
-  //   "value_hash: {:?}, \nmerkle: {:?}",
-  //   value_hash,
-  //   merkle_path.last()
-  // );
-  // let c_hash = HashDigest::new_from_c(
-  //   0xaf90be7d208a0b3b,
-  //   0xf021a37c0517b627,
-  //   0x7781c787bbbf2db5,
-  //   0xbb7bb15639bedf96,
-  // );
-
-  // println!("c_hash: {:?}", c_hash);
-  // value_hash.print_c();
 
   hash_digest == current_hash && Some(&value_hash) == merkle_path.last()
 }
@@ -259,39 +242,37 @@ impl FRIContext {
 
     self.visited[self.current_step_no] = vec![false; nxt_witness_size * 4 * slice_count];
 
-    let mut htmp: HashDigest = HashDigest::default();
+    let mut htmp: HashDigest;
     let mut hash_val: Vec<HashDigest> = vec![HashDigest::default(); nxt_witness_size / 2];
 
-    unsafe {
-      for i in 0..nxt_witness_size / 2 {
-        let mut data = [HashDigest::default(), HashDigest::default()];
-        htmp = HashDigest::default();
-        for j in 0..(1 << LOG_SLICE_NUMBER) {
-          let c = (i) << log_leaf_size | (j << 1) | 0;
-          let d = (i) << log_leaf_size | (j << 1) | 1;
+    for i in 0..nxt_witness_size / 2 {
+      let mut data = [HashDigest::default(), HashDigest::default()];
+      htmp = HashDigest::default();
+      for j in 0..(1 << LOG_SLICE_NUMBER) {
+        let c = (i) << log_leaf_size | (j << 1) | 0;
+        let d = (i) << log_leaf_size | (j << 1) | 1;
 
-          let data_ele = [
-            self.cpd.rs_codeword[self.current_step_no][c],
-            self.cpd.rs_codeword[self.current_step_no][d],
-          ];
+        let data_ele = [
+          self.cpd.rs_codeword[self.current_step_no][c],
+          self.cpd.rs_codeword[self.current_step_no][d],
+        ];
 
-          data[0] = HashDigest::memcpy_from_field_elements(data_ele);
-          data[1] = htmp;
-          htmp = my_hash(data);
-        }
-        hash_val[i] = htmp;
+        data[0] = HashDigest::memcpy_from_field_elements(data_ele);
+        data[1] = htmp;
+        htmp = my_hash(data);
       }
-
-      // write merkle tree to self.cpd.merkle[self.current_step_no]
-      let current_step_no = self.cpd.merkle[self.current_step_no].clone();
-      create_tree(
-        hash_val,
-        nxt_witness_size / 2,
-        self.cpd.merkle[self.current_step_no].as_mut(),
-        //Some(std::mem::size_of::<HashDigest>()),
-        current_step_no.is_empty(),
-      )
+      hash_val[i] = htmp;
     }
+
+    // write merkle tree to self.cpd.merkle[self.current_step_no]
+    let current_step_no = self.cpd.merkle[self.current_step_no].clone();
+    create_tree(
+      hash_val,
+      nxt_witness_size / 2,
+      self.cpd.merkle[self.current_step_no].as_mut(),
+      //Some(std::mem::size_of::<HashDigest>()),
+      current_step_no.is_empty(),
+    );
 
     self.cpd.merkle_size[self.current_step_no] = nxt_witness_size / 2;
     self.log_current_witness_size_per_slice -= 1;
@@ -316,22 +297,13 @@ impl FRIContext {
     let mut randomness: Vec<FieldElement> =
       vec![FieldElement::default(); log_length + RS_CODE_RATE - LOG_SLICE_NUMBER];
 
-    let is_not_random = env::args().nth(3).is_none();
     let mut ptr = 0;
     while codeword_size > 1 << RS_CODE_RATE {
       assert!(ptr < log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
 
-      if is_not_random {
-        randomness[ptr] = FieldElement::new_random();
-      } else {
-        randomness[ptr] = FieldElement {
-          real: 1445952529,
-          img: 527239191,
-        };
-      }
+      randomness[ptr] = FieldElement::new_random();
 
       ret[ptr] = self.commit_phase_step(randomness[ptr], slice_count);
-      //println!("ret[{}]: {:?}", ptr, ret[ptr]);
       codeword_size /= 2;
       ptr += 1;
     }

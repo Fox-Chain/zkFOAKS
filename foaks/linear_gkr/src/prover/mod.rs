@@ -1,5 +1,4 @@
 use std::{
-  env,
   mem::swap,
   time::{self, SystemTime},
 };
@@ -11,7 +10,6 @@ use prime_field::FieldElement;
 use crate::{
   circuit_fast_track::LayeredCircuit,
   polynomial::{LinearPoly, QuadraticPoly},
-  verifier::read_vec_fe_file,
 };
 
 pub fn from_string(s: &str) -> FieldElement {
@@ -246,19 +244,9 @@ impl ZkProver {
 
   //Todo: Improve this function with Rust features
   pub fn get_witness(&mut self, inputs: Vec<FieldElement>, n: usize) {
-    let random = env::args().nth(3);
-    let mut res = vec![];
-    if random.is_some() {
-      res = read_vec_fe_file("witness.txt");
-    }
-
     self.circuit_value[0] = vec![FieldElement::zero(); 1 << self.a_c.circuit[0].bit_length];
     for i in 0..n {
-      if random.is_some() {
-        self.circuit_value[0][i] = res[i];
-      } else {
-        self.circuit_value[0][i] = inputs[i];
-      }
+      self.circuit_value[0][i] = inputs[i];
     }
   }
 

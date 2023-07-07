@@ -1,20 +1,17 @@
 use std::{
   mem::{size_of, size_of_val},
-  ptr::copy_nonoverlapping,
   vec::Vec,
 };
 
 use prime_field::FieldElement;
 
-use crate::my_hash::{my_hash, HashDigest};
+use crate::my_hash::{HashDigest, my_hash};
 
 // Todo: Debug coppy no overlapping
 pub unsafe fn hash_single_field_element(x: FieldElement) -> HashDigest {
   let mut data = [HashDigest::default(); 2];
   data[0].h0 = HashDigest::memcpy_from_field_element(x).h0; // merkle_tree.cpp 9
   assert_eq!(size_of_val(&x), size_of_val(&data[0].h0));
-  // data[0].print_c();
-  // data[1].print_c();
   my_hash(data)
 }
 
