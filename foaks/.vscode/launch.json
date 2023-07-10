@@ -1,0 +1,181 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'infrastructure'",
+      "cargo": {
+        "args": ["test", "--no-run", "--lib", "--package=infrastructure"],
+        "filter": {
+          "name": "infrastructure",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'prime_field'",
+      "cargo": {
+        "args": ["test", "--no-run", "--lib", "--package=prime_field"],
+        "filter": {
+          "name": "prime_field",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'intrinsics'",
+      "cargo": {
+        "args": ["test", "--no-run", "--lib", "--package=intrinsics"],
+        "filter": {
+          "name": "intrinsics",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'linear_gkr'",
+      "cargo": {
+        "args": ["test", "--no-run", "--lib", "--package=linear_gkr"],
+        "filter": {
+          "name": "linear_gkr",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug executable 'linear_gkr'",
+      "cargo": {
+        "args": ["build", "--bin=linear_gkr", "--package=linear_gkr"],
+        "filter": {
+          "name": "linear_gkr",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in executable 'linear_gkr'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--bin=linear_gkr",
+          "--package=linear_gkr"
+        ],
+        "filter": {
+          "name": "linear_gkr",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'poly_commitment'",
+      "cargo": {
+        "args": ["test", "--no-run", "--lib", "--package=poly_commitment"],
+        "filter": {
+          "name": "poly_commitment",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'linear_code'",
+      "cargo": {
+        "args": ["test", "--no-run", "--lib", "--package=linear_code"],
+        "filter": {
+          "name": "linear_code",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'linear_pc'",
+      "cargo": {
+        "args": ["test", "--no-run", "--lib", "--package=linear_pc"],
+        "filter": {
+          "name": "linear_pc",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'foaks'",
+      "cargo": {
+        "args": ["test", "--no-run", "--lib", "--package=foaks"],
+        "filter": {
+          "name": "foaks",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug executable 'foaks'",
+      "cargo": {
+        "args": ["build", "--bin=foaks", "--package=foaks"],
+        "filter": {
+          "name": "foaks",
+          "kind": "bin"
+        }
+      },
+      "args": ["14", "text.txt", "uih"],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in executable 'foaks'",
+      "cargo": {
+        "args": ["test", "--no-run", "--bin=foaks", "--package=foaks"],
+        "filter": {
+          "name": "foaks",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

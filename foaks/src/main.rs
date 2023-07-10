@@ -1,6 +1,8 @@
-use std::{env, process, time::Instant};
+use std::{env, time::Instant};
+use std::vec;
 
-use linear_code::{linear_code_encode::LinearCodeEncodeContext, parameter::COLUMN_SIZE};
+use linear_code::parameter::COLUMN_SIZE;
+use linear_gkr::verifier::generate_randomness;
 use linear_pc::LinearPC;
 use prime_field::FieldElement;
 
@@ -8,7 +10,6 @@ use prime_field::FieldElement;
 enum Error {
   ParseParamsError,
 }
-
 fn main() -> Result<(), Error> {
   let args: Vec<String> = env::args().collect();
   let lg_n = match args.iter().nth(1) {
@@ -18,16 +19,27 @@ fn main() -> Result<(), Error> {
   let n = 1 << lg_n;
   let mut linear_pc = LinearPC::init();
   unsafe { linear_pc.lce_ctx.expander_init(n / COLUMN_SIZE, None) };
-  let mut coefs = vec![FieldElement::zero(); n];
 
+  let mut coefs = vec![FieldElement::zero(); n];
   for i in 0..n {
     coefs[i] = FieldElement::new_random()
   }
+
   let commit_t0 = Instant::now();
   let h = unsafe { linear_pc.commit(coefs, n) };
   let commit_time_diff = commit_t0.elapsed();
   let open_t0 = Instant::now();
-  let result = linear_pc.open_and_verify(FieldElement::new_random(), n, h);
+
+
+  let result;
+  let multi = env::args().nth(3).unwrap_or_else(|| String::default()).contains("multi");
+  if multi {
+    let r = generate_randomness(lg_n);
+    result = linear_pc.open_and_verify_multi(&r, lg_n, n, h);
+  } else {
+    result = linear_pc.open_and_verify(FieldElement::new_random(), n, h);
+  }
+
   let open_time_diff = open_t0.elapsed();
   println!("Commit time: {}", commit_time_diff.as_secs_f64());
   println!("Open time: {}", open_time_diff.as_secs_f64());

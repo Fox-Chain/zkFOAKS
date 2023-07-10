@@ -11,7 +11,8 @@ hmac-sha256 = "1.1.4"
 serde = { version = "1.0.143", features = ["serde_derive"] }
 prime_field = { path = "../prime_field" }
 bincode = "1.3.3"
-rayon = "1.5.3"
 rust-crypto = "0.2"
 sha3 = "0.10.2"
 byteorder = "1"
+ring = "0.16.20"  #Temp library
+blake3 = "1.3.3"  #Temp library

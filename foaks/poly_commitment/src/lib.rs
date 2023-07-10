@@ -1,22 +1,30 @@
-mod vpd;
-
-use rand::Rng;
-use std::{ffi::OsStr, fs::File, io::Read, os::unix::prelude::OsStrExt, process::Command, time};
-
-use prime_field::FieldElement;
-
-use crate::vpd::{
-  fri::{
-    request_init_commit, request_init_value_with_merkle, request_step_commit, FRIContext, TripleVec,
-  },
-  verifier::verify_merkle,
+use std::{
+  env,
+  ffi::OsStr,
+  fs::{File, read_to_string},
+  io::Read,
+  os::unix::prelude::OsStrExt,
+  process::Command,
+  time,
 };
+
 use infrastructure::{
   constants::*,
   my_hash::HashDigest,
   rs_polynomial::{fast_fourier_transform, inverse_fast_fourier_transform, ScratchPad},
   utility::my_log,
 };
+use prime_field::FieldElement;
+
+use crate::vpd::{
+  fri::{
+    FRIContext, request_init_commit, request_init_value_with_merkle, request_step_commit, TripleVec,
+  },
+  verifier::verify_merkle,
+};
+
+mod test;
+mod vpd;
 
 #[derive(Default)]
 pub struct LdtCommitment {
@@ -89,11 +97,9 @@ impl PolyCommitProver {
     let l_eval_len = slice_count * slice_size;
     self.ctx.l_eval_len = l_eval_len;
 
-    //let l_eval = &mut self.ctx.l_eval;
     self.ctx.l_eval = vec![FieldElement::zero(); l_eval_len];
-    //l_eval.reserve(l_eval_len);
 
-    let mut tmp = Vec::<FieldElement>::with_capacity(slice_real_ele_cnt);
+    let mut tmp = vec![FieldElement::default(); slice_real_ele_cnt]; // Vec::<FieldElement>::with_capacity(slice_real_ele_cnt);
 
     //let order = slice_size * slice_count;
 
@@ -108,9 +114,11 @@ impl PolyCommitProver {
 
       for j in 0..slice_real_ele_cnt {
         if private_array[i * slice_real_ele_cnt + j] == zero {
+          //println!("j: {} continue", j);
           continue;
         }
         all_zero = false;
+        //println!("j: {} break", j);
         break;
       }
 
@@ -134,9 +142,8 @@ impl PolyCommitProver {
           slice_size,
           FieldElement::get_root_of_unity(my_log(slice_size).unwrap()).unwrap(),
           &mut self.ctx.l_eval[i * slice_size..],
-          &mut self.scratch_pad.twiddle_factor,
-          &mut self.scratch_pad.dst,
-          &mut self.scratch_pad.twiddle_factor_size,
+          &mut self.scratch_pad,
+          None,
         )
       }
     }
@@ -145,7 +152,7 @@ impl PolyCommitProver {
     println!("FFT Prepare time: {} ms", elapsed_time.as_millis());
 
     if self.fri_ctx.is_none() {
-      self.fri_ctx = Some(FRIContext::default());
+      self.fri_ctx = Some(FRIContext::new());
     }
 
     let ret =
@@ -167,7 +174,7 @@ impl PolyCommitProver {
   ) -> HashDigest {
     let mut t0 = time::Instant::now();
     assert!(self.ctx.pre_prepare_executed);
-    let mut default_fri_ctx = FRIContext::default();
+    let mut default_fri_ctx = FRIContext::new();
     let mut fri_ctx = self.fri_ctx.as_mut().unwrap_or(&mut default_fri_ctx);
     fri_ctx.virtual_oracle_witness =
       vec![FieldElement::default(); self.ctx.slice_size * self.ctx.slice_count];
@@ -181,7 +188,7 @@ impl PolyCommitProver {
     let mut re_mapping_time = 0.0;
 
     let mut ftt_t0 = time::Instant::now();
-
+    //println!("Into commit_public_array");
     for i in 0..self.ctx.slice_count {
       inverse_fast_fourier_transform(
         &mut self.scratch_pad,
@@ -191,19 +198,16 @@ impl PolyCommitProver {
         FieldElement::get_root_of_unity(my_log(self.ctx.slice_real_ele_cnt).unwrap()).unwrap(),
         &mut tmp,
       );
-
       fast_fourier_transform(
         &tmp,
         self.ctx.slice_real_ele_cnt,
         self.ctx.slice_size,
         FieldElement::get_root_of_unity(my_log(self.ctx.slice_size).unwrap()).unwrap(),
         &mut self.ctx.q_eval[i * self.ctx.slice_size..],
-        &mut self.scratch_pad.twiddle_factor,
-        &mut self.scratch_pad.dst,
-        &mut self.scratch_pad.twiddle_factor_size,
-      )
+        &mut self.scratch_pad,
+        None,
+      );
     }
-
     ftt_time += ftt_t0.elapsed().as_secs_f64();
 
     let mut sum = FieldElement::zero();
@@ -271,6 +275,7 @@ impl PolyCommitProver {
             .unwrap(),
           &mut self.ctx.lq_coef,
         );
+        //panic!("Fix last values after inverse_fast_fourier_transform");
 
         for j in 0..self.ctx.slice_real_ele_cnt {
           self.ctx.h_coef[j] = self.ctx.lq_coef[j + self.ctx.slice_real_ele_cnt];
@@ -282,10 +287,10 @@ impl PolyCommitProver {
           self.ctx.slice_size,
           FieldElement::get_root_of_unity(my_log(self.ctx.slice_size).unwrap()).unwrap(),
           &mut self.ctx.h_eval,
-          &mut self.scratch_pad.twiddle_factor,
-          &mut self.scratch_pad.dst,
-          &mut self.scratch_pad.twiddle_factor_size,
+          &mut self.scratch_pad,
+          None,
         );
+        //panic!("Verify values after fast_fourier_transform");
 
         ftt_time += ftt_t0.elapsed().as_secs_f64();
       }
@@ -298,21 +303,23 @@ impl PolyCommitProver {
       let const_sum = FieldElement::zero() - (self.ctx.lq_coef[0] + self.ctx.h_coef[0]);
 
       for j in 0..self.ctx.slice_size {
-        let g = self.ctx.l_eval[i * self.ctx.slice_size + j]
-          * self.ctx.q_eval[i * self.ctx.slice_size + j]
-          - (self.scratch_pad.twiddle_factor
-            [twiddle_gap * j % self.scratch_pad.twiddle_factor_size]
-            - FieldElement::real_one())
-            * self.ctx.h_eval[j];
+        let p = self.ctx.l_eval[i * self.ctx.slice_size + j];
+        let q = self.ctx.q_eval[i * self.ctx.slice_size + j];
+        let aabb = self.scratch_pad.twiddle_factor
+          [twiddle_gap * j % self.scratch_pad.twiddle_factor_size]
+          - FieldElement::real_one();
+        let h = self.ctx.h_eval[j];
+        let g = p * q - aabb * h;
 
         if j < self.ctx.slice_size / 2 {
           assert!((j << log_leaf_size | (i << 1) | 0) < self.ctx.slice_count * self.ctx.slice_size);
           assert_eq!((j << log_leaf_size) & (i << 1), 0);
 
-          fri_ctx.virtual_oracle_witness[j << log_leaf_size | (i << 1) | 0] = (g + const_sum)
-            * self.scratch_pad.inv_twiddle_factor
-              [inv_twiddle_gap * j % self.scratch_pad.twiddle_factor_size]
-            * FieldElement::from_real(self.ctx.slice_real_ele_cnt as u64);
+          let a = g + const_sum;
+          let b = self.scratch_pad.inv_twiddle_factor
+            [inv_twiddle_gap * j % self.scratch_pad.twiddle_factor_size];
+          let c = FieldElement::from_real(self.ctx.slice_real_ele_cnt as u64);
+          fri_ctx.virtual_oracle_witness[j << log_leaf_size | (i << 1) | 0] = a * b * c;
 
           fri_ctx.virtual_oracle_witness_mapping[j << LOG_SLICE_NUMBER | i] =
             j << log_leaf_size | (i << 1) | 0;
@@ -345,27 +352,27 @@ impl PolyCommitProver {
 
     let mut time_span = t0.elapsed().as_secs_f64();
     self.total_time_pc_p += time_span;
-    println!("PostGKR FFT time {}", ftt_time);
-    println!("PostGKR remap time {}", re_mapping_time);
-    println!("PostGKR prepare time {}", time_span);
+    println!("PostGKR FFT time: {}", ftt_time);
+    println!("PostGKR remap time: {}", re_mapping_time);
+    println!("PostGKR prepare time 0:{}", time_span);
 
     t0 = time::Instant::now();
     let ret = request_init_commit(&mut fri_ctx, &self.ctx, r_0_len, 1);
 
     time_span = t0.elapsed().as_secs_f64();
     self.total_time_pc_p += time_span;
-    println!("PostGKR prepare time 1 {}", time_span);
+    println!("PostGKR prepare time 1: {}", time_span);
 
     ret
   }
 
-  pub fn commit_phase(&mut self, log_length: usize) -> LdtCommitment {
-    self
-      .fri_ctx
-      .as_mut()
-      .unwrap()
-      .commit_phase(log_length, self.ctx.slice_count)
-  }
+  // pub fn commit_phase(&mut self, log_length: usize) -> LdtCommitment {
+  //   self
+  //     .fri_ctx
+  //     .as_mut()
+  //     .unwrap()
+  //     .commit_phase(log_length, self.ctx.slice_count)
+  // }
 }
 
 #[derive(Default, Debug)]
@@ -379,14 +386,16 @@ impl PolyCommitVerifier {
     all_sum: &[FieldElement],
     log_length: usize,
     public_array: &[FieldElement],
-    mut v_time: f64,
-    mut proof_size: usize,
-    mut p_time: f64,
+    v_time: &mut f64,
+    proof_size: &mut usize,
+    p_time: &mut f64,
     merkle_tree_l: HashDigest,
     merkle_tree_h: HashDigest,
-    fri_ctx: &mut FRIContext,
   ) -> bool {
-    let command = format!("./fft_gkr {} log_fftgkr.txt", log_length - LOG_SLICE_NUMBER);
+    let command = format!(
+      "./fft_gkr {} 16_log_fftgkr.txt",
+      log_length - LOG_SLICE_NUMBER
+    );
 
     let _output = Command::new("sh")
       .arg("-c")
@@ -395,11 +404,16 @@ impl PolyCommitVerifier {
       .expect("Failed to execute command");
 
     let v_time_fft;
-    let proof_size_fft;
     let p_time_fft;
+    let proof_size_fft;
 
-    let mut file = match File::open("log_fftgkr.txt") {
-      Err(err) => panic!("Couldn't open {}: {}", "log_fftgkr.txt", err),
+    let mut file = match File::open(
+      env::current_dir()
+        .unwrap()
+        .join("src")
+        .join("16_log_fftgkr.txt"),
+    ) {
+      Err(err) => panic!("Couldn't open {}: {}", "16_log_fftgkr.txt", err),
       Ok(file) => file,
     };
 
@@ -413,14 +427,20 @@ impl PolyCommitVerifier {
     proof_size_fft = iter.next().unwrap().parse::<usize>().unwrap();
     p_time_fft = iter.next().unwrap().parse::<f64>().unwrap();
 
-    v_time += v_time_fft as f64;
-    proof_size += proof_size_fft;
-    p_time += p_time_fft as f64;
+    *v_time += v_time_fft;
+    *p_time += p_time_fft;
+    *proof_size += proof_size_fft;
 
-    let com = self.pc_prover.commit_phase(log_length);
+    let com = self
+      .pc_prover
+      .fri_ctx
+      .as_mut()
+      .unwrap()
+      .commit_phase(log_length, self.pc_prover.ctx.slice_count);
     let coef_slice_size = 1 << (log_length - LOG_SLICE_NUMBER);
 
     for _ in 0..33 {
+      //println!("rep: {}", rep);
       let slice_count = 1 << LOG_SLICE_NUMBER;
       let slice_size = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
 
@@ -434,32 +454,35 @@ impl PolyCommitVerifier {
       let mut alpha: TripleVec = (vec![], vec![]);
       let mut beta: TripleVec = (vec![], vec![]);
 
-      let mut s0 = FieldElement::default();
-      let mut s1 = FieldElement::default();
+      let mut s0;
+      let mut s1;
       let mut pre_y = FieldElement::default();
       let mut root_of_unity = FieldElement::default();
       let mut y = FieldElement::default();
-
-      let mut equ_beta: bool;
+      // let mut equ_beta: bool; not used in C++
       assert!(log_length - LOG_SLICE_NUMBER > 0);
-      let mut pow: u128 = 0;
+      let mut pow = 0_u128;
+      let mut max: u128;
 
-      for i in 0..log_length - LOG_SLICE_NUMBER {
+      for i in 0..(log_length - LOG_SLICE_NUMBER) {
         t0 = time::Instant::now();
 
         if i == 0 {
-          pow = rand::random::<u128>() % (1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i));
+          max = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i);
+          pow = rand::random::<u128>() % max;
+
           while pow < (1 << (log_length - LOG_SLICE_NUMBER - i)) || pow % 2 == 1 {
-            pow =
-              rand::random::<u128>() % (1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i));
+            pow = rand::random::<u128>() % max;
           }
           root_of_unity =
-            FieldElement::get_root_of_unity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i)
-              .unwrap();
+              FieldElement::get_root_of_unity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i)
+                  .unwrap();
           y = FieldElement::fast_pow(root_of_unity, pow);
         } else {
           root_of_unity = root_of_unity * root_of_unity;
           pow = pow % (1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i));
+          //println!("pow =  {}", pow);
+
           pre_y = y;
           y = y * y;
         }
@@ -472,45 +495,44 @@ impl PolyCommitVerifier {
         s0 = root_of_unity.fast_pow(s0_pow);
         s1 = root_of_unity.fast_pow(s1_pow);
 
-        let indicator;
+        // let mut indicator; in C++ "indicator" is used but in the if else the sentence are the same. Check vpd_verifier.cpp line 263
 
         if i != 0 {
           assert!(s1 == pre_y || s0 == pre_y);
-          if s1 == pre_y {
-            indicator = 1;
-          } else {
-            indicator = 0;
-          }
+          // if s1 == pre_y {
+          //   indicator = 1;
+          // } else {
+          //   indicator = 0;
+          // }
         }
 
         assert_eq!(s0 * s0, y);
         assert_eq!(s1 * s1, y);
 
-        let new_size = 0;
+        let mut new_size;
         let gen_val = |alpha: &TripleVec, inv_mu: FieldElement, i: usize, j: usize| {
           (alpha.0[j].0 + alpha.0[j].1) * inv_2
             + (alpha.0[j].0 - alpha.0[j].1) * inv_2 * com.randomness[i] * inv_mu
         };
 
+        let fri_ctx = self.pc_prover.fri_ctx.as_mut().unwrap();
         if i == 0 {
           time_span = t0.elapsed().as_secs_f64();
-          v_time += time_span;
-          alpha_l = request_init_value_with_merkle(
+          *v_time += time_span;
+          (alpha_l, new_size) = request_init_value_with_merkle(
             s0_pow.try_into().unwrap(),
             s1_pow.try_into().unwrap(),
-            new_size,
             0,
             fri_ctx,
           );
-          alpha_h = request_init_value_with_merkle(
+          (alpha_h, new_size) = request_init_value_with_merkle(
             s0_pow.try_into().unwrap(),
             s1_pow.try_into().unwrap(),
-            new_size,
             1,
             fri_ctx,
           );
 
-          proof_size += new_size;
+          *proof_size += new_size;
 
           t0 = time::Instant::now();
 
@@ -521,7 +543,6 @@ impl PolyCommitVerifier {
               s1
             }
           };
-
           if !verify_merkle(
             merkle_tree_l,
             &alpha_l.1,
@@ -531,7 +552,6 @@ impl PolyCommitVerifier {
           ) {
             return false;
           }
-
           if !verify_merkle(
             merkle_tree_h,
             &alpha_h.1,
@@ -542,12 +562,25 @@ impl PolyCommitVerifier {
             return false;
           }
 
-          v_time += t0.elapsed().as_secs_f64();
-          beta = request_step_commit(0, (pow / 2).try_into().unwrap(), new_size, fri_ctx);
+          *v_time += t0.elapsed().as_secs_f64();
+          (beta, new_size) = request_step_commit(0, (pow / 2).try_into().unwrap(), fri_ctx);
 
-          proof_size += new_size;
+          *proof_size += new_size;
 
           t0 = time::Instant::now();
+          //println!("Before verify_merkle with beta.1");
+
+          if !verify_merkle(
+            com.commitment_hash[0],
+            &beta.1,
+            beta.1.len(),
+            (pow / 2) as u128,
+            &beta.0,
+          ) {
+            //println!("verify_merkle failed with beta.1, i:{}", i);
+            return false;
+          }
+          //println!("Passed verify_merkle with beta.1");
 
           let inv_mu = root_of_unity.fast_pow((pow / 2) as u128).inverse();
           alpha.0.clear();
@@ -610,32 +643,46 @@ impl PolyCommitVerifier {
               std::mem::swap(&mut a.0, &mut a.1);
             }
 
-            let p_val = gen_val(&alpha, inv_mu, i, j);
+            //let p_val = gen_val(&alpha, inv_mu, i, j);
+            let p_val = (alpha.0[j].0 + alpha.0[j].1) * inv_2
+              + (alpha.0[j].0 - alpha.0[j].1) * inv_2 * com.randomness[i] * inv_mu;
 
             if p_val != beta.0[j].0 && p_val != beta.0[j].1 {
-              eprintln!("Fri check consistency first round fail {}", j);
+              let a = p_val != beta.0[j].0;
+              let b = p_val != beta.0[j].1;
+              eprintln!(
+                "a: {}, b:{}, Fri check consistency first round fail {}",
+                a, b, j
+              );
               return false;
             }
 
-            if p_val == beta.0[j].0 {
-              equ_beta = false
-            } else {
-              equ_beta = true
-            };
+            // if p_val == beta.0[j].0 {
+            //   equ_beta = false
+            // } else {
+            //   equ_beta = true
+            // };
           }
 
           time_span = t0.elapsed().as_secs_f64();
         } else {
           time_span = t0.elapsed().as_secs_f64();
-          v_time += time_span;
+          *v_time += time_span;
 
           alpha = beta.clone();
-          beta = request_step_commit(i, (pow / 2).try_into().unwrap(), new_size, fri_ctx);
+          (beta, new_size) = request_step_commit(i, (pow / 2).try_into().unwrap(), fri_ctx);
 
-          proof_size += new_size;
+          *proof_size += new_size;
 
           t0 = time::Instant::now();
 
+          // println!(
+          //   "i:{}, beta.1.len():{}, pow/2:{}, beta.0.len():{}",
+          //   i,
+          //   beta.1.len(),
+          //   (pow / 2) as u128,
+          //   beta.0.len()
+          // );
           if !verify_merkle(
             com.commitment_hash[i],
             &beta.1,
@@ -643,12 +690,13 @@ impl PolyCommitVerifier {
             (pow / 2) as u128,
             &beta.0,
           ) {
+            //println!("668");
             return false;
           }
 
           let inv_mu = root_of_unity.fast_pow((pow / 2) as u128).inverse();
           time_span = t0.elapsed().as_secs_f64();
-          v_time += time_span;
+          *v_time += time_span;
 
           for j in 0..slice_count {
             let p_val_0 = gen_val(&alpha, inv_mu, i, j);
@@ -660,27 +708,43 @@ impl PolyCommitVerifier {
               && p_val_1 != beta.0[j].0
               && p_val_1 != beta.0[j].1
             {
-              eprintln!("Fri check consistency first round fail {}", j);
+              eprintln!("Fri check consistency {} round fail", i);
               return false;
             }
           }
         }
       }
 
+      let fri_ctx = self.pc_prover.fri_ctx.as_mut().unwrap();
       for i in 0..slice_count {
         let template =
-          fri_ctx.cpd.rs_codeword[com.mx_depth - 1][0 << (LOG_SLICE_NUMBER + 1) | i << 1 | 0];
+          fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(0 << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0];
         for j in 0..(1 << (RS_CODE_RATE - 1)) {
-          if fri_ctx.cpd.rs_codeword[com.mx_depth - 1][j << (LOG_SLICE_NUMBER + 1) | i << 1 | 0]
+          if fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(j << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0]
             != template
           {
-            eprintln!("Fri rs code check fail");
+            eprintln!("Fri rs code check fail {} {}", i, j);
             return false;
           }
         }
+        //panic!("stop");
       }
     }
-
     true
   }
+}
+
+pub fn read_random_file(path: &str) -> Vec<u128> {
+  let result_content = read_to_string(path).unwrap();
+  let result_lines = result_content.lines();
+  //let mut result = Vec::new();
+
+  result_lines
+    .into_iter()
+    .map(|x| {
+      let mut line = x.split_whitespace();
+      let ran = line.next().unwrap().parse().unwrap();
+      ran
+    })
+    .collect()
 }

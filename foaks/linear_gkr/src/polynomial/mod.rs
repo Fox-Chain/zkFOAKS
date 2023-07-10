@@ -75,7 +75,7 @@ impl QuadraticPoly {
   pub fn new(a: FieldElement, b: FieldElement, c: FieldElement) -> Self { Self { a, b, c } }
 
   //todo: debug function
-  pub fn eval(self, x: &FieldElement) -> FieldElement { (self.a * *x + self.b) * *x + self.c }
+  pub fn eval(&self, x: &FieldElement) -> FieldElement { self.a * *x * *x + self.b * *x + self.c }
 
   pub fn mul(self, x: LinearPoly) -> CubicPoly {
     let a = self.a * x.a;
@@ -87,9 +87,9 @@ impl QuadraticPoly {
 }
 
 impl core::ops::Add for QuadraticPoly {
-  type Output = Self;
+  type Output = QuadraticPoly;
 
-  fn add(self, x: Self) -> Self::Output {
+  fn add(self, x: QuadraticPoly) -> Self::Output {
     let a = self.a + x.a;
     let b = self.b + x.b;
     let c = self.c + x.c;

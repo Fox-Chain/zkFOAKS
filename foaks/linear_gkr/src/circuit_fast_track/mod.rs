@@ -47,17 +47,9 @@ pub struct Layer {
   pub log_repeat_num: usize,
 }
 
-impl Layer {
-  pub fn new() -> Self { Default::default() }
-}
-
 #[derive(Default, Debug, Clone)]
 pub struct LayeredCircuit {
   pub circuit: Vec<Layer>,
   pub total_depth: usize,
   pub inputs: Vec<FieldElement>,
-}
-
-impl LayeredCircuit {
-  pub fn new() -> Self { Default::default() }
 }

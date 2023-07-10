@@ -8,6 +8,7 @@ use std::{
   mem::size_of_val,
   sync::atomic::AtomicBool,
 };
+use rand::Rng;
 
 use self::error::{PrimeFieldError, RootOfUnityError};
 
@@ -113,14 +114,14 @@ impl FieldElement {
   pub fn size(&self) -> usize { std::mem::size_of::<Self>() }
 
   pub fn new_random() -> Self {
-    let real = rand::random::<u64>() % MOD;
-    let img = rand::random::<u64>() % MOD;
+    let real = rand::thread_rng().gen_range(0..(1 << 31) - 1) % MOD;
+    let img = rand::thread_rng().gen_range(0..(1 << 31) - 1) % MOD;
 
     Self::new(real, img)
   }
 
   pub fn new_random_real_only() -> Self {
-    let real = rand::random::<u64>() % MOD;
+    let real = rand::thread_rng().gen_range(0..(1 << 31) - 1) % MOD;
 
     Self::new(real, 0)
   }

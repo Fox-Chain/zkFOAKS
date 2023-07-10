@@ -39,6 +39,8 @@ It's a gate that output the summation of previous layer. A simple use case is ma
 
 > **_NOTE:_** This are just my notes base on my understanding.
 
+g++ -Ic:/myprojects/aproject/inc myfile.cpp
+
 # Examples and tests
 
 ## Univariate Polynomial Commitment
