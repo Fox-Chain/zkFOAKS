@@ -598,9 +598,8 @@ impl PolyCommitVerifier {
           rou[0] = x[0].fast_pow((slice_size >> RS_CODE_RATE) as u128);
           rou[1] = x[1].fast_pow((slice_size >> RS_CODE_RATE) as u128);
 
-          inv_x[0] = x[0].clone().inverse();
-          inv_x[1] = x[1].clone().inverse();
-
+          inv_x[0] = x[0].inverse();
+          inv_x[1] = x[1].inverse();
           alpha.0.resize(
             slice_count,
             (FieldElement::default(), FieldElement::default()),

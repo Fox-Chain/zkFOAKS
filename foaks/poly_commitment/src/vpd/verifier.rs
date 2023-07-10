@@ -210,33 +210,31 @@ impl FRIContext {
     // );
     self.cpd.rs_codeword_mapping[self.current_step_no] = vec![0; nxt_witness_size * slice_count];
 
-    for i in 0..nxt_witness_size / 2 {
-      for j in 0..SLICE_NUMBER {
+    let nxt_witness_size_div_2 = nxt_witness_size / 2;
+
+for i in 0..nxt_witness_size_div_2 {
+    for j in 0..SLICE_NUMBER {
         let a = i << LOG_SLICE_NUMBER | j;
-        let b = (i + nxt_witness_size / 2) << LOG_SLICE_NUMBER | j;
-        let c = (i) << log_leaf_size | (j << 1) | 0;
-        let d = (i) << log_leaf_size | (j << 1) | 1;
-        self.cpd.rs_codeword_mapping[self.current_step_no][a] = (i) << log_leaf_size | (j << 1) | 0;
-        self.cpd.rs_codeword_mapping[self.current_step_no][b] = (i) << log_leaf_size | (j << 1) | 0;
+        let b = (i + nxt_witness_size_div_2) << LOG_SLICE_NUMBER | j;
+        let c = i << log_leaf_size | (j << 1);
+        let d = c | 1;
 
-        tmp[c] = self.cpd.rs_codeword[self.current_step_no][i << LOG_SLICE_NUMBER | j];
-        tmp[d] = self.cpd.rs_codeword[self.current_step_no]
-          [(i + nxt_witness_size / 2) << LOG_SLICE_NUMBER | j];
+        let rs_codeword_mapping = &mut self.cpd.rs_codeword_mapping;
+        let rs_codeword = &self.cpd.rs_codeword;
 
-        // println!(
-        //   "a:{}, tmp[{}].real:{}, img:{} ",
-        //   a, c, tmp[c].real, tmp[c].img
-        // );
-        // println!(
-        //   "b:{}, tmp[{}].real:{}, img:{} ",
-        //   b, d, tmp[d].real, tmp[d].img
-        // );
+        rs_codeword_mapping[self.current_step_no][a] = c;
+        rs_codeword_mapping[self.current_step_no][b] = c;
+
+        tmp[c] = rs_codeword[self.current_step_no][a];
+        tmp[d] = rs_codeword[self.current_step_no][b];
+
         assert!(a < nxt_witness_size * SLICE_NUMBER);
         assert!(b < nxt_witness_size * SLICE_NUMBER);
         assert!(c < nxt_witness_size * SLICE_NUMBER);
         assert!(d < nxt_witness_size * SLICE_NUMBER);
-      }
     }
+}
+
     //panic!("stop here");
     self.cpd.rs_codeword[self.current_step_no] = tmp;
 

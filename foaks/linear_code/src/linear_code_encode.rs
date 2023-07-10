@@ -2,8 +2,8 @@ use std::{fs::read_to_string, vec::Vec};
 
 use prime_field::FieldElement;
 
-use crate::parameter::*;
 use crate::parameter::DISTANCE_THRESHOLD;
+use crate::parameter::*;
 
 #[derive(Default, Clone)]
 pub struct Graph {
@@ -54,17 +54,15 @@ impl LinearCodeEncodeContext {
         let size = (2 * n) >> i;
         self.scratch[0][i] = vec![FieldElement::default(); size];
         self.scratch[1][i] = vec![FieldElement::default(); size];
-        i = i + 1;
+        i += 1
       }
     }
-    for i in 0..n {
-      self.scratch[0][dep][i] = src[i];
-    }
+    self.scratch[0][dep][..n].copy_from_slice(&src[..n]);
     let mut r: usize = (ALPHA * (n as f64)) as usize;
 
-    for j in 0..r {
-      self.scratch[1][dep][j] = FieldElement::zero();
-    }
+    self.scratch[1][dep].iter_mut().for_each(|item| {
+      *item = FieldElement::zero();
+    });
     //expander mult
     for i in 0..n {
       let val = src[i];
@@ -91,10 +89,7 @@ impl LinearCodeEncodeContext {
       }
     }
 
-    for i in 0..(n + l + r) {
-      dst[i] = self.scratch[0][dep][i];
-    }
-
+    dst[..(n + l + r)].copy_from_slice(&self.scratch[0][dep][..(n + l + r)]);
     return n + l + r;
   }
 
@@ -133,7 +128,7 @@ impl LinearCodeEncodeContext {
       self.scratch[0][dep][n + l + i] = FieldElement::from_real(0);
     }
     for i in 0..l {
-      let val = self.scratch[0][dep][n + i].clone();
+      let val = self.scratch[0][dep][n + i];
       for d in 0..self.d[dep].degree {
         let target = self.d[dep].neighbor[i][d];
         self.scratch[0][dep][n + l + target] =
@@ -149,16 +144,22 @@ impl LinearCodeEncodeContext {
   }
 
   pub unsafe fn expander_init(&mut self, n: usize, dep: Option<usize>) -> usize {
-    // random Graph
-    if n <= DISTANCE_THRESHOLD {
-      n
-    } else {
-      let dep = dep.unwrap_or(0);
-      self.c[dep] = generate_random_expander(n, (ALPHA * (n as f64)) as usize, CN);
-      let l = self.expander_init((ALPHA * (n as f64)) as usize, Some(dep + 1));
-      self.d[dep] =
-        generate_random_expander(l, ((n as f64) * (R - 1f64) - (l as f64)) as usize, DN);
-      n + l + (((n as f64) * (R - 1.0) - (l as f64)) as usize)
+    match n <= DISTANCE_THRESHOLD {
+      true => n,
+      false => {
+        let dep = dep.unwrap_or(0);
+        let alpha_n = (ALPHA * n as f64) as usize;
+        let (l, expander_size) = {
+          let l = self.expander_init(alpha_n, Some(dep + 1));
+          let expander_size = ((n as f64) * (R - 1.0) - l as f64) as usize;
+          (l, expander_size)
+        };
+
+        self.c[dep] = generate_random_expander(n, alpha_n, CN);
+        self.d[dep] = generate_random_expander(l, expander_size, DN);
+
+        n + l + expander_size
+      }
     }
   }
 }

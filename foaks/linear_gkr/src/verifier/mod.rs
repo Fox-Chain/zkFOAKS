@@ -5,11 +5,11 @@ use std::{
   mem,
 };
 
+use infrastructure::my_hash::HashDigest;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
   rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
 };
-use infrastructure::my_hash::HashDigest;
 use poly_commitment::PolyCommitVerifier;
 use prime_field::FieldElement;
 
@@ -170,8 +170,8 @@ impl ZkVerifier {
             );
             process::exit(1)
           }
-        } else {
-          if g != 0 {
+        } else if g != 0 {
+          {
             eprintln!(
               "Error, gates must be in sorted order, and full [0, 2^n - 1]. {} {} {} -1",
               i, j, g
@@ -333,7 +333,7 @@ impl ZkVerifier {
     let capacity = self.a_c.circuit[self.a_c.total_depth - 1].bit_length;
 
     let mut r_0 = generate_randomness(capacity);
-    let mut r_1= generate_randomness(capacity);
+    let mut r_1 = generate_randomness(capacity);
 
     let mut one_minus_r_0 = Vec::with_capacity(capacity);
     let mut one_minus_r_1 = Vec::with_capacity(capacity);
@@ -383,7 +383,7 @@ impl ZkVerifier {
       let r_u;
       let mut r_v;
 
-        //next level random
+      //next level random
       r_u = generate_randomness(self.a_c.circuit[i - 1].bit_length);
       r_v = generate_randomness(self.a_c.circuit[i - 1].bit_length);
 
@@ -837,21 +837,21 @@ impl ZkVerifier {
   pub fn direct_relay(
     &mut self,
     depth: usize,
-    r_g: &Vec<FieldElement>,
-    r_u: &Vec<FieldElement>,
+    r_g: &[FieldElement],
+    r_u: &[FieldElement],
   ) -> FieldElement {
-    return if depth != 1 {
-      let ret = FieldElement::from_real(0);
-      ret
+    if depth != 1 {
+      FieldElement::from_real(0)
     } else {
-      let mut ret = FieldElement::from_real(1);
-      for i in 0..(self.a_c.circuit[depth].bit_length) {
-        ret = ret
-          * (FieldElement::from_real(1) - r_g[i] - r_u[i]
-            + FieldElement::from_real(2) * r_g[i] * r_u[i]);
-      }
-      ret
-    };
+      let ret = FieldElement::from_real(1);
+      let result = ret
+        * r_g
+          .iter()
+          .zip(r_u.iter())
+          .map(|(&g, &u)| FieldElement::from_real(1) - g - u + FieldElement::from_real(2) * g * u)
+          .fold(FieldElement::from_real(1), |acc, val| acc * val);
+      result
+    }
   }
 
   pub fn beta_init(
@@ -859,14 +859,14 @@ impl ZkVerifier {
     depth: usize,
     alpha: FieldElement,
     beta: FieldElement,
-    r_0: &Vec<FieldElement>,
-    r_1: &Vec<FieldElement>,
-    r_u: &Vec<FieldElement>,
-    r_v: &Vec<FieldElement>,
-    one_minus_r_0: &Vec<FieldElement>,
-    one_minus_r_1: &Vec<FieldElement>,
-    one_minus_r_u: &Vec<FieldElement>,
-    one_minus_r_v: &Vec<FieldElement>,
+     r_0: &[FieldElement],
+    r_1: &[FieldElement],
+    r_u: &[FieldElement],
+    r_v: &[FieldElement],
+    one_minus_r_0: &[FieldElement],
+    one_minus_r_1: &[FieldElement],
+    one_minus_r_u: &[FieldElement],
+    one_minus_r_v: &[FieldElement],
   ) {
     let debug_mode = false;
     if !self.a_c.circuit[depth].is_parallel || debug_mode {

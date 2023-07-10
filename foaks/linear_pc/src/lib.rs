@@ -39,8 +39,8 @@ impl LinearPC {
     let mut stash = vec![HashDigest::new(); n / COLUMN_SIZE * 2];
     self.codeword_size = vec![0; COLUMN_SIZE];
     assert_eq!(n % COLUMN_SIZE, 0);
-    self.encoded_codeword = vec![vec![FieldElement::zero()]; COLUMN_SIZE];
-    self.coef = vec![Vec::new(); COLUMN_SIZE];
+    self.encoded_codeword = vec![vec![FieldElement::zero(); n / COLUMN_SIZE]; COLUMN_SIZE];
+    self.coef = vec![Vec::with_capacity(n / COLUMN_SIZE); COLUMN_SIZE];
 
     //new code
     for i in 0..COLUMN_SIZE {
@@ -58,16 +58,16 @@ impl LinearPC {
       );
     }
 
-    for i in 0..(n / COLUMN_SIZE * 2) {
-      stash[i] = HashDigest::default();
-      for j in 0..(COLUMN_SIZE / 2) {
-        stash[i] = merkle_tree::hash_double_field_element_merkle_damgard(
-          self.encoded_codeword[2 * j][i],
-          self.encoded_codeword[2 * j + 1][i],
-          stash[i],
-        );
-      }
-    }
+    let stash: Vec<HashDigest> = (0..(n / COLUMN_SIZE * 2)).map(|i| {
+      (0..(COLUMN_SIZE / 2)).fold(HashDigest::default(), |acc, j| {
+          merkle_tree::hash_double_field_element_merkle_damgard(
+              self.encoded_codeword[2 * j][i],
+              self.encoded_codeword[2 * j + 1][i],
+              acc,
+          )
+      })
+  }).collect();
+  
 
     create_tree(
       stash,
@@ -118,11 +118,31 @@ impl LinearPC {
     self.verifier.a_c.circuit[self.gates_count.len() + 1].gates =
       vec![Gate::new(); 1 << self.verifier.a_c.circuit[self.gates_count.len() + 1].bit_length];
 
-    for i in 0..n {
-      self.verifier.a_c.inputs[i] = input[i];
-      self.verifier.a_c.circuit[0].gates[i] = Gate::from_params(3, 0, 0);
-      self.verifier.a_c.circuit[1].gates[i] = Gate::from_params(4, i, 0);
-    }
+      self
+      .verifier
+      .a_c
+      .inputs
+      .iter_mut()
+      .zip(input.iter())
+      .for_each(|(input_elem, &input_value)| {
+        *input_elem = input_value;
+      });
+
+    self.verifier.a_c.circuit[0]
+      .gates
+      .iter_mut()
+      .enumerate()
+      .for_each(|(i, gate)| {
+        *gate = Gate::from_params(3, 0, 0);
+      });
+
+    self.verifier.a_c.circuit[1]
+      .gates
+      .iter_mut()
+      .enumerate()
+      .for_each(|(i, gate)| {
+        *gate = Gate::from_params(4, i, 0);
+      });
     //Todo: improve gate_types::input with constant values
     for i in 0..n {
       self.verifier.a_c.circuit[2].gates[i] = Gate::from_params(10, i, 0);
@@ -156,7 +176,7 @@ impl LinearPC {
       self.generate_enc_circuit(self.lce_ctx.c[0].r, n + self.lce_ctx.c[0].r, 1, 2);
     // add final output
     let final_output_depth = output_depth_output_size.0 + 1;
-    for i in 0..output_depth_output_size.1 {
+    for (i, _) in (0..output_depth_output_size.1).enumerate() {
       self.verifier.a_c.circuit[final_output_depth].gates[i] = Gate::from_params(10, i, 0);
     }
     //let d_input_offset = n; //Never used
@@ -178,11 +198,16 @@ impl LinearPC {
         self.verifier.a_c.circuit[final_output_depth].weight_expander_d_mempool[d_mempool_ptr..]
           .to_vec();
       d_mempool_ptr += self.lce_ctx.d[0].r_neighbor[i].len();
-      for j in 0..self.lce_ctx.d[0].r_neighbor[i].len() {
-        self.verifier.a_c.circuit[final_output_depth].gates[output_so_far + i].src[j] =
-          self.lce_ctx.d[0].r_neighbor[i][j] + n;
-        self.verifier.a_c.circuit[final_output_depth].gates[output_so_far + i].weight[j] =
-          self.lce_ctx.d[0].r_weight[i][j];
+      for (j, (&neighbor, &weight)) in self.lce_ctx.d[0].r_neighbor[i]
+        .iter()
+        .zip(self.lce_ctx.d[0].r_weight[i].iter())
+        .enumerate()
+      {
+        let gate_index = output_so_far + i;
+        let gate = &mut self.verifier.a_c.circuit[final_output_depth].gates[gate_index];
+
+        gate.src[j] = neighbor + n;
+        gate.weight[j] = weight;
       }
     }
     for i in 0..query_count {
@@ -245,12 +270,9 @@ impl LinearPC {
     //prover construct the combined original message
     let mut combined_message = vec![FieldElement::zero(); n];
 
-    for i in 0..COLUMN_SIZE {
-      for j in 0..self.codeword_size[0] {
-        if self.coef[i].len() <= j {
-          continue;
-        } // We realized that beyond 512 the C++ code multiply garbage values
-        combined_message[j] = combined_message[j] + r0[i] * self.coef[i][j];
+    for (i, coef_i) in self.coef.iter().enumerate().take(COLUMN_SIZE) {
+      for (j, &coef_ij) in coef_i.iter().enumerate().take(self.codeword_size[0]) {
+        combined_message[j] = combined_message[j] + r0[i] * coef_ij;
       }
     }
 
@@ -300,7 +322,7 @@ impl LinearPC {
         &mut proof_size,
       ));
       assert!(merkle_tree::verify_claim(
-        combined_codeword_mt[1].clone(),
+        combined_codeword_mt[1],
         combined_codeword_mt.clone(),
         merkle_tree::hash_single_field_element(combined_codeword[q]),
         q,

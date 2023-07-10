@@ -128,9 +128,7 @@ impl ZkProver {
   ) -> FieldElement {
     let t0 = time::Instant::now();
     let mut output = vec![FieldElement::zero(); output_size];
-    for i in 0..output_size {
-      output[i] = output_raw[i];
-    }
+    output[..output_size].copy_from_slice(&output_raw[..output_size]);
     for i in 0..r_0_size {
       for j in 0..(output_size >> 1) {
         output[j] = output[j << 1] * one_minus_r_0[i] + output[j << 1 | 1] * r_0[i];
@@ -245,8 +243,12 @@ impl ZkProver {
   //Todo: Improve this function with Rust features
   pub fn get_witness(&mut self, inputs: Vec<FieldElement>, n: usize) {
     self.circuit_value[0] = vec![FieldElement::zero(); 1 << self.a_c.circuit[0].bit_length];
-    for i in 0..n {
-      self.circuit_value[0][i] = inputs[i];
+    use std::ptr;
+
+    unsafe {
+      let src_ptr = inputs.as_ptr();
+      let dest_ptr = self.circuit_value[0].as_mut_ptr();
+      ptr::copy_nonoverlapping(src_ptr, dest_ptr, n);
     }
   }
 
@@ -559,7 +561,7 @@ impl ZkProver {
     current_bit: usize,
   ) -> QuadraticPoly {
     let t0 = time::Instant::now();
-    let ret;
+    
 
     for i in 0..self.total_uv >> 1 {
       let g_zero = i << 1;
@@ -621,7 +623,7 @@ impl ZkProver {
       swap(&mut self.ctx.rets_prev, &mut self.ctx.rets_cur);
       iter += 1;
     }
-    ret = self.ctx.rets_prev[0];
+    let ret = self.ctx.rets_prev[0];
 
     self.total_uv >>= 1;
 
