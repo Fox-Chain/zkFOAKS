@@ -38,15 +38,14 @@ impl ScratchPad {
     twiddle_factor.push(FieldElement::real_one());
     inv_twiddle_factor.push(FieldElement::real_one());
 
-    let mut prev_twiddle_factor = twiddle_factor[0];
-    let mut prev_inv_twiddle_factor = inv_twiddle_factor[0];
-    for _ in 1..order {
-      prev_twiddle_factor = rou * prev_twiddle_factor;
-      prev_inv_twiddle_factor = inv_rou * prev_inv_twiddle_factor;
+    let twiddle_factor = std::iter::successors(Some(twiddle_factor[0]), |&prev| Some(rou * prev))
+      .take(order)
+      .collect::<Vec<_>>();
 
-      twiddle_factor.push(prev_twiddle_factor);
-      inv_twiddle_factor.push(prev_inv_twiddle_factor);
-    }
+    let inv_twiddle_factor =
+      std::iter::successors(Some(inv_twiddle_factor[0]), |&prev| Some(inv_rou * prev))
+        .take(order)
+        .collect::<Vec<_>>();
 
     ScratchPad {
       dst,

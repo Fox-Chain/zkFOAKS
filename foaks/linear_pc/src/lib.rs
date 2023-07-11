@@ -343,9 +343,9 @@ impl LinearPC {
 
     // prover commit private input
     let mut q = vec![0; query_count];
-    for i in 0..query_count {
-      q[i] = rand::random::<usize>() % self.codeword_size[0];
-    }
+    q.iter_mut().for_each(|value| {
+      *value = rand::random::<usize>() % self.codeword_size[0];
+    });
 
     // generate circuit
 
@@ -359,12 +359,8 @@ impl LinearPC {
     //self.verifier.get_prover(&p); //Refactored, inside of zk_verifier has not
     // zk_prover self.prover.get_circuit(self.verifier.aritmetic_circuit);
     // //Refactored, inside of zk_prover.init_array()
-    let mut max_bit_length: Option<usize> = None;
-    for i in 0..self.verifier.a_c.total_depth {
-      if Some(self.verifier.a_c.circuit[i].bit_length) > max_bit_length {
-        max_bit_length = Some(self.verifier.a_c.circuit[i].bit_length);
-      }
-    }
+    let max_bit_length = self.verifier.a_c.circuit.iter().map(|c| c.bit_length).max();
+
     // p.init_array(max_bit_length); Refactored inside verifier.verify()
     self.verifier.init_array(max_bit_length.unwrap());
     // p.get_witness(combined_message, N / column_size); Refactored inside
@@ -457,9 +453,15 @@ impl LinearPC {
       return (input_depth, output_size_so_far);
     }
     // relay the output
-    for i in 0..output_size_so_far {
-      self.verifier.a_c.circuit[input_depth + 1].gates[i] = Gate::from_params(10, i, 0);
+    for (i, gate) in self.verifier.a_c.circuit[input_depth + 1]
+      .gates
+      .iter_mut()
+      .enumerate()
+      .take(output_size_so_far)
+    {
+      *gate = Gate::from_params(10, i, 0);
     }
+
     self.verifier.a_c.circuit[input_depth + 1].src_expander_c_mempool =
       vec![0; CN * self.lce_ctx.c[recursion_depth].l];
     self.verifier.a_c.circuit[input_depth + 1].weight_expander_c_mempool =
@@ -643,18 +645,11 @@ fn dfs(dst: &mut [FieldElement], r: &[FieldElement], size: usize, depth: usize, 
 // 	CustomLinearComb = 14,
 // 	Input = 3isize
 // }
-
 pub fn read_random_file(path: &str) -> Vec<usize> {
-  let result_content = read_to_string(path).unwrap();
-  let result_lines = result_content.lines();
-  //let mut result = Vec::new();
+  let result_content = std::fs::read_to_string(path).expect("Failed to read file");
 
-  result_lines
-    .into_iter()
-    .map(|x| {
-      let mut line = x.split_whitespace();
-      let ran = line.next().unwrap().parse().unwrap();
-      ran
-    })
+  result_content
+    .lines()
+    .map(|line| line.trim().parse().expect("Failed to parse number"))
     .collect()
 }
