@@ -1,7 +1,7 @@
 use std::{
   env,
   ffi::OsStr,
-  fs::{File, read_to_string},
+  fs::{read_to_string, File},
   io::Read,
   os::unix::prelude::OsStrExt,
   process::Command,
@@ -18,7 +18,7 @@ use prime_field::FieldElement;
 
 use crate::vpd::{
   fri::{
-    FRIContext, request_init_commit, request_init_value_with_merkle, request_step_commit, TripleVec,
+    request_init_commit, request_init_value_with_merkle, request_step_commit, FRIContext, TripleVec,
   },
   verifier::verify_merkle,
 };
@@ -411,9 +411,9 @@ impl PolyCommitVerifier {
       env::current_dir()
         .unwrap()
         .join("src")
-        .join("16_log_fftgkr.txt"),
+        .join("log_fftgkr.txt"),
     ) {
-      Err(err) => panic!("Couldn't open {}: {}", "16_log_fftgkr.txt", err),
+      Err(err) => panic!("Couldn't open {}: {}", "log_fftgkr.txt", err),
       Ok(file) => file,
     };
 
@@ -475,8 +475,8 @@ impl PolyCommitVerifier {
             pow = rand::random::<u128>() % max;
           }
           root_of_unity =
-              FieldElement::get_root_of_unity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i)
-                  .unwrap();
+            FieldElement::get_root_of_unity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i)
+              .unwrap();
           y = FieldElement::fast_pow(root_of_unity, pow);
         } else {
           root_of_unity = root_of_unity * root_of_unity;

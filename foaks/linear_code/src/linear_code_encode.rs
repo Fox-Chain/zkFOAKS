@@ -143,7 +143,7 @@ impl LinearCodeEncodeContext {
     return n + l + r;
   }
 
-  pub unsafe fn expander_init(&mut self, n: usize, dep: Option<usize>) -> usize {
+  pub fn expander_init(&mut self, n: usize, dep: Option<usize>) -> usize {
     match n <= DISTANCE_THRESHOLD {
       true => n,
       false => {

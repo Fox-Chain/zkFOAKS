@@ -35,9 +35,8 @@ impl LinearPC {
       ..Default::default()
     }
   }
-  pub unsafe fn commit(&mut self, src: Vec<FieldElement>, n: usize) -> Vec<HashDigest> {
-    let mut stash = vec![HashDigest::new(); n / COLUMN_SIZE * 2];
-    self.codeword_size = vec![0; COLUMN_SIZE];
+  pub fn commit(&mut self, src: Vec<FieldElement>, n: usize) -> Vec<HashDigest> {
+    //self.codeword_size = vec![0; COLUMN_SIZE];
     assert_eq!(n % COLUMN_SIZE, 0);
     self.encoded_codeword = vec![vec![FieldElement::zero(); n / COLUMN_SIZE]; COLUMN_SIZE];
     self.coef = vec![Vec::with_capacity(n / COLUMN_SIZE); COLUMN_SIZE];
@@ -48,26 +47,24 @@ impl LinearPC {
       self.coef[i] = vec![FieldElement::zero(); n / COLUMN_SIZE];
       let src_slice = &src[(i * n / COLUMN_SIZE)..((i + 1) * n / COLUMN_SIZE)];
       self.coef[i].copy_from_slice(src_slice);
-      //memset(encoded_codeword[i], 0, sizeof(prime_field::field_element) * n /
-      // COLUMN_SIZE * 2);
 
-      self.codeword_size[i] = self.lce_ctx.encode(
+      self.codeword_size.push(self.lce_ctx.encode(
         (src[i * n / COLUMN_SIZE..]).to_vec(),
         &mut self.encoded_codeword[i],
         n / COLUMN_SIZE,
-      );
+      ));
     }
-
-    let stash: Vec<HashDigest> = (0..(n / COLUMN_SIZE * 2)).map(|i| {
-      (0..(COLUMN_SIZE / 2)).fold(HashDigest::default(), |acc, j| {
+    let stash = (0..(n / COLUMN_SIZE * 2))
+      .map(|i| unsafe {
+        (0..(COLUMN_SIZE / 2)).fold(HashDigest::default(), |acc, j| {
           merkle_tree::hash_double_field_element_merkle_damgard(
-              self.encoded_codeword[2 * j][i],
-              self.encoded_codeword[2 * j + 1][i],
-              acc,
+            self.encoded_codeword[2 * j][i],
+            self.encoded_codeword[2 * j + 1][i],
+            acc,
           )
+        })
       })
-  }).collect();
-  
+      .collect();
 
     create_tree(
       stash,
@@ -118,7 +115,7 @@ impl LinearPC {
     self.verifier.a_c.circuit[self.gates_count.len() + 1].gates =
       vec![Gate::new(); 1 << self.verifier.a_c.circuit[self.gates_count.len() + 1].bit_length];
 
-      self
+    self
       .verifier
       .a_c
       .inputs
@@ -553,6 +550,7 @@ impl LinearPC {
     n: usize,
     com_mt: Vec<HashDigest>,
   ) -> (FieldElement, bool) {
+    println!("open_and_verify_univariate");
     assert_eq!(n % COLUMN_SIZE, 0);
     //tensor product of r0 otimes r1
     let mut r0 = vec![FieldElement::zero(); COLUMN_SIZE];

@@ -859,7 +859,7 @@ impl ZkVerifier {
     depth: usize,
     alpha: FieldElement,
     beta: FieldElement,
-     r_0: &[FieldElement],
+    r_0: &[FieldElement],
     r_1: &[FieldElement],
     r_u: &[FieldElement],
     r_v: &[FieldElement],
@@ -1551,11 +1551,9 @@ impl ZkVerifier {
 }
 
 pub fn generate_randomness(size: usize) -> Vec<FieldElement> {
-  let k = size;
-  let mut ret = vec![FieldElement::zero(); k];
-
-  for i in 0..k {
-    ret[i] = FieldElement::new_random();
+  let mut ret = Vec::new();
+  for _ in 0..size {
+    ret.push(FieldElement::new_random());
   }
   ret
 }
