@@ -85,7 +85,7 @@ pub fn fast_fourier_transform(
   scratch_pad: &mut ScratchPad,
   twiddle_fac: Option<Vec<FieldElement>>,
 ) {
-  let twiddle_fac = twiddle_fac.unwrap_or(scratch_pad.twiddle_factor.clone());
+  let twiddle_fac = twiddle_fac.unwrap_or_else(|| scratch_pad.twiddle_factor.clone());
   let mut rot_mul: [FieldElement; MAX_ORDER] = [FieldElement::default(); MAX_ORDER];
 
   let mut log_order: Option<usize> = None;
@@ -119,11 +119,14 @@ pub fn fast_fourier_transform(
 
   // initialize leaves
   let blk_sz = order / coefficient_len;
-  for j in 0..blk_sz {
-    for i in 0..coefficient_len {
-      scratch_pad.dst[log_coefficient & 1][(j << log_coefficient) | i] = coefficients[i];
-    }
-  }
+
+  (0..blk_sz).for_each(|j| {
+    let dst_base = j << log_coefficient;
+    (0..coefficient_len).for_each(|i| {
+      let dst_index = dst_base | i;
+      scratch_pad.dst[log_coefficient & 1][dst_index] = coefficients[i];
+    });
+  });
 
   {
     // initialize leaves
@@ -146,7 +149,7 @@ pub fn fast_fourier_transform(
             for j in 0..(1 << dep) {
               let l_value = pre_ptr[(double_k << (dep + 1)) | j];
               let r_value = x * pre_ptr[(double_k << (dep + 1) | (1 << dep)) | j];
-              cur_ptr[(k << dep) | j] = l_value.clone() + r_value.clone();
+              cur_ptr[(k << dep) | j] = l_value + r_value;
               cur_ptr[((k + blk_size / 2) << dep) | j] = l_value - r_value;
             }
           }
@@ -155,9 +158,7 @@ pub fn fast_fourier_transform(
     }
   }
 
-  for i in 0..order {
-    result[i] = scratch_pad.dst[0][i];
-  }
+  result[..order].copy_from_slice(&scratch_pad.dst[0][..order]);
 }
 
 pub fn inverse_fast_fourier_transform(
@@ -177,16 +178,13 @@ pub fn inverse_fast_fourier_transform(
     coefficient_len = order;
   }
 
-  let sub_eval: Vec<FieldElement>;
-  if coefficient_len != order {
-    let mut temp_eval: Vec<FieldElement> = Vec::with_capacity(coefficient_len);
-    for i in 0..coefficient_len {
-      temp_eval.push(evaluations[i * (order / coefficient_len)]);
-    }
-    sub_eval = temp_eval;
+  let sub_eval: Vec<FieldElement> = if coefficient_len != order {
+    (0..coefficient_len)
+      .map(|i| evaluations[i * (order / coefficient_len)])
+      .collect()
   } else {
-    sub_eval = evaluations.to_vec();
-  }
+    evaluations.to_vec()
+  };
 
   let mut new_rou = FieldElement::real_one();
   for _ in 0..(order / coefficient_len) {

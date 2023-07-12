@@ -2,13 +2,13 @@
 pub mod error;
 pub mod ops;
 use ethnum::{i256, AsI256};
+use rand::Rng;
 use serde::Serialize;
 use std::{
   arch::x86_64::{__m256i, _mm256_set_epi64x},
   mem::size_of_val,
   sync::atomic::AtomicBool,
 };
-use rand::Rng;
 
 use self::error::{PrimeFieldError, RootOfUnityError};
 
@@ -105,7 +105,7 @@ impl FieldElement {
   pub fn as_bytes(&self) -> &[i128] {
     unsafe {
       std::slice::from_raw_parts(
-        (&*self as *const FieldElement) as *const i128,
+        (self as *const FieldElement) as *const i128,
         size_of_val(&self),
       )
     }
