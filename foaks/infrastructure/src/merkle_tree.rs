@@ -8,7 +8,7 @@ use prime_field::FieldElement;
 use crate::my_hash::{my_hash, HashDigest};
 
 // Todo: Debug coppy no overlapping
-pub unsafe fn hash_single_field_element(x: FieldElement) -> HashDigest {
+pub fn hash_single_field_element(x: FieldElement) -> HashDigest {
   let mut data = [HashDigest::default(); 2];
   data[0].h0 = HashDigest::memcpy_from_field_element(x).h0; // merkle_tree.cpp 9
   assert_eq!(size_of_val(&x), size_of_val(&data[0].h0));
@@ -16,7 +16,7 @@ pub unsafe fn hash_single_field_element(x: FieldElement) -> HashDigest {
 }
 
 //ToDo: Debbug copy_nonoverlapping
-pub unsafe fn hash_double_field_element_merkle_damgard(
+pub fn hash_double_field_element_merkle_damgard(
   x: FieldElement,
   y: FieldElement,
   prev_hash: HashDigest,

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs::read_to_string, time::Instant};
+use std::{collections::HashMap, time::Instant};
 
 use infrastructure::{
   merkle_tree::{self, create_tree},
@@ -55,7 +55,7 @@ impl LinearPC {
       ));
     }
     let stash = (0..(n / COLUMN_SIZE * 2))
-      .map(|i| unsafe {
+      .map(|i| {
         (0..(COLUMN_SIZE / 2)).fold(HashDigest::default(), |acc, j| {
           merkle_tree::hash_double_field_element_merkle_damgard(
             self.encoded_codeword[2 * j][i],
@@ -78,7 +78,7 @@ impl LinearPC {
 
   fn generate_circuit(
     &mut self,
-    query: &mut Vec<usize>,
+    query: &mut [usize],
     n: usize,
     query_count: usize,
     input: Vec<FieldElement>,
@@ -97,49 +97,23 @@ impl LinearPC {
       vec![Gate::new(); 1 << self.verifier.a_c.circuit[0].bit_length];
 
     for i in 0..self.gates_count.len() {
-      self.verifier.a_c.circuit[i + 1].bit_length = my_log(
-        smallest_pow2_larger_or_equal_to(*self.gates_count.get(&i).unwrap())
-          .try_into()
-          .unwrap(),
-      )
+      self.verifier.a_c.circuit[i + 1].bit_length = my_log(smallest_pow2_larger_or_equal_to(
+        *self.gates_count.get(&i).unwrap(),
+      ))
       .unwrap();
       self.verifier.a_c.circuit[i + 1].gates =
         vec![Gate::new(); 1 << self.verifier.a_c.circuit[i + 1].bit_length];
     }
-    self.verifier.a_c.circuit[self.gates_count.len() + 1].bit_length = my_log(
-      smallest_pow2_larger_or_equal_to(query_count)
-        .try_into()
-        .unwrap(),
-    )
-    .unwrap();
+    self.verifier.a_c.circuit[self.gates_count.len() + 1].bit_length =
+      my_log(smallest_pow2_larger_or_equal_to(query_count)).unwrap();
     self.verifier.a_c.circuit[self.gates_count.len() + 1].gates =
       vec![Gate::new(); 1 << self.verifier.a_c.circuit[self.gates_count.len() + 1].bit_length];
 
-    self
-      .verifier
-      .a_c
-      .inputs
-      .iter_mut()
-      .zip(input.iter())
-      .for_each(|(input_elem, &input_value)| {
-        *input_elem = input_value;
-      });
-
-    self.verifier.a_c.circuit[0]
-      .gates
-      .iter_mut()
-      .enumerate()
-      .for_each(|(i, gate)| {
-        *gate = Gate::from_params(3, 0, 0);
-      });
-
-    self.verifier.a_c.circuit[1]
-      .gates
-      .iter_mut()
-      .enumerate()
-      .for_each(|(i, gate)| {
-        *gate = Gate::from_params(4, i, 0);
-      });
+    for i in 0..n {
+      self.verifier.a_c.inputs[i] = input[i];
+      self.verifier.a_c.circuit[0].gates[i] = Gate::from_params(3, 0, 0);
+      self.verifier.a_c.circuit[1].gates[i] = Gate::from_params(4, i, 0);
+    }
     //Todo: improve gate_types::input with constant values
     for i in 0..n {
       self.verifier.a_c.circuit[2].gates[i] = Gate::from_params(10, i, 0);
@@ -154,7 +128,6 @@ impl LinearPC {
       self.verifier.a_c.circuit[2].gates[i + n] = Gate::from_params(14, 0, 0);
       self.verifier.a_c.circuit[2].gates[i + n].parameter_length =
         self.lce_ctx.c[0].r_neighbor[i].len();
-      //Todo: Check if this is correct for Edu
       self.verifier.a_c.circuit[2].gates[i + n].src =
         self.verifier.a_c.circuit[2].src_expander_c_mempool[c_mempool_ptr..].to_vec();
       self.verifier.a_c.circuit[2].gates[i + n].weight =
@@ -214,7 +187,7 @@ impl LinearPC {
     assert_eq!(c_mempool_ptr, CN * self.lce_ctx.c[0].l);
   }
 
-  pub unsafe fn tensor_product_protocol(
+  pub fn tensor_product_protocol(
     &mut self,
     r0: Vec<FieldElement>,
     r1: Vec<FieldElement>,
@@ -259,7 +232,7 @@ impl LinearPC {
     //merkle commit to combined_codeword
     create_tree(
       combined_codeword_hash,
-      (n / COLUMN_SIZE * 2).try_into().unwrap(),
+      n / COLUMN_SIZE * 2,
       &mut combined_codeword_mt,
       false,
     );
@@ -275,7 +248,7 @@ impl LinearPC {
 
     //check for encode
     {
-      let mut test_codeword = vec![FieldElement::zero(); (n / COLUMN_SIZE * 2).try_into().unwrap()];
+      let mut test_codeword = vec![FieldElement::zero(); n / COLUMN_SIZE * 2];
       let test_codeword_size = self.lce_ctx.encode(
         combined_message.clone(),
         &mut test_codeword,
@@ -310,11 +283,11 @@ impl LinearPC {
       }
 
       assert!(merkle_tree::verify_claim(
-        com_mt[1].clone(),
+        com_mt[1],
         com_mt.clone(),
         column_hash,
         q,
-        (n / COLUMN_SIZE * 2).try_into().unwrap(),
+        n / COLUMN_SIZE * 2,
         &mut visited_com,
         &mut proof_size,
       ));
@@ -323,11 +296,10 @@ impl LinearPC {
         combined_codeword_mt.clone(),
         merkle_tree::hash_single_field_element(combined_codeword[q]),
         q,
-        (n / COLUMN_SIZE * 2).try_into().unwrap(),
+        n / COLUMN_SIZE * 2,
         &mut visited_combined_com,
         &mut proof_size,
       ));
-
       assert_eq!(sum, combined_codeword[q]);
       //add merkle tree open
     }
@@ -415,7 +387,7 @@ impl LinearPC {
     output_size_so_far: usize,
     depth: usize,
   ) -> (usize, usize) {
-    if input_size <= DISTANCE_THRESHOLD.try_into().unwrap() {
+    if input_size <= DISTANCE_THRESHOLD {
       return (depth, output_size_so_far);
     }
     // output
@@ -449,7 +421,7 @@ impl LinearPC {
     recursion_depth: usize,
     input_depth: usize,
   ) -> (usize, usize) {
-    if input_size <= DISTANCE_THRESHOLD.try_into().unwrap() {
+    if input_size <= DISTANCE_THRESHOLD {
       return (input_depth, output_size_so_far);
     }
     // relay the output
@@ -567,7 +539,7 @@ impl LinearPC {
     for j in 1..(n / COLUMN_SIZE) {
       r1[j] = r1[j - 1] * x;
     }
-    unsafe { self.tensor_product_protocol(r0, r1, COLUMN_SIZE, n / COLUMN_SIZE, n, com_mt) }
+    self.tensor_product_protocol(r0, r1, COLUMN_SIZE, n / COLUMN_SIZE, n, com_mt)
   }
 
   pub fn open_and_verify_multi(
@@ -600,9 +572,7 @@ impl LinearPC {
       FieldElement::real_one(),
     );
 
-    unsafe {
-      self.tensor_product_protocol(r0.to_vec(), r1, COLUMN_SIZE, n / COLUMN_SIZE, n, com_mt)
-    }
+    self.tensor_product_protocol(r0.to_vec(), r1, COLUMN_SIZE, n / COLUMN_SIZE, n, com_mt)
   }
 }
 fn smallest_pow2_larger_or_equal_to(x: usize) -> usize {

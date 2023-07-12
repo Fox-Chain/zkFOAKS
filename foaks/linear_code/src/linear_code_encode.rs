@@ -65,11 +65,10 @@ impl LinearCodeEncodeContext {
     });
     //expander mult
     for i in 0..n {
-      let val = src[i];
       for d in 0..self.c[dep].degree {
         let target = self.c[dep].neighbor[i][d];
         self.scratch[1][dep][target] =
-          self.scratch[1][dep][target] + self.c[dep].weight[i][d] * val;
+          self.scratch[1][dep][target] + self.c[dep].weight[i][d] * src[i];
       }
     }
     let l: usize = self.encode_scratch(r, Some((n, dep + 1)));
@@ -81,7 +80,7 @@ impl LinearCodeEncodeContext {
       self.scratch[0][dep][n + l + i] = FieldElement::from_real(0);
     }
     for i in 0..l {
-      let val = self.scratch[0][dep][n + i].clone();
+      let val = self.scratch[0][dep][n + i];
       for d in 0..self.d[dep].degree {
         let target = self.d[dep].neighbor[i][d];
         self.scratch[0][dep][n + l + target] =
@@ -90,7 +89,7 @@ impl LinearCodeEncodeContext {
     }
 
     dst[..(n + l + r)].copy_from_slice(&self.scratch[0][dep][..(n + l + r)]);
-    return n + l + r;
+    n + l + r
   }
 
   pub fn encode_scratch(&mut self, n: usize, pre_n_and_dep: Option<(usize, usize)>) -> usize {
@@ -165,30 +164,36 @@ impl LinearCodeEncodeContext {
 }
 
 pub fn generate_random_expander(l: usize, r: usize, d: usize) -> Graph {
-  let mut ret: Graph = Graph::default();
-  ret.degree = d;
-  ret.neighbor = vec![vec![]; l];
-  ret.weight = vec![vec![]; l];
+  //let mut ret: Graph = Graph::default();
+  let degree = d;
+  let mut neighbor = vec![vec![]; l];
+  let mut weight = vec![vec![]; l];
 
-  ret.r_neighbor = vec![vec![]; r];
-  ret.r_weight = vec![vec![]; r];
+  let mut r_neighbor = vec![vec![]; r];
+  let mut r_weight = vec![vec![]; r];
 
   for i in 0..l {
-    ret.neighbor[i] = vec![0; d];
-    ret.weight[i] = vec![FieldElement::zero(); d];
+    neighbor[i] = vec![0; d];
+    weight[i] = vec![FieldElement::zero(); d];
     for j in 0..d {
       let target = rand::random::<usize>() % r;
-      let weight = FieldElement::new_random();
-      ret.neighbor[i][j] = target;
-      ret.r_neighbor[target].push(i);
-      ret.r_weight[target].push(weight);
-      ret.weight[i][j] = weight;
+      let tmp_weight = FieldElement::new_random();
+      neighbor[i][j] = target;
+      r_neighbor[target].push(i);
+      r_weight[target].push(tmp_weight);
+      weight[i][j] = tmp_weight;
     }
   }
 
-  ret.l = l;
-  ret.r = r;
-  ret
+  Graph {
+    degree,
+    neighbor,
+    weight,
+    l,
+    r,
+    r_neighbor,
+    r_weight,
+  }
 }
 
 pub fn read_weight_graph_file(path: &str) -> Vec<Vec<FieldElement>> {
