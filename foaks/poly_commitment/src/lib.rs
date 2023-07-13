@@ -392,12 +392,9 @@ impl PolyCommitVerifier {
     merkle_tree_l: HashDigest,
     merkle_tree_h: HashDigest,
   ) -> bool {
-    let command = format!(
-      "./fft_gkr {} 16_log_fftgkr.txt",
-      log_length - LOG_SLICE_NUMBER
-    );
+    let command = format!("./fft_gkr {} log_fftgkr.txt", log_length - LOG_SLICE_NUMBER);
 
-    let _output = Command::new("sh")
+    let output = Command::new("sh")
       .arg("-c")
       .arg(OsStr::from_bytes(command.as_bytes()))
       .output()
@@ -410,7 +407,7 @@ impl PolyCommitVerifier {
     let mut file = match File::open(
       env::current_dir()
         .unwrap()
-        .join("src")
+        //.join("src")
         .join("log_fftgkr.txt"),
     ) {
       Err(err) => panic!("Couldn't open {}: {}", "log_fftgkr.txt", err),
