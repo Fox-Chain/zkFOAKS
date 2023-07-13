@@ -77,7 +77,7 @@ impl QuadraticPoly {
   //todo: debug function
   pub fn eval(&self, x: &FieldElement) -> FieldElement { self.a * *x * *x + self.b * *x + self.c }
 
-  pub fn mul(self, x: LinearPoly) -> CubicPoly {
+  pub fn multi(self, x: LinearPoly) -> CubicPoly {
     let a = self.a * x.a;
     let b = self.a * x.b + self.b * x.a;
     let c = self.b * x.b + self.c * x.a;
@@ -183,14 +183,8 @@ impl QuintuplePoly {
     Self { a, b, c, d, e, f }
   }
 
-  // pub fn operator(x: Self) {
-  //     return Self {
-  //         a + x.a, b + x.b, c + x.c, d + x.d, e + x.e, f + x.f
-  //     }
-  // }
-
   pub fn eval(self, x: FieldElement) -> FieldElement {
-    return (((((self.a * x) + self.b) * x + self.c) * x + self.d) * x + self.e) * x + self.f;
+    (((((self.a * x) + self.b) * x + self.c) * x + self.d) * x + self.e) * x + self.f
   }
 }
 

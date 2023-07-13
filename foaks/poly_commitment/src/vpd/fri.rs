@@ -126,8 +126,7 @@ pub fn request_init_commit(
   // let sliced_input_length_per_block = 1 << *witness_bit_length_per_slice; No
   // usages
   assert!(*witness_bit_length_per_slice >= 0);
-  let root_of_unity =
-    FieldElement::get_root_of_unity(*log_current_witness_size_per_slice).unwrap();
+  let root_of_unity = FieldElement::get_root_of_unity(*log_current_witness_size_per_slice).unwrap();
   if oracle_indicator == 0 {
     //l_group.reserve(1 << *log_current_witness_size_per_slice);
     l_group.push(FieldElement::from_real(1));
@@ -168,7 +167,7 @@ pub fn request_init_commit(
 
     //witness_rs_mapping[oracle_indicator][i].reserve(1 <<
     // *log_current_witness_size_per_slice);
-    if witness_rs_mapping.len() == 0 {
+    if witness_rs_mapping.is_empty() {
       for _ in 0..=oracle_indicator + 1 {
         witness_rs_mapping.push(vec![]);
       }
@@ -290,28 +289,26 @@ pub fn request_init_value_with_merkle(
 
   (0..depth).for_each(|i| {
     if !fri_ctx.visited_init[oracle_indicator][pos ^ 1] {
-        new_size += size_of::<HashDigest>();
+      new_size += size_of::<HashDigest>();
     }
 
     fri_ctx.visited_init[oracle_indicator][pos] = true;
     fri_ctx.visited_init[oracle_indicator][pos ^ 1] = true;
 
     if (pos & 1) == 1 {
-        data[0] = fri_ctx.witness_merkle[oracle_indicator][pos ^ 1];
-        data[1] = test_hash;
+      data[0] = fri_ctx.witness_merkle[oracle_indicator][pos ^ 1];
+      data[1] = test_hash;
     } else {
-        data[0] = test_hash;
-        data[1] = fri_ctx.witness_merkle[oracle_indicator][pos ^ 1];
+      data[0] = test_hash;
+      data[1] = fri_ctx.witness_merkle[oracle_indicator][pos ^ 1];
     }
     test_hash = my_hash(data);
 
     com_hhash[i] = fri_ctx.witness_merkle[oracle_indicator][pos ^ 1];
     pos /= 2;
     assert_eq!(test_hash, fri_ctx.witness_merkle[oracle_indicator][pos]);
-});
+  });
 
-
-  //println!("324 -> {:?} {:?}", value[0], com_hhash[0]);
   assert_eq!(pos, 1);
   ((value, com_hhash), new_size)
 }
@@ -325,7 +322,6 @@ pub fn request_step_commit(lvl: usize, pow: usize, fri_ctx: &mut FRIContext) -> 
 
   for i in 0..SLICE_NUMBER {
     pow_0 = fri_ctx.cpd.rs_codeword_mapping[lvl][pow << LOG_SLICE_NUMBER | i];
-    //println!(" pow_0: {}", pow_0);
     pow_0 /= 2;
 
     if !fri_ctx.visited[lvl][pow_0 * 2] {
@@ -352,7 +348,6 @@ pub fn request_step_commit(lvl: usize, pow: usize, fri_ctx: &mut FRIContext) -> 
 
   while pow_0 != 1 {
     let pow1 = pow_0 ^ 1;
-    //println!("lvl:{}, pow0:{}, pow1:{}", lvl, pow_0, pow1);
     if !fri_ctx.visited[lvl][pow1] {
       new_size += size_of::<HashDigest>();
       fri_ctx.visited[lvl][pow1] = true;
@@ -363,6 +358,5 @@ pub fn request_step_commit(lvl: usize, pow: usize, fri_ctx: &mut FRIContext) -> 
   }
 
   com_hhash.push(val_hhash);
-  //panic!("stop here");
   ((value_vec, com_hhash), new_size)
 }

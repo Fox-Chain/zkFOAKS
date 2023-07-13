@@ -364,14 +364,6 @@ impl PolyCommitProver {
 
     ret
   }
-
-  // pub fn commit_phase(&mut self, log_length: usize) -> LdtCommitment {
-  //   self
-  //     .fri_ctx
-  //     .as_mut()
-  //     .unwrap()
-  //     .commit_phase(log_length, self.ctx.slice_count)
-  // }
 }
 
 #[derive(Default, Debug)]
@@ -432,7 +424,6 @@ impl PolyCommitVerifier {
     let coef_slice_size = 1 << (log_length - LOG_SLICE_NUMBER);
 
     for _ in 0..33 {
-      //println!("rep: {}", rep);
       let slice_count = 1 << LOG_SLICE_NUMBER;
       let slice_size = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
 
@@ -517,6 +508,7 @@ impl PolyCommitVerifier {
             0,
             fri_ctx,
           );
+          // previos new_size is not read in C++
           (alpha_h, new_size) = request_init_value_with_merkle(
             s0_pow.try_into().unwrap(),
             s1_pow.try_into().unwrap(),

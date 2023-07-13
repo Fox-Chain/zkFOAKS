@@ -68,7 +68,7 @@ impl ZkVerifier {
     let circuit_content = read_to_string(&circuit_path).unwrap();
     let mut circuit_lines = circuit_content.lines();
     let describe_gate = |circuit: &Vec<Layer>, input_gate: usize, ix: usize, ty, g, u, v| {
-      if !(input_gate < (1 << circuit[ix - 1].bit_length)) {
+      if input_gate >= (1 << circuit[ix - 1].bit_length) {
         println!(
           "{} {} {} {} {} ",
           ty,
@@ -97,14 +97,9 @@ impl ZkVerifier {
     let mut n_pad: usize;
 
     for i in 1..d + 1 {
-      let pad_requirement: usize;
       let mut next_line_splited = circuit_lines.next().unwrap().split_whitespace();
       let mut number_gates: usize = next_line_splited.next().unwrap().parse().unwrap();
-      if d > 3 {
-        pad_requirement = 17;
-      } else {
-        pad_requirement = 15;
-      }
+      let pad_requirement = if d > 3 { 17_usize } else { 15 };
       if i == 1 && number_gates < (1 << pad_requirement) {
         n_pad = 1 << pad_requirement;
       } else {
@@ -117,14 +112,12 @@ impl ZkVerifier {
         } else {
           self.a_c.circuit[i].gates = vec![Gate::new(); n_pad];
         }
+      } else if number_gates == 1 {
+        self.a_c.circuit[0].gates = vec![Gate::new(); 2];
+        self.a_c.circuit[1].gates = vec![Gate::new(); 2];
       } else {
-        if number_gates == 1 {
-          self.a_c.circuit[0].gates = vec![Gate::new(); 2];
-          self.a_c.circuit[1].gates = vec![Gate::new(); 2];
-        } else {
-          self.a_c.circuit[0].gates = vec![Gate::new(); n_pad];
-          self.a_c.circuit[1].gates = vec![Gate::new(); n_pad];
-        }
+        self.a_c.circuit[0].gates = vec![Gate::new(); n_pad];
+        self.a_c.circuit[1].gates = vec![Gate::new(); n_pad];
       }
 
       let mut max_gate: Option<usize>;
@@ -348,7 +341,7 @@ impl ZkVerifier {
     let mut a_0 = zk_prover.v_res(
       one_minus_r_0.clone(),
       r_0.clone(),
-      result.clone(),
+      result,
       capacity,
       1 << capacity,
     );
@@ -380,11 +373,10 @@ impl ZkVerifier {
       zk_prover.sumcheck_phase1_init();
 
       let mut previous_random = FieldElement::from_real(0);
-      let r_u;
       let mut r_v;
 
       //next level random
-      r_u = generate_randomness(self.a_c.circuit[i - 1].bit_length);
+      let r_u = generate_randomness(self.a_c.circuit[i - 1].bit_length);
       r_v = generate_randomness(self.a_c.circuit[i - 1].bit_length);
 
       direct_relay_value =
@@ -510,7 +502,7 @@ impl ZkVerifier {
 
       let predicates_calc_span = predicates_calc.elapsed();
       //println!("predicates_calc_span: {:?}", predicates_calc_span);
-      if self.a_c.circuit[i].is_parallel == false {
+      if !self.a_c.circuit[i].is_parallel {
         verification_rdl_time += predicates_calc_span.as_secs_f64();
       }
       verification_time += predicates_calc_span.as_secs_f64();
@@ -708,7 +700,7 @@ impl ZkVerifier {
       0,
       FieldElement::real_one(),
       r,
-      one_minus_r.clone(),
+      one_minus_r,
       0,
       log_length - LOG_SLICE_NUMBER,
     );
@@ -1085,9 +1077,9 @@ impl ZkVerifier {
         let mut g = i;
         let mut u = self.a_c.circuit[depth].gates[i].u;
         let mut v = self.a_c.circuit[depth].gates[i].v;
-        g = g & ((1 << self.a_c.circuit[depth].log_block_size) - 1);
-        u = u & ((1 << self.a_c.circuit[depth - 1].log_block_size) - 1);
-        v = v & ((1 << self.a_c.circuit[depth - 1].log_block_size) - 1);
+        g &= (1 << self.a_c.circuit[depth].log_block_size) - 1;
+        u &= (1 << self.a_c.circuit[depth - 1].log_block_size) - 1;
+        v &= (1 << self.a_c.circuit[depth - 1].log_block_size) - 1;
 
         match self.a_c.circuit[depth].gates[i].ty {
           0 => {

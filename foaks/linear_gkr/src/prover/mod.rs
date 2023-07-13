@@ -177,7 +177,7 @@ impl ZkProver {
           // It suppose to be input gate, it just read the 'u' input, what about 'v' input
           self.circuit_value[i][g] = FieldElement::from_real(u as u64);
         } else if ty == 4 {
-          self.circuit_value[i][g] = self.circuit_value[i - 1][u].clone();
+          self.circuit_value[i][g] = self.circuit_value[i - 1][u];
         } else if ty == 5 {
           self.circuit_value[i][g] = FieldElement::from_real(0);
           for k in u..v {
@@ -198,10 +198,10 @@ impl ZkProver {
           let y = self.circuit_value[i - 1][v];
           self.circuit_value[i][g] = y - x * y;
         } else if ty == 10 {
-          self.circuit_value[i][g] = self.circuit_value[i - 1][u].clone();
+          self.circuit_value[i][g] = self.circuit_value[i - 1][u];
         } else if ty == 12 {
           self.circuit_value[i][g] = FieldElement::from_real(0);
-          assert!(v - u + 1 <= 60);
+          assert!(v - u < 60);
           for k in u..=v {
             self.circuit_value[i][g] = self.circuit_value[i][g]
               + self.circuit_value[i - 1][k] * FieldElement::from_real(1u64 << (k - u));
@@ -215,18 +215,12 @@ impl ZkProver {
           self.circuit_value[i][g] = FieldElement::from_real(0);
           for k in 0..self.a_c.circuit[i].gates[g].parameter_length {
             let weight = self.a_c.circuit[i].gates[g].weight[k];
-            // if i > 4 {
-            //   println!(
-            //     "\ti:{i}, g:{g}, k:{k}, weight.real:{}, img:{}",
-            //     weight.real, weight.img
-            //   );
-            // }
             let idx = self.a_c.circuit[i].gates[g].src[k];
             self.circuit_value[i][g] =
               self.circuit_value[i][g] + self.circuit_value[i - 1][idx] * weight;
           }
         } else {
-          assert!(false);
+          panic!("gate type not supported");
         }
       }
     }
@@ -286,7 +280,7 @@ impl ZkProver {
     for i in 0..self.total_uv {
       //todo! linear_poly != FieldElement
       self.v_mult_add[i] =
-        LinearPoly::new_single_input(self.circuit_value[self.sumcheck_layer_id - 1][i].clone());
+        LinearPoly::new_single_input(self.circuit_value[self.sumcheck_layer_id - 1][i]);
 
       //self.v_mult_add[i] = self.circuit_value[self.sumcheck_layer_id - 1][i];
       self.add_v_array[i].a = zero;
@@ -561,7 +555,6 @@ impl ZkProver {
     current_bit: usize,
   ) -> QuadraticPoly {
     let t0 = time::Instant::now();
-    
 
     for i in 0..self.total_uv >> 1 {
       let g_zero = i << 1;
