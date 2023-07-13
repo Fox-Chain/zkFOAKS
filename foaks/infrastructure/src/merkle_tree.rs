@@ -80,7 +80,7 @@ pub fn verify_claim(
   mut leaf_hash: HashDigest,
   pos_element_arr: usize,
   n: usize,
-  visited: &mut Vec<bool>,
+  visited: &mut [bool],
   proof_size: &mut usize,
 ) -> bool {
   // check N is power of 2
@@ -92,7 +92,7 @@ pub fn verify_claim(
     data[(pos_element & 1) ^ 1] = tree[pos_element ^ 1];
     if !visited[pos_element ^ 1] {
       visited[pos_element ^ 1] = true;
-      *proof_size = *proof_size + size_of_val(&leaf_hash);
+      *proof_size += size_of_val(&leaf_hash)
     }
     leaf_hash = my_hash(data);
     pos_element /= 2;
