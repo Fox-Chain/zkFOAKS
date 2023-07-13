@@ -522,10 +522,10 @@ impl ZkVerifier {
 
       let mut r = Vec::new();
       for j in 0..self.a_c.circuit[i - 1].bit_length {
-        r.push(r_u[j].clone());
+        r.push(r_u[j]);
       }
       for j in 0..self.a_c.circuit[i - 1].bit_length {
-        r.push(r_v[j].clone());
+        r.push(r_v[j]);
       }
 
       if alpha_beta_sum
@@ -1484,7 +1484,7 @@ impl ZkVerifier {
                 * (self.beta_v_first_half[v_first_half] * self.beta_v_second_half[v_second_half]);
           }
           10 => {
-            if relay_set == false {
+            if !relay_set {
               tmp_u_val = vec![FieldElement::zero(); 1 << self.a_c.circuit[depth - 1].bit_length];
 
               for i in 0..(1 << self.a_c.circuit[depth - 1].bit_length) {
