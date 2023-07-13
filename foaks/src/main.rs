@@ -1,4 +1,3 @@
-use std::vec;
 use std::{env, time::Instant};
 
 use linear_code::parameter::COLUMN_SIZE;

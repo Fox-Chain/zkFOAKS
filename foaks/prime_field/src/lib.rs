@@ -7,14 +7,11 @@ use serde::Serialize;
 use std::{
   arch::x86_64::{__m256i, _mm256_set_epi64x},
   mem::size_of_val,
-  sync::atomic::AtomicBool,
 };
 
 use self::error::{PrimeFieldError, RootOfUnityError};
 
 pub const MOD: u64 = 2305843009213693951;
-
-pub static mut INITIALIZED: AtomicBool = AtomicBool::new(false);
 
 pub const MASK: u32 = 4294967295; // 2^32 - 1
 pub const PRIME: u64 = 2305843009213693951; // 2^61 - 1
@@ -24,20 +21,24 @@ pub const MAX_ORDER: usize = 62;
 pub struct FieldElementContext {
   pub packed_mod: __m256i,
   pub packed_mod_minus_one: __m256i,
+  pub initialized: bool,
 }
 
 impl FieldElementContext {
+  /// # Safety
+  /// This function is unsafe because it is working with  __m256i values
   pub unsafe fn init() -> Self {
     let mod_i64 = MOD.try_into().unwrap();
+
     let packed_mod = _mm256_set_epi64x(mod_i64, mod_i64, mod_i64, mod_i64);
     let packed_mod_minus_one =
       _mm256_set_epi64x(mod_i64 - 1, mod_i64 - 1, mod_i64 - 1, mod_i64 - 1);
 
-    *INITIALIZED.get_mut() = true;
-
+    let initialized = true;
     Self {
       packed_mod,
       packed_mod_minus_one,
+      initialized,
     }
   }
 }

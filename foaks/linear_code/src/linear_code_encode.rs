@@ -139,7 +139,7 @@ impl LinearCodeEncodeContext {
       self.scratch[0][dep - 1][pre_n + i] = self.scratch[0][dep][i];
     }
 
-    return n + l + r;
+    n + l + r
   }
 
   pub fn expander_init(&mut self, n: usize, dep: Option<usize>) -> usize {

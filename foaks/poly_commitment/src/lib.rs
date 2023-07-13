@@ -23,7 +23,6 @@ use crate::vpd::{
   verifier::verify_merkle,
 };
 
-mod test;
 mod vpd;
 
 #[derive(Default)]
@@ -357,7 +356,7 @@ impl PolyCommitProver {
     println!("PostGKR prepare time 0:{}", time_span);
 
     t0 = time::Instant::now();
-    let ret = request_init_commit(&mut fri_ctx, &self.ctx, r_0_len, 1);
+    let ret = request_init_commit(fri_ctx, &self.ctx, r_0_len, 1);
 
     time_span = t0.elapsed().as_secs_f64();
     self.total_time_pc_p += time_span;
@@ -393,16 +392,12 @@ impl PolyCommitVerifier {
     merkle_tree_h: HashDigest,
   ) -> bool {
     let command = format!("./fft_gkr {} log_fftgkr.txt", log_length - LOG_SLICE_NUMBER);
-
+    // Use output, should error the error
     let output = Command::new("sh")
       .arg("-c")
       .arg(OsStr::from_bytes(command.as_bytes()))
       .output()
       .expect("Failed to execute command");
-
-    let v_time_fft;
-    let p_time_fft;
-    let proof_size_fft;
 
     let mut file = match File::open(
       env::current_dir()
@@ -420,9 +415,9 @@ impl PolyCommitVerifier {
       .expect("something went wrong reading the file");
 
     let mut iter = contents.split_whitespace();
-    v_time_fft = iter.next().unwrap().parse::<f64>().unwrap();
-    proof_size_fft = iter.next().unwrap().parse::<usize>().unwrap();
-    p_time_fft = iter.next().unwrap().parse::<f64>().unwrap();
+    let v_time_fft = iter.next().unwrap().parse::<f64>().unwrap();
+    let proof_size_fft = iter.next().unwrap().parse::<usize>().unwrap();
+    let p_time_fft = iter.next().unwrap().parse::<f64>().unwrap();
 
     *v_time += v_time_fft;
     *p_time += p_time_fft;
@@ -477,7 +472,7 @@ impl PolyCommitVerifier {
           y = FieldElement::fast_pow(root_of_unity, pow);
         } else {
           root_of_unity = root_of_unity * root_of_unity;
-          pow = pow % (1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i));
+          pow %= 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i);
           //println!("pow =  {}", pow);
 
           pre_y = y;
@@ -565,7 +560,6 @@ impl PolyCommitVerifier {
           *proof_size += new_size;
 
           t0 = time::Instant::now();
-          //println!("Before verify_merkle with beta.1");
 
           if !verify_merkle(
             com.commitment_hash[0],
@@ -574,10 +568,8 @@ impl PolyCommitVerifier {
             (pow / 2) as u128,
             &beta.0,
           ) {
-            //println!("verify_merkle failed with beta.1, i:{}", i);
             return false;
           }
-          //println!("Passed verify_merkle with beta.1");
 
           let inv_mu = root_of_unity.fast_pow((pow / 2) as u128).inverse();
           alpha.0.clear();
@@ -639,7 +631,6 @@ impl PolyCommitVerifier {
               std::mem::swap(&mut a.0, &mut a.1);
             }
 
-            //let p_val = gen_val(&alpha, inv_mu, i, j);
             let p_val = (alpha.0[j].0 + alpha.0[j].1) * inv_2
               + (alpha.0[j].0 - alpha.0[j].1) * inv_2 * com.randomness[i] * inv_mu;
 
@@ -652,15 +643,12 @@ impl PolyCommitVerifier {
               );
               return false;
             }
-
-            // if p_val == beta.0[j].0 {
-            //   equ_beta = false
-            // } else {
-            //   equ_beta = true
-            // };
           }
 
           time_span = t0.elapsed().as_secs_f64();
+        // From original code
+        // This will not added into v time since the fft gkr already give the result, we didn't have time to integrate the fft gkr into the main body, so we have the evaluation code here
+        // v_time += time_span.count();
         } else {
           time_span = t0.elapsed().as_secs_f64();
           *v_time += time_span;
@@ -672,13 +660,6 @@ impl PolyCommitVerifier {
 
           t0 = time::Instant::now();
 
-          // println!(
-          //   "i:{}, beta.1.len():{}, pow/2:{}, beta.0.len():{}",
-          //   i,
-          //   beta.1.len(),
-          //   (pow / 2) as u128,
-          //   beta.0.len()
-          // );
           if !verify_merkle(
             com.commitment_hash[i],
             &beta.1,
@@ -686,7 +667,6 @@ impl PolyCommitVerifier {
             (pow / 2) as u128,
             &beta.0,
           ) {
-            //println!("668");
             return false;
           }
 
@@ -739,8 +719,7 @@ pub fn read_random_file(path: &str) -> Vec<u128> {
     .into_iter()
     .map(|x| {
       let mut line = x.split_whitespace();
-      let ran = line.next().unwrap().parse().unwrap();
-      ran
+      line.next().unwrap().parse().unwrap()
     })
     .collect()
 }

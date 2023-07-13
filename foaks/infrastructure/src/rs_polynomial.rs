@@ -1,7 +1,4 @@
-use std::{
-  mem,
-  ops::{Deref, DerefMut},
-};
+use std::mem;
 
 use prime_field::FieldElement;
 
@@ -60,20 +57,6 @@ impl ScratchPad {
     mem::take(&mut self.dst[1]);
     mem::take(&mut self.twiddle_factor);
   }
-}
-
-struct UnsafeSendSyncRawPtr<T>(*mut T);
-unsafe impl<T> Sync for UnsafeSendSyncRawPtr<T> {}
-unsafe impl<T> Send for UnsafeSendSyncRawPtr<T> {}
-
-impl<T> Deref for UnsafeSendSyncRawPtr<T> {
-  type Target = *mut T;
-
-  fn deref(&self) -> &Self::Target { &self.0 }
-}
-
-impl<T> DerefMut for UnsafeSendSyncRawPtr<T> {
-  fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
 }
 
 pub fn fast_fourier_transform(

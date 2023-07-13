@@ -15,8 +15,6 @@ use linear_gkr::{
 };
 use prime_field::FieldElement;
 
-mod test;
-
 #[derive(Default)]
 pub struct LinearPC {
   encoded_codeword: Vec<Vec<FieldElement>>,
