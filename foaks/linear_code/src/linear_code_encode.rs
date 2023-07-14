@@ -206,10 +206,15 @@ pub fn read_weight_graph_file(path: &str) -> Vec<Vec<FieldElement>> {
       let mut block_line = x.split_whitespace();
       let size = block_line.clone().count();
       for _i in 0..size / 2 {
-        let real: u64 = block_line.next().unwrap().parse().unwrap();
-        let img: u64 = block_line.next().unwrap().parse().unwrap();
-        vec.push(FieldElement::new(real, img));
+        if let Some(value) = block_line.next() {
+          let real: u64 = value.parse().expect("conversion error");
+          if let Some(value) = block_line.next() {
+            let img: u64 = value.parse().expect("conversion error");
+            vec.push(FieldElement::new(real, img));
+          }
+        }
       }
+
       vec
     })
     .collect();
@@ -226,9 +231,14 @@ pub fn read_neighbor_graph_file(path: &str) -> Vec<Vec<usize>> {
       let mut block_line = x.split_whitespace();
       let size = block_line.clone().count();
       for _i in 0..size {
-        let elem: usize = block_line.next().unwrap().parse().unwrap();
+        let elem: usize = block_line
+          .next()
+          .expect("Error getting next item")
+          .parse()
+          .expect("Error converting to usize");
         vec.push(elem);
       }
+
       vec
     })
     .collect();
