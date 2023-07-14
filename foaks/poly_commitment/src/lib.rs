@@ -407,9 +407,21 @@ impl PolyCommitVerifier {
       .expect("something went wrong reading the file");
 
     let mut iter = contents.split_whitespace();
-    let v_time_fft = iter.next().unwrap().parse::<f64>().unwrap();
-    let proof_size_fft = iter.next().unwrap().parse::<usize>().unwrap();
-    let p_time_fft = iter.next().unwrap().parse::<f64>().unwrap();
+    let v_time_fft: f64 = iter
+      .next()
+      .expect("Error getting v_time_fft")
+      .parse()
+      .expect("Error converting v_time_fft to f64");
+    let proof_size_fft: usize = iter
+      .next()
+      .expect("Error getting proof_size_fft")
+      .parse()
+      .expect("Error converting proof_size_fft to usize");
+    let p_time_fft: f64 = iter
+      .next()
+      .expect("Error getting p_time_fft")
+      .parse()
+      .expect("Error converting p_time_fft to f64");
 
     *v_time += v_time_fft;
     *p_time += p_time_fft;
@@ -703,15 +715,9 @@ impl PolyCommitVerifier {
 }
 
 pub fn read_random_file(path: &str) -> Vec<u128> {
-  let result_content = read_to_string(path).unwrap();
-  let result_lines = result_content.lines();
-  //let mut result = Vec::new();
-
-  result_lines
-    .into_iter()
-    .map(|x| {
-      let mut line = x.split_whitespace();
-      line.next().unwrap().parse().unwrap()
-    })
+  let result_content = read_to_string(path).expect("Error reading file");
+  result_content
+    .split_whitespace()
+    .map(|x| x.parse().expect("Error converting to u128"))
     .collect()
 }
