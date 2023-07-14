@@ -97,8 +97,9 @@ impl ZkVerifier {
     let mut n_pad: usize;
 
     for i in 1..d + 1 {
-      let mut next_line_splited = circuit_lines.next().unwrap().split_whitespace();
-      let mut number_gates: usize = next_line_splited.next().unwrap().parse().unwrap();
+      let mut next_line_splited = circuit_lines.next().unwrap_or("").split_whitespace();
+      let mut number_gates: usize = next_line_splited.next().unwrap_or("0").parse().unwrap_or(0);
+
       let pad_requirement = if d > 3 { 17_usize } else { 15 };
       if i == 1 && number_gates < (1 << pad_requirement) {
         n_pad = 1 << pad_requirement;
@@ -124,10 +125,10 @@ impl ZkVerifier {
       let mut previous_g: Option<usize> = None;
 
       for j in 0..number_gates {
-        let ty: usize = next_line_splited.next().unwrap().parse().unwrap();
-        let g: usize = next_line_splited.next().unwrap().parse().unwrap();
-        let u: usize = next_line_splited.next().unwrap().parse().unwrap();
-        let mut v: usize = next_line_splited.next().unwrap().parse().unwrap();
+        let ty: usize = next_line_splited.next().unwrap_or("0").parse().unwrap_or(0);
+        let g: usize = next_line_splited.next().unwrap_or("0").parse().unwrap_or(0);
+        let u: usize = next_line_splited.next().unwrap_or("0").parse().unwrap_or(0);
+        let mut v: usize = next_line_splited.next().unwrap_or("0").parse().unwrap_or(0);
 
         if ty != 3 {
           if ty == 5 {
@@ -242,13 +243,15 @@ impl ZkVerifier {
     let mut meta_lines = meta_content.lines();
 
     for i in 1..=d {
-      let mut meta_line_splited = meta_lines.next().unwrap().split_whitespace();
+      let mut meta_line_splited = meta_lines.next().unwrap_or("").split_whitespace();
 
-      let is_para: usize = meta_line_splited.next().unwrap().parse().unwrap();
-      self.a_c.circuit[i].block_size = meta_line_splited.next().unwrap().parse().unwrap();
-      self.a_c.circuit[i].repeat_num = meta_line_splited.next().unwrap().parse().unwrap();
-      self.a_c.circuit[i].log_block_size = meta_line_splited.next().unwrap().parse().unwrap();
-      self.a_c.circuit[i].log_repeat_num = meta_line_splited.next().unwrap().parse().unwrap();
+      let is_para: usize = meta_line_splited.next().unwrap_or("0").parse().unwrap_or(0);
+      self.a_c.circuit[i].block_size = meta_line_splited.next().unwrap_or("0").parse().unwrap_or(0);
+      self.a_c.circuit[i].repeat_num = meta_line_splited.next().unwrap_or("0").parse().unwrap_or(0);
+      self.a_c.circuit[i].log_block_size =
+        meta_line_splited.next().unwrap_or("0").parse().unwrap_or(0);
+      self.a_c.circuit[i].log_repeat_num =
+        meta_line_splited.next().unwrap_or("0").parse().unwrap_or(0);
 
       if is_para != 0 {
         assert_eq!(
@@ -1555,13 +1558,13 @@ pub fn read_vec_fe_file(path: &str) -> Vec<FieldElement> {
   let result_lines = result_content.lines();
 
   let res: Vec<FieldElement> = result_lines
-    .into_iter()
     .map(|x| {
       let mut line = x.split_whitespace();
-      let real: u64 = line.next().unwrap().parse().unwrap();
-      let img: u64 = line.next().unwrap().parse().unwrap();
+      let real: u64 = line.next().unwrap_or("0").parse().unwrap_or(0);
+      let img: u64 = line.next().unwrap_or("0").parse().unwrap_or(0);
       FieldElement::new(real, img)
     })
     .collect();
+
   res
 }
