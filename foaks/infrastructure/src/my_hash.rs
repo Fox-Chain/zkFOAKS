@@ -1,4 +1,3 @@
-use blake3::Hasher;
 use ring::digest::{Context, SHA256};
 
 use prime_field::FieldElement;
@@ -78,23 +77,3 @@ pub fn my_hash(src: [HashDigest; 2]) -> HashDigest {
   hash
 }
 
-pub fn my_hash_blake(src: [HashDigest; 2]) -> HashDigest {
-  let mut hasher = Hasher::new();
-
-  src.iter().for_each(|h| {
-    hasher.update(&h.h0.to_be_bytes());
-    hasher.update(&h.h1.to_be_bytes());
-  });
-
-  let mut hash = HashDigest::new();
-  let digest = hasher.finalize();
-  let digest_bytes = digest.as_bytes();
-  let mut digest_u128 = [0u8; 16];
-
-  digest_u128.copy_from_slice(&digest_bytes[..16]);
-  hash.h0 = u128::from_be_bytes(digest_u128);
-  digest_u128.copy_from_slice(&digest_bytes[16..]);
-  hash.h1 = u128::from_be_bytes(digest_u128);
-
-  hash
-}
