@@ -197,7 +197,7 @@ pub fn generate_random_expander(l: usize, r: usize, d: usize) -> Graph {
 }
 
 pub fn read_weight_graph_file(path: &str) -> Vec<Vec<FieldElement>> {
-  let result_content = read_to_string(path).unwrap();
+  let result_content = read_to_string(path).expect("Failed to read file to string");
   let result_lines = result_content.lines();
   let res: Vec<Vec<FieldElement>> = result_lines
     .into_iter()
@@ -222,7 +222,8 @@ pub fn read_weight_graph_file(path: &str) -> Vec<Vec<FieldElement>> {
 }
 
 pub fn read_neighbor_graph_file(path: &str) -> Vec<Vec<usize>> {
-  let result_content = read_to_string(path).unwrap();
+  let result_content = read_to_string(path).expect("Failed to read file to string");
+
   let result_lines = result_content.lines();
   let res: Vec<Vec<usize>> = result_lines
     .into_iter()
