@@ -483,10 +483,10 @@ impl PolyCommitVerifier {
           while pow < (1 << (log_length - LOG_SLICE_NUMBER - i)) || pow % 2 == 1 {
             pow = rand::random::<u128>() % max;
           }
-          let root_of_unity =
+          root_of_unity =
             FieldElement::get_root_of_unity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i)
               .expect("Failed to retrieve root of unity");
-          let y = FieldElement::fast_pow(root_of_unity, pow);
+          y = FieldElement::fast_pow(root_of_unity, pow);
         } else {
           root_of_unity = root_of_unity * root_of_unity;
           pow %= 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i);
@@ -578,7 +578,7 @@ impl PolyCommitVerifier {
           }
 
           *v_time += t0.elapsed().as_secs_f64();
-          let (beta, new_size) = request_step_commit(
+          (beta, new_size) = request_step_commit(
             0,
             (pow / 2)
               .try_into()
@@ -689,7 +689,7 @@ impl PolyCommitVerifier {
           *v_time += time_span;
 
           alpha = beta.clone();
-          let (beta, new_size) = request_step_commit(
+          (beta, new_size) = request_step_commit(
             i,
             (pow / 2)
               .try_into()
