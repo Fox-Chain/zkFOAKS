@@ -1283,7 +1283,8 @@ pub fn generate_randomness(size: usize) -> Vec<FieldElement> {
 }
 
 pub fn read_vec_fe_file(path: &str) -> Vec<FieldElement> {
-  let result_content = read_to_string(path).unwrap();
+  let result_content = read_to_string(path).expect("Failed to read file");
+
   let result_lines = result_content.lines();
 
   let res: Vec<FieldElement> = result_lines

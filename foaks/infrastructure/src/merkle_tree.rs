@@ -36,7 +36,7 @@ pub fn create_tree(
   alloc_required: bool,
 ) {
   // ToDo: Check this, do not need element_size_
-  //let element_num = element_num.unwrap_or(256 / 8);
+  //let element_num = element_num._or(256 / 8);
   //let alloc_required = alloc_required_.unwrap_or(false);
 
   let mut size_after_padding = 1;

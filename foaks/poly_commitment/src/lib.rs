@@ -524,20 +524,25 @@ impl PolyCommitVerifier {
             + (alpha.0[j].0 - alpha.0[j].1) * inv_2 * com.randomness[i] * inv_mu
         };
 
-        let fri_ctx = self.pc_prover.fri_ctx.as_mut().unwrap();
+        let fri_ctx = self
+          .pc_prover
+          .fri_ctx
+          .as_mut()
+          .expect("Failed to retrieve fri_ctx");
+
         if i == 0 {
           time_span = t0.elapsed().as_secs_f64();
           *v_time += time_span;
           (alpha_l, new_size) = request_init_value_with_merkle(
-            s0_pow.try_into().unwrap(),
-            s1_pow.try_into().unwrap(),
+            s0_pow.try_into().expect("Failed to convert s0_pow to u32"),
+            s1_pow.try_into().expect("Failed to convert s1_pow to u32"),
             0,
             fri_ctx,
           );
           // previos new_size is not read in C++
           (alpha_h, new_size) = request_init_value_with_merkle(
-            s0_pow.try_into().unwrap(),
-            s1_pow.try_into().unwrap(),
+            s0_pow.try_into().expect("Failed to convert s0_pow to u32"),
+            s1_pow.try_into().expect("Failed to convert s1_pow to u32"),
             1,
             fri_ctx,
           );
@@ -573,7 +578,13 @@ impl PolyCommitVerifier {
           }
 
           *v_time += t0.elapsed().as_secs_f64();
-          (beta, new_size) = request_step_commit(0, (pow / 2).try_into().unwrap(), fri_ctx);
+          let (beta, new_size) = request_step_commit(
+            0,
+            (pow / 2)
+              .try_into()
+              .expect("Failed to convert pow/2 to u32"),
+            fri_ctx,
+          );
 
           *proof_size += new_size;
 
@@ -597,8 +608,15 @@ impl PolyCommitVerifier {
           let mut x = [FieldElement::default(); 2];
           let mut inv_x = [FieldElement::default(); 2];
 
-          x[0] = FieldElement::get_root_of_unity(my_log(slice_size).unwrap()).unwrap();
-          x[1] = FieldElement::get_root_of_unity(my_log(slice_size).unwrap()).unwrap();
+          x[0] = FieldElement::get_root_of_unity(
+            my_log(slice_size).expect("Failed to compute logarithm"),
+          )
+          .expect("Failed to retrieve root of unity");
+          x[1] = FieldElement::get_root_of_unity(
+            my_log(slice_size).expect("Failed to compute logarithm"),
+          )
+          .expect("Failed to retrieve root of unity");
+
           x[0] = x[0].fast_pow(s0_pow as u128);
           x[1] = x[1].fast_pow(s1_pow as u128);
 
@@ -671,7 +689,13 @@ impl PolyCommitVerifier {
           *v_time += time_span;
 
           alpha = beta.clone();
-          (beta, new_size) = request_step_commit(i, (pow / 2).try_into().unwrap(), fri_ctx);
+          let (beta, new_size) = request_step_commit(
+            i,
+            (pow / 2)
+              .try_into()
+              .expect("Failed to convert pow/2 to u32"),
+            fri_ctx,
+          );
 
           *proof_size += new_size;
 
@@ -708,7 +732,12 @@ impl PolyCommitVerifier {
         }
       }
 
-      let fri_ctx = self.pc_prover.fri_ctx.as_mut().unwrap();
+      let fri_ctx = self
+        .pc_prover
+        .fri_ctx
+        .as_mut()
+        .expect("Failed to retrieve fri_ctx");
+
       for i in 0..slice_count {
         let template =
           fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(0 << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0];
