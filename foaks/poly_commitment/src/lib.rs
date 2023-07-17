@@ -1,7 +1,7 @@
 use std::{
   env,
   ffi::OsStr,
-  fs::{read_to_string, File},
+  fs::{File, read_to_string},
   io::Read,
   os::unix::prelude::OsStrExt,
   process::Command,
@@ -18,7 +18,7 @@ use prime_field::FieldElement;
 
 use crate::vpd::{
   fri::{
-    request_init_commit, request_init_value_with_merkle, request_step_commit, FRIContext, TripleVec,
+    FRIContext, request_init_commit, request_init_value_with_merkle, request_step_commit, TripleVec,
   },
   verifier::verify_merkle,
 };
@@ -385,7 +385,7 @@ impl PolyCommitVerifier {
   ) -> bool {
     let command = format!("./fft_gkr {} log_fftgkr.txt", log_length - LOG_SLICE_NUMBER);
     // Use output, should error the error
-    let output = Command::new("sh")
+    Command::new("sh")
       .arg("-c")
       .arg(OsStr::from_bytes(command.as_bytes()))
       .output()
@@ -635,8 +635,7 @@ impl PolyCommitVerifier {
               std::mem::swap(&mut a.0, &mut a.1);
             }
 
-            let p_val = (alpha.0[j].0 + alpha.0[j].1) * inv_2
-              + (alpha.0[j].0 - alpha.0[j].1) * inv_2 * com.randomness[i] * inv_mu;
+            let p_val = gen_val(&alpha, inv_mu, i, j);
 
             if p_val != beta.0[j].0 && p_val != beta.0[j].1 {
               let a = p_val != beta.0[j].0;

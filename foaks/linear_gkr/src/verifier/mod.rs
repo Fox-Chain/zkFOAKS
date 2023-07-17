@@ -5,11 +5,11 @@ use std::{
   mem,
 };
 
-use infrastructure::my_hash::HashDigest;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
   rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
 };
+use infrastructure::my_hash::HashDigest;
 use poly_commitment::PolyCommitVerifier;
 use prime_field::FieldElement;
 
@@ -1113,6 +1113,14 @@ impl ZkVerifier {
             prefix_alpha =
               prefix_alpha * r_0[j + self.a_c.circuit[depth].log_block_size] * uv_value;
             prefix_beta = prefix_beta * r_1[j + self.a_c.circuit[depth].log_block_size] * uv_value;
+
+            let uv_value_v0 = r_u[j + self.a_c.circuit[depth - 1].log_block_size]
+                * (one - r_v[j + self.a_c.circuit[depth - 1].log_block_size]);
+
+            prefix_alpha_v0 =
+                prefix_alpha_v0 * r_0[j + self.a_c.circuit[depth].log_block_size] * uv_value_v0;
+            prefix_beta_v0 =
+                prefix_beta_v0 * r_1[j + self.a_c.circuit[depth].log_block_size] * uv_value_v0;
           } else {
             let uv_value = (one - r_u[j + self.a_c.circuit[depth - 1].log_block_size])
               * (one - r_v[j + self.a_c.circuit[depth - 1].log_block_size]);
@@ -1122,23 +1130,7 @@ impl ZkVerifier {
               prefix_beta * (one - r_1[j + self.a_c.circuit[depth].log_block_size]) * uv_value;
           }
         }
-        for j in 0..self.a_c.circuit[depth].log_repeat_num {
-          if (i >> j) > 0 {
-            let uv_value = r_u[j + self.a_c.circuit[depth - 1].log_block_size]
-              * (one - r_v[j + self.a_c.circuit[depth - 1].log_block_size]);
-            prefix_alpha_v0 =
-              prefix_alpha_v0 * r_0[j + self.a_c.circuit[depth].log_block_size] * uv_value;
-            prefix_beta_v0 =
-              prefix_beta_v0 * r_1[j + self.a_c.circuit[depth].log_block_size] * uv_value;
-          } else {
-            let uv_value = (one - r_u[j + self.a_c.circuit[depth - 1].log_block_size])
-              * (one - r_v[j + self.a_c.circuit[depth - 1].log_block_size]);
-            prefix_alpha_v0 =
-              prefix_alpha_v0 * (one - r_0[j + self.a_c.circuit[depth].log_block_size]) * uv_value;
-            prefix_beta_v0 =
-              prefix_beta_v0 * (one - r_1[j + self.a_c.circuit[depth].log_block_size]) * uv_value;
-          }
-        }
+
         for j in 0..gate_type_count {
           if j == 6 || j == 10 || j == 5 || j == 12 {
             ret_para[j] = ret_para[j]
@@ -1174,19 +1166,12 @@ impl ZkVerifier {
         let v_first_half = v & ((1 << first_half_uv) - 1);
         let v_second_half = v >> first_half_uv;
 
-        match self.a_c.circuit[depth].gates[i].ty {
-          0 => {
-            ret[0] = ret[0]
-              + (self.beta_g_r0_first_half[g_first_half]
-                * self.beta_g_r0_second_half[g_second_half]
-                + self.beta_g_r1_first_half[g_first_half]
-                  * self.beta_g_r1_second_half[g_second_half])
-                * (self.beta_u_first_half[u_first_half] * self.beta_u_second_half[u_second_half])
-                * (self.beta_v_first_half[v_first_half] * self.beta_v_second_half[v_second_half]);
-          }
-          1 => {
-            ret[1] = ret[1]
-              + (self.beta_g_r0_first_half[g_first_half]
+        let ty = self.a_c.circuit[depth].gates[i].ty;
+
+        match ty {
+          0 | 1 | 6 | 7 | 8 | 9 | 13 => {
+            ret[ty] = ret[ty]
+                + (self.beta_g_r0_first_half[g_first_half]
                 * self.beta_g_r0_second_half[g_second_half]
                 + self.beta_g_r1_first_half[g_first_half]
                   * self.beta_g_r1_second_half[g_second_half])
@@ -1248,42 +1233,6 @@ impl ZkVerifier {
                   * weight;
             }
           }
-          6 => {
-            ret[6] = ret[6]
-              + (self.beta_g_r0_first_half[g_first_half]
-                * self.beta_g_r0_second_half[g_second_half]
-                + self.beta_g_r1_first_half[g_first_half]
-                  * self.beta_g_r1_second_half[g_second_half])
-                * (self.beta_u_first_half[u_first_half] * self.beta_u_second_half[u_second_half])
-                * (self.beta_v_first_half[v_first_half] * self.beta_v_second_half[v_second_half]);
-          }
-          7 => {
-            ret[7] = ret[7]
-              + (self.beta_g_r0_first_half[g_first_half]
-                * self.beta_g_r0_second_half[g_second_half]
-                + self.beta_g_r1_first_half[g_first_half]
-                  * self.beta_g_r1_second_half[g_second_half])
-                * (self.beta_u_first_half[u_first_half] * self.beta_u_second_half[u_second_half])
-                * (self.beta_v_first_half[v_first_half] * self.beta_v_second_half[v_second_half]);
-          }
-          8 => {
-            ret[8] = ret[8]
-              + (self.beta_g_r0_first_half[g_first_half]
-                * self.beta_g_r0_second_half[g_second_half]
-                + self.beta_g_r1_first_half[g_first_half]
-                  * self.beta_g_r1_second_half[g_second_half])
-                * (self.beta_u_first_half[u_first_half] * self.beta_u_second_half[u_second_half])
-                * (self.beta_v_first_half[v_first_half] * self.beta_v_second_half[v_second_half]);
-          }
-          9 => {
-            ret[9] = ret[9]
-              + (self.beta_g_r0_first_half[g_first_half]
-                * self.beta_g_r0_second_half[g_second_half]
-                + self.beta_g_r1_first_half[g_first_half]
-                  * self.beta_g_r1_second_half[g_second_half])
-                * (self.beta_u_first_half[u_first_half] * self.beta_u_second_half[u_second_half])
-                * (self.beta_v_first_half[v_first_half] * self.beta_v_second_half[v_second_half]);
-          }
           10 => {
             if !relay_set {
               tmp_u_val = vec![FieldElement::zero(); 1 << self.a_c.circuit[depth - 1].bit_length];
@@ -1305,21 +1254,6 @@ impl ZkVerifier {
                 + self.beta_g_r1_first_half[g_first_half]
                   * self.beta_g_r1_second_half[g_second_half])
                 * tmp_u_val[u];
-          }
-          13 => {
-            let g_first_half = g & ((1 << first_half_g) - 1);
-            let g_second_half = g >> first_half_g;
-            let u_first_half = u & ((1 << first_half_uv) - 1);
-            let u_second_half = u >> first_half_uv;
-            let v_first_half = v & ((1 << first_half_uv) - 1);
-            let v_second_half = v >> first_half_uv;
-            ret[13] = ret[13]
-              + (self.beta_g_r0_first_half[g_first_half]
-                * self.beta_g_r0_second_half[g_second_half]
-                + self.beta_g_r1_first_half[g_first_half]
-                  * self.beta_g_r1_second_half[g_second_half])
-                * (self.beta_u_first_half[u_first_half] * self.beta_u_second_half[u_second_half])
-                * (self.beta_v_first_half[v_first_half] * self.beta_v_second_half[v_second_half]);
           }
           _ => {}
         }
