@@ -1,8 +1,6 @@
-use std::collections::HashMap;
-
 use prime_field::FieldElement;
-#[derive(Debug, Clone, Default)]
 
+#[derive(Debug, Clone, Default)]
 pub struct Gate {
   pub ty: usize,
   pub u: usize,
@@ -38,8 +36,6 @@ pub struct Layer {
   pub weight_expander_d_mempool: Vec<FieldElement>,
   pub gates: Vec<Gate>,
   pub bit_length: usize,
-  pub u_gates: HashMap<i32, Vec<(i32, (i32, i32))>>,
-  pub v_gates: HashMap<i32, Vec<(i32, (i32, i32))>>,
   pub is_parallel: bool,
   pub block_size: usize,
   pub log_block_size: usize,

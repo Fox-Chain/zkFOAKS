@@ -1,4 +1,4 @@
-use std::{fs::read_to_string, vec::Vec};
+use std::vec::Vec;
 
 use prime_field::FieldElement;
 

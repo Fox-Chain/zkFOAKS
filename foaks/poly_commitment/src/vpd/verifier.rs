@@ -102,16 +102,9 @@ impl FRIContext {
       self.l_group[i] = self.l_group[i * 2];
     }
 
-    // we assume poly_commit::slice_count is (1 << SLICE_NUMBER) here
-    // NOTE: this assumption is solved by using slice_count from context
     let mut tmp: Vec<FieldElement> =
       vec![FieldElement::new_random(); nxt_witness_size * slice_count];
-    // println!(
-    //   "nxt_witness_size: {}, slice_count: {}, len;{}",
-    //   nxt_witness_size,
-    //   slice_count,
-    //   tmp.len()
-    // );
+
     self.cpd.rs_codeword_mapping[self.current_step_no] = vec![0; nxt_witness_size * slice_count];
 
     let nxt_witness_size_div_2 = nxt_witness_size / 2;
@@ -138,8 +131,6 @@ impl FRIContext {
         assert!(d < nxt_witness_size * SLICE_NUMBER);
       }
     }
-
-    //panic!("stop here");
     self.cpd.rs_codeword[self.current_step_no] = tmp;
 
     self.visited[self.current_step_no] = vec![false; nxt_witness_size * 4 * slice_count];
@@ -166,7 +157,6 @@ impl FRIContext {
       hash_val[i] = htmp;
     }
 
-    // write merkle tree to self.cpd.merkle[self.current_step_no]
     let current_step_no = self.cpd.merkle[self.current_step_no].clone();
     create_tree(
       hash_val,

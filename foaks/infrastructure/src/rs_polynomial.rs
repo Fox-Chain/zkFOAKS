@@ -196,7 +196,6 @@ pub fn inverse_fast_fourier_transform(
 
   assert!(log_order.is_some() && log_coefficient.is_some());
   let log_order = log_order.expect("log_order expected to have a value");
-  let log_coefficient = log_coefficient.expect("log_coefficient expected to have a value");
 
   for _ in 0..log_order {
     inv_rou = inv_rou * tmp;

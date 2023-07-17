@@ -1,23 +1,19 @@
-use std::{fs, fs::read_to_string, process, time::Instant};
+use std::{fs, fs::read_to_string, time::Instant};
 use std::{
   fs::File,
   io::{Error, Write},
   mem,
 };
 
+use infrastructure::my_hash::HashDigest;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
   rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
 };
-use infrastructure::my_hash::HashDigest;
 use poly_commitment::PolyCommitVerifier;
 use prime_field::FieldElement;
 
-use crate::{
-  circuit_fast_track::{Gate, Layer, LayeredCircuit},
-  polynomial::QuadraticPoly,
-  prover::ZkProver,
-};
+use crate::{circuit_fast_track::LayeredCircuit, polynomial::QuadraticPoly, prover::ZkProver};
 
 #[derive(Default, Debug)]
 pub struct VerifierContext {
@@ -1115,12 +1111,12 @@ impl ZkVerifier {
             prefix_beta = prefix_beta * r_1[j + self.a_c.circuit[depth].log_block_size] * uv_value;
 
             let uv_value_v0 = r_u[j + self.a_c.circuit[depth - 1].log_block_size]
-                * (one - r_v[j + self.a_c.circuit[depth - 1].log_block_size]);
+              * (one - r_v[j + self.a_c.circuit[depth - 1].log_block_size]);
 
             prefix_alpha_v0 =
-                prefix_alpha_v0 * r_0[j + self.a_c.circuit[depth].log_block_size] * uv_value_v0;
+              prefix_alpha_v0 * r_0[j + self.a_c.circuit[depth].log_block_size] * uv_value_v0;
             prefix_beta_v0 =
-                prefix_beta_v0 * r_1[j + self.a_c.circuit[depth].log_block_size] * uv_value_v0;
+              prefix_beta_v0 * r_1[j + self.a_c.circuit[depth].log_block_size] * uv_value_v0;
           } else {
             let uv_value = (one - r_u[j + self.a_c.circuit[depth - 1].log_block_size])
               * (one - r_v[j + self.a_c.circuit[depth - 1].log_block_size]);
@@ -1171,7 +1167,7 @@ impl ZkVerifier {
         match ty {
           0 | 1 | 6 | 7 | 8 | 9 | 13 => {
             ret[ty] = ret[ty]
-                + (self.beta_g_r0_first_half[g_first_half]
+              + (self.beta_g_r0_first_half[g_first_half]
                 * self.beta_g_r0_second_half[g_second_half]
                 + self.beta_g_r1_first_half[g_first_half]
                   * self.beta_g_r1_second_half[g_second_half])

@@ -244,6 +244,7 @@ impl LinearPC {
     //prover construct the combined original message
     let mut combined_message = vec![FieldElement::zero(); n];
 
+    // Todo: check if this is correct: enumerate().take()?
     for (i, coef_i) in self.coef.iter().enumerate().take(COLUMN_SIZE) {
       for (j, &coef_ij) in coef_i.iter().enumerate().take(self.codeword_size[0]) {
         combined_message[j] = combined_message[j] + r0[i] * coef_ij;
@@ -432,6 +433,8 @@ impl LinearPC {
       return (input_depth, output_size_so_far);
     }
     // relay the output
+
+    // Todo: check if this is correct: enumerate().take()?
     for (i, gate) in self.verifier.a_c.circuit[input_depth + 1]
       .gates
       .iter_mut()

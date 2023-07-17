@@ -1,11 +1,5 @@
 use std::{
-  env,
-  ffi::OsStr,
-  fs::{File, read_to_string},
-  io::Read,
-  os::unix::prelude::OsStrExt,
-  process::Command,
-  time,
+  env, ffi::OsStr, fs::File, io::Read, os::unix::prelude::OsStrExt, process::Command, time,
 };
 
 use infrastructure::{
@@ -18,7 +12,7 @@ use prime_field::FieldElement;
 
 use crate::vpd::{
   fri::{
-    FRIContext, request_init_commit, request_init_value_with_merkle, request_step_commit, TripleVec,
+    request_init_commit, request_init_value_with_merkle, request_step_commit, FRIContext, TripleVec,
   },
   verifier::verify_merkle,
 };
