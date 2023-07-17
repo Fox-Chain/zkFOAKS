@@ -84,26 +84,32 @@ impl LinearPC {
     query.sort();
     self.prepare_gates_count(n, query_count);
     println!("Depth {}", self.gates_count.len());
-    assert_eq!((1 << my_log(n).unwrap()), n);
+    assert_eq!((1 << my_log(n).expect("Failed to compute logarithm")), n);
 
     self.verifier.a_c.inputs = vec![FieldElement::zero(); n];
     self.verifier.a_c.total_depth = self.gates_count.len() + 1;
     //Refactored code, add + 1 to the size of the circuit to avoid panic
     self.verifier.a_c.circuit = vec![Layer::default(); self.verifier.a_c.total_depth + 1];
-    self.verifier.a_c.circuit[0].bit_length = my_log(n).unwrap();
+    self.verifier.a_c.circuit[0].bit_length = my_log(n).expect("Failed to compute bit_length");
+
     self.verifier.a_c.circuit[0].gates =
       vec![Gate::new(); 1 << self.verifier.a_c.circuit[0].bit_length];
 
     for i in 0..self.gates_count.len() {
       self.verifier.a_c.circuit[i + 1].bit_length = my_log(smallest_pow2_larger_or_equal_to(
-        *self.gates_count.get(&i).unwrap(),
+        *self
+          .gates_count
+          .get(&i)
+          .expect("Failed to retrieve gates_count value"),
       ))
-      .unwrap();
+      .expect("Failed to compute bit_length");
+
       self.verifier.a_c.circuit[i + 1].gates =
         vec![Gate::new(); 1 << self.verifier.a_c.circuit[i + 1].bit_length];
     }
     self.verifier.a_c.circuit[self.gates_count.len() + 1].bit_length =
-      my_log(smallest_pow2_larger_or_equal_to(query_count)).unwrap();
+      my_log(smallest_pow2_larger_or_equal_to(query_count)).expect("Failed to compute bit_length");
+
     self.verifier.a_c.circuit[self.gates_count.len() + 1].gates =
       vec![Gate::new(); 1 << self.verifier.a_c.circuit[self.gates_count.len() + 1].bit_length];
 
@@ -332,13 +338,16 @@ impl LinearPC {
     let max_bit_length = self.verifier.a_c.circuit.iter().map(|c| c.bit_length).max();
 
     // p.init_array(max_bit_length); Refactored inside verifier.verify()
-    self.verifier.init_array(max_bit_length.unwrap());
+    self
+      .verifier
+      .init_array(max_bit_length.expect("Failed to retrieve max_bit_length"));
+
     // p.get_witness(combined_message, N / column_size); Refactored inside
     // verifier.verify()
 
     let (result, time_diff) = self.verifier.verify(
       &String::from("log.txt"),
-      max_bit_length.unwrap(),
+      max_bit_length.expect("Failed to retrieve max_bit_length"),
       combined_message.clone(),
       n / COLUMN_SIZE,
       query_count,
@@ -408,7 +417,7 @@ impl LinearPC {
         .gates_count
         .get(&(output_depth_output_size.0 + 1))
         .copied()
-        .unwrap(),
+        .expect("Failed to retrieve gates_count value"),
     )
   }
 
@@ -528,7 +537,13 @@ impl LinearPC {
     let mut r0 = vec![FieldElement::zero(); COLUMN_SIZE];
     let mut r1 = vec![FieldElement::zero(); n / COLUMN_SIZE];
 
-    let x_n = FieldElement::fast_pow(x, (n / COLUMN_SIZE).try_into().unwrap());
+    let x_n = FieldElement::fast_pow(
+      x,
+      (n / COLUMN_SIZE)
+        .try_into()
+        .expect("Failed to convert to u32"),
+    );
+
     r0[0] = FieldElement::real_one();
     for j in 1..COLUMN_SIZE {
       r0[j] = r0[j - 1] * x_n;
