@@ -628,11 +628,3 @@ fn dfs(dst: &mut [FieldElement], r: &[FieldElement], size: usize, depth: usize, 
 // 	CustomLinearComb = 14,
 // 	Input = 3isize
 // }
-pub fn read_random_file(path: &str) -> Vec<usize> {
-  let result_content = std::fs::read_to_string(path).expect("Failed to read file");
-
-  result_content
-    .lines()
-    .map(|line| line.trim().parse().expect("Failed to parse number"))
-    .collect()
-}

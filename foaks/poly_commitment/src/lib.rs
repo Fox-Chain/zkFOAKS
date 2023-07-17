@@ -713,11 +713,3 @@ impl PolyCommitVerifier {
     true
   }
 }
-
-pub fn read_random_file(path: &str) -> Vec<u128> {
-  let result_content = read_to_string(path).expect("Error reading file");
-  result_content
-    .split_whitespace()
-    .map(|x| x.parse().expect("Error converting to u128"))
-    .collect()
-}
