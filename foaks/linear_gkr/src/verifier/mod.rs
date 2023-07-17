@@ -508,7 +508,8 @@ impl ZkVerifier {
       &self.ctx.q_eval_verifier,
       1 << (log_length - LOG_SLICE_NUMBER),
       1 << (log_length - LOG_SLICE_NUMBER),
-      FieldElement::get_root_of_unity(log_length - LOG_SLICE_NUMBER).unwrap(),
+      FieldElement::get_root_of_unity(log_length - LOG_SLICE_NUMBER)
+        .expect("Failed to retrieve root of unity"),
       &mut q_coef_verifier,
     );
 

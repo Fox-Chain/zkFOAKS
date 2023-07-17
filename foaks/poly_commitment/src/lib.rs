@@ -125,7 +125,10 @@ impl PolyCommitProver {
           &private_array[i * slice_real_ele_cnt..],
           slice_real_ele_cnt,
           slice_real_ele_cnt,
-          FieldElement::get_root_of_unity(my_log(slice_real_ele_cnt).unwrap()).unwrap(),
+          FieldElement::get_root_of_unity(
+            my_log(slice_real_ele_cnt).expect("Failed to compute logarithm"),
+          )
+          .expect("Failed to retrieve root of unity"),
           &mut tmp[..],
         );
 
@@ -133,7 +136,8 @@ impl PolyCommitProver {
           &tmp[..],
           slice_real_ele_cnt,
           slice_size,
-          FieldElement::get_root_of_unity(my_log(slice_size).unwrap()).unwrap(),
+          FieldElement::get_root_of_unity(my_log(slice_size).expect("Failed to compute logarithm"))
+            .expect("Failed to retrieve root of unity"),
           &mut self.ctx.l_eval[i * slice_size..],
           &mut self.scratch_pad,
           None,
@@ -148,8 +152,11 @@ impl PolyCommitProver {
       self.fri_ctx = Some(FRIContext::new());
     }
 
-    let ret =
-      vpd::prover::vpd_prover_init(self.fri_ctx.as_mut().unwrap(), &self.ctx, log_array_length);
+    let ret = vpd::prover::vpd_prover_init(
+      self.fri_ctx.as_mut().expect("Failed to retrieve fri_ctx"),
+      &self.ctx,
+      log_array_length,
+    );
 
     let time_span = t0.elapsed().as_secs_f64();
     self.total_time_pc_p += time_span;
@@ -169,6 +176,7 @@ impl PolyCommitProver {
     assert!(self.ctx.pre_prepare_executed);
     let mut default_fri_ctx = FRIContext::new();
     let mut fri_ctx = self.fri_ctx.as_mut().unwrap_or(&mut default_fri_ctx);
+
     fri_ctx.virtual_oracle_witness =
       vec![FieldElement::default(); self.ctx.slice_size * self.ctx.slice_count];
     fri_ctx.virtual_oracle_witness_mapping = vec![0; self.ctx.slice_size * self.ctx.slice_count];
@@ -188,14 +196,20 @@ impl PolyCommitProver {
         &public_array[i * self.ctx.slice_real_ele_cnt..],
         self.ctx.slice_real_ele_cnt,
         self.ctx.slice_real_ele_cnt,
-        FieldElement::get_root_of_unity(my_log(self.ctx.slice_real_ele_cnt).unwrap()).unwrap(),
+        FieldElement::get_root_of_unity(
+          my_log(self.ctx.slice_real_ele_cnt).expect("Failed to compute logarithm"),
+        )
+        .expect("Failed to retrieve root of unity"),
         &mut tmp,
       );
       fast_fourier_transform(
         &tmp,
         self.ctx.slice_real_ele_cnt,
         self.ctx.slice_size,
-        FieldElement::get_root_of_unity(my_log(self.ctx.slice_size).unwrap()).unwrap(),
+        FieldElement::get_root_of_unity(
+          my_log(self.ctx.slice_size).expect("Failed to compute logarithm"),
+        )
+        .expect("Failed to retrieve root of unity"),
         &mut self.ctx.q_eval[i * self.ctx.slice_size..],
         &mut self.scratch_pad,
         None,
@@ -264,8 +278,10 @@ impl PolyCommitProver {
           &self.ctx.lq_eval,
           2 * self.ctx.slice_real_ele_cnt,
           2 * self.ctx.slice_real_ele_cnt,
-          FieldElement::get_root_of_unity(my_log(2 * self.ctx.slice_real_ele_cnt).unwrap())
-            .unwrap(),
+          FieldElement::get_root_of_unity(
+            my_log(2 * self.ctx.slice_real_ele_cnt).expect("Failed to compute logarithm"),
+          )
+          .expect("Failed to retrieve root of unity"),
           &mut self.ctx.lq_coef,
         );
         //panic!("Fix last values after inverse_fast_fourier_transform");
@@ -278,7 +294,10 @@ impl PolyCommitProver {
           &self.ctx.h_coef,
           self.ctx.slice_real_ele_cnt,
           self.ctx.slice_size,
-          FieldElement::get_root_of_unity(my_log(self.ctx.slice_size).unwrap()).unwrap(),
+          FieldElement::get_root_of_unity(
+            my_log(self.ctx.slice_size).expect("Failed to compute logarithm"),
+          )
+          .expect("Failed to retrieve root of unity"),
           &mut self.ctx.h_eval,
           &mut self.scratch_pad,
           None,
@@ -387,7 +406,7 @@ impl PolyCommitVerifier {
 
     let mut file = match File::open(
       env::current_dir()
-        .unwrap()
+        .expect("Failed to retrieve current directory")
         //.join("src")
         .join("log_fftgkr.txt"),
     ) {
@@ -425,8 +444,9 @@ impl PolyCommitVerifier {
       .pc_prover
       .fri_ctx
       .as_mut()
-      .unwrap()
+      .expect("Failed to retrieve fri_ctx")
       .commit_phase(log_length, self.pc_prover.ctx.slice_count);
+
     let coef_slice_size = 1 << (log_length - LOG_SLICE_NUMBER);
 
     for _ in 0..33 {
@@ -463,10 +483,10 @@ impl PolyCommitVerifier {
           while pow < (1 << (log_length - LOG_SLICE_NUMBER - i)) || pow % 2 == 1 {
             pow = rand::random::<u128>() % max;
           }
-          root_of_unity =
+          let root_of_unity =
             FieldElement::get_root_of_unity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i)
-              .unwrap();
-          y = FieldElement::fast_pow(root_of_unity, pow);
+              .expect("Failed to retrieve root of unity");
+          let y = FieldElement::fast_pow(root_of_unity, pow);
         } else {
           root_of_unity = root_of_unity * root_of_unity;
           pow %= 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i);
