@@ -28,7 +28,7 @@ impl FieldElementContext {
   /// # Safety
   /// This function is unsafe because it is working with  __m256i values
   pub unsafe fn init() -> Self {
-    let mod_i64 = MOD.try_into().unwrap();
+    let mod_i64 = MOD.try_into().expect("Failed to convert MOD to i64");
 
     let packed_mod = _mm256_set_epi64x(mod_i64, mod_i64, mod_i64, mod_i64);
     let packed_mod_minus_one =

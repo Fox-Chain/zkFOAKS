@@ -12,9 +12,12 @@ enum Error {
 fn main() -> Result<(), Error> {
   let args: Vec<String> = env::args().collect();
   let lg_n = match args.get(1) {
-    Some(number) => number.parse::<usize>().unwrap(),
+    Some(number) => number
+      .parse::<usize>()
+      .expect("Failed to parse number as usize"),
     None => return Err(Error::ParseParamsError),
   };
+
   let n = 1 << lg_n;
   let mut linear_pc = LinearPC::init();
   linear_pc.lce_ctx.expander_init(n / COLUMN_SIZE, None);

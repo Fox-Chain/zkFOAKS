@@ -24,7 +24,7 @@ pub fn verify_merkle(
 
   let mut pow = pow;
 
-  let mut current_hash: HashDigest = *merkle_path.last().unwrap();
+  let mut current_hash: HashDigest = *merkle_path.last().expect("Merkle path is empty");
 
   let mut data: [HashDigest; 2];
   // don't mutate the current_hash, this is the output of the loop following

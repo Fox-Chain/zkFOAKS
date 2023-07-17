@@ -126,7 +126,9 @@ pub fn request_init_commit(
   // let sliced_input_length_per_block = 1 << *witness_bit_length_per_slice; No
   // usages
   assert!(*witness_bit_length_per_slice >= 0);
-  let root_of_unity = FieldElement::get_root_of_unity(*log_current_witness_size_per_slice).unwrap();
+  let root_of_unity = FieldElement::get_root_of_unity(*log_current_witness_size_per_slice)
+    .expect("Failed to retrieve root of unity");
+
   if oracle_indicator == 0 {
     //l_group.reserve(1 << *log_current_witness_size_per_slice);
     l_group.push(FieldElement::from_real(1));
