@@ -65,7 +65,7 @@ impl ZkVerifier {
 
   pub fn read_circuit(&mut self, circuit_path: &str, meta_path: &str) -> Option<usize> {
     let d: usize;
-    let circuit_content = read_to_string(&circuit_path).unwrap();
+    let circuit_content = fs::read_to_string(&circuit_path).expect("Failed to read circuit file");
     let mut circuit_lines = circuit_content.lines();
     let describe_gate = |circuit: &Vec<Layer>, input_gate: usize, ix: usize, ty, g, u, v| {
       if input_gate >= (1 << circuit[ix - 1].bit_length) {
@@ -216,12 +216,18 @@ impl ZkVerifier {
       if number_gates == 1 {
         //add a dummy gate to avoid ill-defined layer.
         if i != 1 {
-          self.a_c.circuit[i].gates[max_gate.unwrap()] = Gate::from_params(2, 0, 0);
+          self.a_c.circuit[i].gates[max_gate.expect("Failed to retrieve max_gate")] =
+            Gate::from_params(2, 0, 0);
+
           self.a_c.circuit[i].bit_length = cnt;
         } else {
-          self.a_c.circuit[0].gates[max_gate.unwrap()] = Gate::from_params(2, 0, 0);
+          self.a_c.circuit[0].gates[max_gate.expect("Failed to retrieve max_gate")] =
+            Gate::from_params(2, 0, 0);
+
           self.a_c.circuit[0].bit_length = cnt;
-          self.a_c.circuit[1].gates[max_gate.unwrap()] = Gate::from_params(4, 1, 0);
+          self.a_c.circuit[1].gates[max_gate.expect("Failed to retrieve max_gate")] =
+            Gate::from_params(4, 1, 0);
+
           self.a_c.circuit[1].bit_length = cnt;
         }
       } else {
@@ -264,8 +270,11 @@ impl ZkVerifier {
       }
     }
 
-    Self::init_array(self, max_bit_length.unwrap());
-    Some(max_bit_length.unwrap())
+    Self::init_array(
+      self,
+      max_bit_length.expect("Failed to retrieve max_bit_length"),
+    );
+    Some(max_bit_length.expect("Failed to retrieve max_bit_length"))
   }
 
   pub fn init_array(&mut self, max_bit_length: usize) {
@@ -665,8 +674,11 @@ impl ZkVerifier {
 
     //let mut result_file = File::create(output_path)?;
     let full_path = std::path::Path::new(output_path);
-    let prefix = full_path.parent().unwrap();
-    fs::create_dir_all(prefix).unwrap();
+    let prefix = full_path
+      .parent()
+      .expect("Failed to retrieve parent directory");
+    fs::create_dir_all(prefix).expect("Failed to create directory");
+
     let mut result_file = File::create(full_path)?;
 
     writeln!(
