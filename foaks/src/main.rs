@@ -10,13 +10,25 @@ enum Error {
 }
 fn main() -> Result<(), Error> {
   let args: Vec<String> = env::args().collect();
+  const REQUIRED_THRESHOLD: usize = 14;
   let lg_n = match args.get(1) {
-    Some(number) => number
-      .parse::<usize>()
-      .expect("Failed to parse number as usize"),
-    None => return Err(Error::ParseParamsError),
+    Some(number) => number.parse::<usize>().unwrap_or_else(|_| {
+      eprintln!("Error: Failed to parse number as usize");
+      std::process::exit(1);
+    }),
+    None => {
+      eprintln!("Error: No number provided.");
+      std::process::exit(1);
+    }
   };
 
+  if lg_n < REQUIRED_THRESHOLD {
+    eprintln!(
+      "Error: The number is below the required threshold of {}.",
+      REQUIRED_THRESHOLD
+    );
+    std::process::exit(1);
+  }
   let n = 1 << lg_n;
   let mut linear_pc = LinearPC::init(n);
 
