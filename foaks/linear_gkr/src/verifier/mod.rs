@@ -1,4 +1,4 @@
-use std::{fs, fs::read_to_string, time::Instant};
+use std::{fs, time::Instant};
 use std::{
   fs::File,
   io::{Error, Write},

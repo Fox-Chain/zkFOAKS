@@ -1,6 +1,5 @@
 use std::{env, time::Instant};
 
-use linear_code::parameter::COLUMN_SIZE;
 use linear_gkr::verifier::generate_randomness;
 use linear_pc::LinearPC;
 use prime_field::FieldElement;
@@ -32,7 +31,7 @@ fn main() -> Result<(), Error> {
   let result = match multi {
     true => {
       let r = generate_randomness(lg_n);
-      linear_pc.open_and_verify_multi(&r, lg_n, n, h)
+      linear_pc.open_and_verify_multi(&r, n, h)
     }
     false => linear_pc.open_and_verify(FieldElement::new_random(), n, h),
   };

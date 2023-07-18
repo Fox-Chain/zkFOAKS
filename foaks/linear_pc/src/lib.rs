@@ -36,24 +36,24 @@ impl LinearPC {
     }
   }
   pub fn commit(&mut self, src: Vec<FieldElement>) -> Vec<HashDigest> {
-    //self.codeword_size = vec![0; COLUMN_SIZE];
     let n = src.len();
     assert_eq!(n % COLUMN_SIZE, 0);
-    self.encoded_codeword = vec![vec![FieldElement::zero(); n / COLUMN_SIZE]; COLUMN_SIZE];
-    self.coef = vec![Vec::with_capacity(n / COLUMN_SIZE); COLUMN_SIZE];
 
-    //new code
+    //new refactored code
     for i in 0..COLUMN_SIZE {
-      self.encoded_codeword[i] = vec![FieldElement::zero(); n / COLUMN_SIZE * 2];
-      self.coef[i] = vec![FieldElement::zero(); n / COLUMN_SIZE];
-      let src_slice = &src[(i * n / COLUMN_SIZE)..((i + 1) * n / COLUMN_SIZE)];
-      self.coef[i].copy_from_slice(src_slice);
+      self
+        .encoded_codeword
+        .push(vec![FieldElement::zero(); n / COLUMN_SIZE * 2]);
+      let begin = i * n / COLUMN_SIZE;
+      let end = (i + 1) * n / COLUMN_SIZE;
+      let src_slice = &src[begin..end];
+      self.coef.push(src_slice.to_vec());
 
-      self.codeword_size.push(self.lce_ctx.encode(
-        (src[i * n / COLUMN_SIZE..]).to_vec(),
-        &mut self.encoded_codeword[i],
-        n / COLUMN_SIZE,
-      ));
+      let (size, dst) = self
+        .lce_ctx
+        .encode((src[begin..]).to_vec(), n / COLUMN_SIZE);
+      self.codeword_size.push(size);
+      self.encoded_codeword[i][..size].copy_from_slice(&dst);
     }
     let stash = (0..(n / COLUMN_SIZE * 2))
       .map(|i| {
@@ -256,12 +256,9 @@ impl LinearPC {
 
     //check for encode
     {
-      let mut test_codeword = vec![FieldElement::zero(); n / COLUMN_SIZE * 2];
-      let test_codeword_size = self.lce_ctx.encode(
-        combined_message.clone(),
-        &mut test_codeword,
-        n / COLUMN_SIZE,
-      );
+      let (test_codeword_size, test_codeword) = self
+        .lce_ctx
+        .encode(combined_message.clone(), n / COLUMN_SIZE);
       assert_eq!(test_codeword_size, self.codeword_size[0]);
       for i in 0..test_codeword_size {
         assert_eq!(test_codeword[i], combined_codeword[i]);
@@ -563,7 +560,7 @@ impl LinearPC {
   pub fn open_and_verify_multi(
     &mut self,
     r: &[FieldElement],
-    _size_r: usize, // not used in C++
+    //_size_r: usize, // not used in C++
     n: usize,
     com_mt: Vec<HashDigest>,
   ) -> (FieldElement, bool) {
