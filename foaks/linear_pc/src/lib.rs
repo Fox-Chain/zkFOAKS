@@ -534,7 +534,6 @@ impl LinearPC {
     n: usize,
     com_mt: Vec<HashDigest>,
   ) -> (FieldElement, bool) {
-    println!("open_and_verify_univariate");
     assert_eq!(n % COLUMN_SIZE, 0);
     //tensor product of r0 otimes r1
     let mut r0 = vec![FieldElement::zero(); COLUMN_SIZE];

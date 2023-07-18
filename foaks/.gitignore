@@ -1,3 +1,5 @@
 /target
 log.txt
 log_fftgkr.txt
+*.data.*
+*.svg

@@ -234,15 +234,11 @@ impl ZkProver {
     self.circuit_value[self.a_c.total_depth - 1].clone()
   }
 
-  //Todo: Improve this function with Rust features
   pub fn get_witness(&mut self, inputs: Vec<FieldElement>, n: usize) {
     self.circuit_value[0] = vec![FieldElement::zero(); 1 << self.a_c.circuit[0].bit_length];
-    use std::ptr;
 
-    unsafe {
-      let src_ptr = inputs.as_ptr();
-      let dest_ptr = self.circuit_value[0].as_mut_ptr();
-      ptr::copy_nonoverlapping(src_ptr, dest_ptr, n);
+    for i in 0..n {
+      self.circuit_value[0][i] = inputs[i];
     }
   }
 
