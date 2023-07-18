@@ -988,5 +988,6 @@ impl ZkProver {
     (self.v_u, self.v_v)
   }
 
-  pub fn proof_init() {} //Used, but is not implemented neither in virgo repo nor orion repo
+  //Used, but is not implemented neither in virgo repo nor orion repo
+  //pub fn proof_init() {}
 }

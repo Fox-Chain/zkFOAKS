@@ -22,19 +22,22 @@ pub struct LinearPC {
   codeword_size: Vec<usize>,
   mt: Vec<HashDigest>,
   verifier: ZkVerifier,
-  pub lce_ctx: LinearCodeEncodeContext,
+  lce_ctx: LinearCodeEncodeContext,
   gates_count: HashMap<usize, usize>,
 }
 
 impl LinearPC {
-  pub fn init() -> Self {
+  pub fn init(n: usize) -> Self {
+    let mut lce_ctx = LinearCodeEncodeContext::init();
+    lce_ctx.expander_init(n / COLUMN_SIZE, None);
     Self {
-      lce_ctx: LinearCodeEncodeContext::init(),
+      lce_ctx,
       ..Default::default()
     }
   }
-  pub fn commit(&mut self, src: Vec<FieldElement>, n: usize) -> Vec<HashDigest> {
+  pub fn commit(&mut self, src: Vec<FieldElement>) -> Vec<HashDigest> {
     //self.codeword_size = vec![0; COLUMN_SIZE];
+    let n = src.len();
     assert_eq!(n % COLUMN_SIZE, 0);
     self.encoded_codeword = vec![vec![FieldElement::zero(); n / COLUMN_SIZE]; COLUMN_SIZE];
     self.coef = vec![Vec::with_capacity(n / COLUMN_SIZE); COLUMN_SIZE];

@@ -1281,20 +1281,3 @@ pub fn generate_randomness(size: usize) -> Vec<FieldElement> {
   }
   ret
 }
-
-pub fn read_vec_fe_file(path: &str) -> Vec<FieldElement> {
-  let result_content = read_to_string(path).expect("Failed to read file");
-
-  let result_lines = result_content.lines();
-
-  let res: Vec<FieldElement> = result_lines
-    .map(|x| {
-      let mut line = x.split_whitespace();
-      let real: u64 = line.next().unwrap_or("0").parse().unwrap_or(0);
-      let img: u64 = line.next().unwrap_or("0").parse().unwrap_or(0);
-      FieldElement::new(real, img)
-    })
-    .collect();
-
-  res
-}

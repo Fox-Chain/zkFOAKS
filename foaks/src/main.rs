@@ -19,13 +19,12 @@ fn main() -> Result<(), Error> {
   };
 
   let n = 1 << lg_n;
-  let mut linear_pc = LinearPC::init();
-  linear_pc.lce_ctx.expander_init(n / COLUMN_SIZE, None);
+  let mut linear_pc = LinearPC::init(n);
 
   let coefs = generate_randomness(n);
 
   let commit_t0 = Instant::now();
-  let h = linear_pc.commit(coefs, n);
+  let h = linear_pc.commit(coefs);
   let commit_time_diff = commit_t0.elapsed();
   let open_t0 = Instant::now();
 
