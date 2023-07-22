@@ -1,8 +1,7 @@
-use std::{env, time::Instant};
-
 use linear_gkr::verifier::generate_randomness;
 use linear_pc::LinearPC;
 use prime_field::FieldElement;
+use std::{env, time::Instant};
 
 #[derive(Debug)]
 enum Error {
