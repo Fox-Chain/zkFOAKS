@@ -67,13 +67,7 @@ impl LinearPC {
       })
       .collect();
 
-    create_tree(
-      stash,
-      n / COLUMN_SIZE * 2,
-      &mut self.mt,
-      //Some(std::mem::size_of::<HashDigest>()),
-      true,
-    );
+    create_tree(stash, n / COLUMN_SIZE * 2, &mut self.mt, true);
     self.mt.clone()
   }
 
@@ -203,7 +197,6 @@ impl LinearPC {
     n: usize,
     com_mt: Vec<HashDigest>,
   ) -> (FieldElement, bool) {
-    //let mut verification_time = 0.0;
     assert_eq!(size_r0 * size_r1, n);
 
     let mut visited_com = vec![false; n / COLUMN_SIZE * 4];
@@ -309,7 +302,6 @@ impl LinearPC {
       //add merkle tree open
     }
     let time_span = v_t0.elapsed();
-    //verification_time += time_span.as_secs_f64();
     let mut verification_time = time_span.as_secs_f64();
 
     // setup code-switching
@@ -359,9 +351,7 @@ impl LinearPC {
     verification_time += time_diff;
     verification_time += self.verifier.v_time;
     proof_size += query_count * std::mem::size_of::<FieldElement>();
-    // Dont need to do this in Rust right?
-    //p.delete_self();
-    //v.delete_self();
+
     println!(
       "Proof size for tensor IOP {} bytes",
       proof_size + self.verifier.proof_size
@@ -456,11 +446,6 @@ impl LinearPC {
       self.verifier.a_c.circuit[input_depth + 1].gates[output_size_so_far + i].parameter_length =
         neighbor_size;
 
-      // For testing
-      // if (input_depth + 1) >= 3 && (output_size_so_far + i) >= 158 {
-      //   println!("478 neighbor_size {i}: {}, i: {}, g: {}", neighbor_size, input_depth + 1, output_size_so_far + i);
-      // }
-
       self.verifier.a_c.circuit[input_depth + 1].gates[output_size_so_far + i].src =
         self.verifier.a_c.circuit[input_depth + 1].src_expander_c_mempool[mempool_ptr..].to_vec();
       self.verifier.a_c.circuit[input_depth + 1].gates[output_size_so_far + i].weight =
@@ -502,12 +487,6 @@ impl LinearPC {
       self.verifier.a_c.circuit[final_output_depth].gates[output_size_so_far + i].ty = 14;
       self.verifier.a_c.circuit[final_output_depth].gates[output_size_so_far + i]
         .parameter_length = neighbor_size;
-
-      // For testing
-      // if final_output_depth >= 3 && (output_size_so_far + i) >= 158 {
-      //   println!("526 neighbor_size {i}: {}, i: {final_output_depth}, g: {}", neighbor_size, output_size_so_far + i);
-      // }
-
       self.verifier.a_c.circuit[final_output_depth].gates[output_size_so_far + i].src =
         self.verifier.a_c.circuit[final_output_depth].src_expander_d_mempool[mempool_ptr..]
           .to_vec();
@@ -557,10 +536,10 @@ impl LinearPC {
     self.tensor_product_protocol(r0, r1, COLUMN_SIZE, n / COLUMN_SIZE, n, com_mt)
   }
 
+  //Refactored
   pub fn open_and_verify_multi(
     &mut self,
     r: &[FieldElement],
-    //_size_r: usize, // not used in C++
     n: usize,
     com_mt: Vec<HashDigest>,
   ) -> (FieldElement, bool) {

@@ -73,7 +73,6 @@ impl FRIContext {
   pub fn new() -> Self {
     Self {
       witness_rs_codeword_before_arrange: vec![vec![Vec::new(); SLICE_NUMBER]; 2],
-      //witness_rs_mapping: vec![vec![vec![0; SLICE_NUMBER]; 2]],
       ..Default::default()
     }
   }
@@ -130,12 +129,9 @@ pub fn request_init_commit(
     .expect("Failed to retrieve root of unity");
 
   if oracle_indicator == 0 {
-    //l_group.reserve(1 << *log_current_witness_size_per_slice);
     l_group.push(FieldElement::from_real(1));
-    //l_group[0] = FieldElement::from_real(1);
 
     for i in 1..(1 << *log_current_witness_size_per_slice) {
-      //l_group[i] = l_group[i - 1] * root_of_unity;
       l_group.push(l_group[i - 1] * root_of_unity);
     }
     assert_eq!(
@@ -144,19 +140,16 @@ pub fn request_init_commit(
     );
   }
 
-  //witness_rs_codeword_interleaved[oracle_indicator].reserve(1 << (bit_len +
-  // RS_CODE_RATE));
   witness_rs_codeword_interleaved[oracle_indicator] =
     vec![FieldElement::default(); 1 << (bit_len + RS_CODE_RATE)];
 
   let log_leaf_size = LOG_SLICE_NUMBER + 1;
-  //println!("l_eval {:?}", l_eval[0]);
-  //println!("h_eval_arr {:?}", h_eval_arr[0]); TODO find the cause why this is not initialized anywhere
   for i in 0..SLICE_NUMBER {
     assert_eq!(
       (*log_current_witness_size_per_slice - RS_CODE_RATE) as i64,
       *witness_bit_length_per_slice
     );
+    //never used
     // root_of_unity = FieldElement::get_root_of_unity((*witness_bit_length_per_slice).try_into().unwrap()).unwrap();
 
     if oracle_indicator == 0 {
@@ -164,11 +157,9 @@ pub fn request_init_commit(
     } else {
       witness_rs_codeword_before_arrange[1][i] = h_eval_arr[i * slice_size..].to_vec();
     }
-
+    //never used
     //root_of_unity = FieldElement::get_root_of_unity(*log_current_witness_size_per_slice).unwrap();
 
-    //witness_rs_mapping[oracle_indicator][i].reserve(1 <<
-    // *log_current_witness_size_per_slice);
     if witness_rs_mapping.is_empty() {
       for _ in 0..=oracle_indicator + 1 {
         witness_rs_mapping.push(vec![]);
@@ -193,15 +184,12 @@ pub fn request_init_commit(
     }
   }
 
-  //leaf_hash[oracle_indicator].reserve(1 << (*log_current_witness_size_per_slice
-  // - 1));
   leaf_hash[oracle_indicator] =
     vec![HashDigest::default(); 1 << (*log_current_witness_size_per_slice - 1)];
 
   for i in 0..(1 << (*log_current_witness_size_per_slice - 1)) {
     let mut tmp_hash = HashDigest::new();
     let mut data = [HashDigest::new(), HashDigest::new()];
-    // Gian: Propose this way to do  copynonoverlapping
     let mut j = 0;
     let end = 1 << log_leaf_size;
     while j < end {
@@ -221,7 +209,6 @@ pub fn request_init_commit(
     leaf_hash[oracle_indicator].clone(),
     1 << (*log_current_witness_size_per_slice - 1),
     &mut witness_merkle[oracle_indicator],
-    //Some(size_of::<HashDigest>()),
     true,
   );
 
@@ -233,10 +220,10 @@ pub fn request_init_commit(
   witness_merkle[oracle_indicator][1]
 }
 
+//Refactored
 pub fn request_init_value_with_merkle(
   mut pow_0: usize,
   mut pow_1: usize,
-  //mut new_size: usize, this value is always initialized with 0
   oracle_indicator: usize,
   fri_ctx: &mut FRIContext,
 ) -> (TripleVec, usize) {
@@ -261,10 +248,9 @@ pub fn request_init_value_with_merkle(
         [pow_0 << log_leaf_size | i << 1 | 1],
     ));
 
-    // it was `pow_0 << log_leaf_size | i << 1 | 1` but this makes the number be added by 1,
+    // Thi assert_eq! was `pow_0 << log_leaf_size | i << 1 | 1` but this makes the number be added by 1,
     // As C++ returns the number calculated in the left part of this expression `70 << 7 | 0 << 1 | 1 == 3` the assert pass
     // but in Rust the equals is actually evaluated.
-
     assert_eq!(
       pow_0 << log_leaf_size | i << 1,
       fri_ctx.witness_rs_mapping[oracle_indicator][i][pow_1]

@@ -16,12 +16,6 @@ pub struct Graph {
   pub r: usize,
 }
 
-// TODO this can be something like
-// this https://crates.io/crates/lazy_static or this https://github.com/matklad/once_cell
-
-// pub static mut D: Vec<Graph> = Vec::new(); // TODO this can actually be
-// lazy_cell
-
 #[derive(Default)]
 pub struct LinearCodeEncodeContext {
   pub scratch: Vec<Vec<Vec<FieldElement>>>,
@@ -33,7 +27,6 @@ pub struct LinearCodeEncodeContext {
 impl LinearCodeEncodeContext {
   pub fn init() -> Self {
     let scratch = vec![vec![vec![FieldElement::zero()]; 100]; 2];
-    //let encode_initialized = false;
     let c = vec![Graph::default(); 100];
     let d = vec![Graph::default(); 100];
 
@@ -106,7 +99,7 @@ impl LinearCodeEncodeContext {
     for i in 0..n {
       self.scratch[0][dep][i] = self.scratch[1][dep - 1][i];
     }
-    let mut r = (ALPHA * (n as f64)) as usize; //chech here
+    let mut r = (ALPHA * (n as f64)) as usize;
     for j in 0..r {
       self.scratch[1][dep][j] = FieldElement::zero();
     }
@@ -164,7 +157,6 @@ impl LinearCodeEncodeContext {
 }
 
 pub fn generate_random_expander(l: usize, r: usize, d: usize) -> Graph {
-  //let mut ret: Graph = Graph::default();
   let degree = d;
   let mut neighbor = vec![vec![]; l];
   let mut weight = vec![vec![]; l];

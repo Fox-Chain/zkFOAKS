@@ -24,7 +24,6 @@ pub struct VerifierContext {
 
 #[derive(Default, Debug)]
 pub struct ZkVerifier {
-  //pub prover: zk_prover, // ZY suggestion
   pub proof_size: usize,
   pub v_time: f64,
   pub poly_verifier: PolyCommitVerifier,
@@ -49,8 +48,6 @@ pub struct ZkVerifier {
   beta_v_block_second_half: Vec<FieldElement>,
 
   pub a_c: LayeredCircuit,
-  // The circuit
-  //zk_prover *p; //!< The prover
   vpd_randomness: Vec<FieldElement>,
   one_minus_vpd_randomness: Vec<FieldElement>,
   pub ctx: VerifierContext,
@@ -92,9 +89,6 @@ impl ZkVerifier {
     combined_codeword: Vec<FieldElement>,
     q: Vec<usize>,
   ) -> (bool, f64) {
-    //println!("output path: {}", output_path);
-    // Initialize the prover,
-    // the original repo initialize the prover in the main fn()
     let mut zk_prover = ZkProver::new();
     zk_prover.init_array(bit_length, self.a_c.clone());
     zk_prover.get_witness(inputs, n);
@@ -116,7 +110,6 @@ impl ZkVerifier {
     let mut beta = FieldElement::zero();
 
     //	random_oracle oracle; // Orion just declare the variable but dont use it
-    // later
     let capacity = self.a_c.circuit[self.a_c.total_depth - 1].bit_length;
 
     let mut r_0 = generate_randomness(capacity);
@@ -295,7 +288,6 @@ impl ZkVerifier {
       );
 
       let predicates_calc_span = predicates_calc.elapsed();
-      //println!("predicates_calc_span: {:?}", predicates_calc_span);
       if !self.a_c.circuit[i].is_parallel {
         verification_rdl_time += predicates_calc_span.as_secs_f64();
       }
@@ -340,9 +332,6 @@ impl ZkVerifier {
         eprintln!("Verification fail, semi final, circuit level {}", i,);
         return (false, 0.0);
       }
-
-      // let tmp_alpha = generate_randomness(1); There's no need to generate a vector, assign random directly
-      // let tmp_beta= generate_randomness(1);
 
       alpha = FieldElement::new_random();
       beta = FieldElement::new_random();
@@ -433,7 +422,6 @@ impl ZkVerifier {
     // Code added from tensor_product()
     let sample_t0 = Instant::now();
     for i in 0..query_count {
-      // i = 717 q[i] = 128 combined_codeword[128] = 0
       assert_eq!(
         zk_prover.circuit_value[zk_prover.a_c.total_depth - 1][i],
         combined_codeword[q[i]],
@@ -452,9 +440,6 @@ impl ZkVerifier {
     verification_rdl_time: f64,
     proof_size: usize,
   ) -> Result<(), Error> {
-    //fs::create_dir("/some/dir")?;
-
-    //let mut result_file = File::create(output_path)?;
     let full_path = std::path::Path::new(output_path);
     let prefix = full_path
       .parent()
@@ -488,8 +473,6 @@ impl ZkVerifier {
       FieldElement::real_one(),
       &r[log_length - LOG_SLICE_NUMBER..].to_vec(),
       one_minus_r[log_length - LOG_SLICE_NUMBER..].to_vec(),
-      //vec![one_minus_r[log_length - LOG_SLICE_NUMBER]],
-      //one_minus_r.clone() + log_length - LOG_SLICE_NUMBER,
       0,
     );
     Self::dfs_coef(
@@ -560,7 +543,6 @@ impl ZkVerifier {
     }
   }
 
-  //Todo: Debug aritmetic pointes
   pub fn dfs_ratio(
     &mut self,
     dep: usize,

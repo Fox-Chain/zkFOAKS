@@ -45,7 +45,7 @@ pub fn verify_merkle(
   let mut value_hash = HashDigest::new();
 
   for value in values {
-    data[0] = HashDigest::memcpy_from_field_elements([value.0, value.1]); // vpd_verifier 52
+    data[0] = HashDigest::memcpy_from_field_elements([value.0, value.1]);
     data[1] = value_hash;
     value_hash = my_hash::my_hash(data);
   }
@@ -61,9 +61,6 @@ impl FRIContext {
       self.cpd.rs_codeword[self.current_step_no] =
         vec![FieldElement::default(); nxt_witness_size * slice_count];
     }
-
-    //let mut previous_witness: Vec<FieldElement> = vec![];
-    //let mut previous_witness_mapping: Vec<usize> = vec![];
 
     let (previous_witness, previous_witness_mapping) = match self.current_step_no {
       0 => (
@@ -83,7 +80,7 @@ impl FRIContext {
     for i in 0..nxt_witness_size {
       let qual_res_0 = i;
       let qual_res_1 = ((1 << (self.log_current_witness_size_per_slice - 1)) + i) / 2;
-      let pos = usize::min(qual_res_0, qual_res_1 as usize);
+      let pos = usize::min(qual_res_0, qual_res_1);
 
       let inv_mu = self.l_group[((1 << self.log_current_witness_size_per_slice) - i)
         & ((1 << self.log_current_witness_size_per_slice) - 1)];
@@ -91,7 +88,6 @@ impl FRIContext {
       for j in 0..SLICE_NUMBER {
         let real_pos = previous_witness_mapping[(pos) << LOG_SLICE_NUMBER | j];
         assert!((i << LOG_SLICE_NUMBER | j) < nxt_witness_size * slice_count);
-        // we should check this since the original code has BUG comment
         self.cpd.rs_codeword[self.current_step_no][i << LOG_SLICE_NUMBER | j] = inv_2
           * ((previous_witness[real_pos] + previous_witness[real_pos | 1])
             + inv_mu * r * (previous_witness[real_pos] - previous_witness[real_pos | 1]));
@@ -162,7 +158,6 @@ impl FRIContext {
       hash_val,
       nxt_witness_size / 2,
       self.cpd.merkle[self.current_step_no].as_mut(),
-      //Some(std::mem::size_of::<HashDigest>()),
       current_step_no.is_empty(),
     );
 

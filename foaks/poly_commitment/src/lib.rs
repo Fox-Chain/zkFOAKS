@@ -25,7 +25,6 @@ pub struct LdtCommitment {
   pub randomness: Vec<FieldElement>,
   pub final_rs_code: Vec<FieldElement>,
   pub mx_depth: usize,
-  // repeat_no: usize,
 }
 
 #[derive(Default, Debug, Clone)]
@@ -92,9 +91,7 @@ impl PolyCommitProver {
 
     self.ctx.l_eval = vec![FieldElement::zero(); l_eval_len];
 
-    let mut tmp = vec![FieldElement::default(); slice_real_ele_cnt]; // Vec::<FieldElement>::with_capacity(slice_real_ele_cnt);
-
-    //let order = slice_size * slice_count;
+    let mut tmp = vec![FieldElement::default(); slice_real_ele_cnt];
 
     let now = time::Instant::now();
 
@@ -107,11 +104,9 @@ impl PolyCommitProver {
 
       for j in 0..slice_real_ele_cnt {
         if private_array[i * slice_real_ele_cnt + j] == zero {
-          //println!("j: {} continue", j);
           continue;
         }
         all_zero = false;
-        //println!("j: {} break", j);
         break;
       }
 
@@ -189,7 +184,6 @@ impl PolyCommitProver {
     let mut re_mapping_time = 0.0;
 
     let mut ftt_t0 = time::Instant::now();
-    //println!("Into commit_public_array");
     for i in 0..self.ctx.slice_count {
       inverse_fast_fourier_transform(
         &mut self.scratch_pad,
@@ -229,10 +223,6 @@ impl PolyCommitProver {
     }
 
     assert_eq!(sum, target_sum);
-
-    // do fft for q_eval
-    // experiment
-    // poly mul first
 
     self.ctx.lq_eval = vec![FieldElement::default(); 2 * self.ctx.slice_real_ele_cnt];
     self.ctx.h_coef = vec![FieldElement::default(); self.ctx.slice_real_ele_cnt];
@@ -284,7 +274,6 @@ impl PolyCommitProver {
           .expect("Failed to retrieve root of unity"),
           &mut self.ctx.lq_coef,
         );
-        //panic!("Fix last values after inverse_fast_fourier_transform");
 
         for j in 0..self.ctx.slice_real_ele_cnt {
           self.ctx.h_coef[j] = self.ctx.lq_coef[j + self.ctx.slice_real_ele_cnt];
@@ -302,7 +291,6 @@ impl PolyCommitProver {
           &mut self.scratch_pad,
           None,
         );
-        //panic!("Verify values after fast_fourier_transform");
 
         ftt_time += ftt_t0.elapsed().as_secs_f64();
       }
@@ -490,7 +478,6 @@ impl PolyCommitVerifier {
         } else {
           root_of_unity = root_of_unity * root_of_unity;
           pow %= 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER - i);
-          //println!("pow =  {}", pow);
 
           pre_y = y;
           y = y * y;
@@ -508,11 +495,6 @@ impl PolyCommitVerifier {
 
         if i != 0 {
           assert!(s1 == pre_y || s0 == pre_y);
-          // if s1 == pre_y {
-          //   indicator = 1;
-          // } else {
-          //   indicator = 0;
-          // }
         }
 
         assert_eq!(s0 * s0, y);
@@ -539,7 +521,7 @@ impl PolyCommitVerifier {
             0,
             fri_ctx,
           );
-          // previos new_size is not read in C++
+          // previous new_size is not read in C++
           (alpha_h, new_size) = request_init_value_with_merkle(
             s0_pow.try_into().expect("Failed to convert s0_pow to u32"),
             s1_pow.try_into().expect("Failed to convert s1_pow to u32"),
@@ -594,13 +576,13 @@ impl PolyCommitVerifier {
             com.commitment_hash[0],
             &beta.1,
             beta.1.len(),
-            (pow / 2) as u128,
+            pow / 2,
             &beta.0,
           ) {
             return false;
           }
 
-          let inv_mu = root_of_unity.fast_pow((pow / 2) as u128).inverse();
+          let inv_mu = root_of_unity.fast_pow(pow / 2).inverse();
           alpha.0.clear();
           alpha.1.clear();
 
@@ -617,8 +599,8 @@ impl PolyCommitVerifier {
           )
           .expect("Failed to retrieve root of unity");
 
-          x[0] = x[0].fast_pow(s0_pow as u128);
-          x[1] = x[1].fast_pow(s1_pow as u128);
+          x[0] = x[0].fast_pow(s0_pow);
+          x[1] = x[1].fast_pow(s1_pow);
 
           rou[0] = x[0].fast_pow((slice_size >> RS_CODE_RATE) as u128);
           rou[1] = x[1].fast_pow((slice_size >> RS_CODE_RATE) as u128);
@@ -705,13 +687,13 @@ impl PolyCommitVerifier {
             com.commitment_hash[i],
             &beta.1,
             beta.1.len(),
-            (pow / 2) as u128,
+            pow / 2,
             &beta.0,
           ) {
             return false;
           }
 
-          let inv_mu = root_of_unity.fast_pow((pow / 2) as u128).inverse();
+          let inv_mu = root_of_unity.fast_pow(pow / 2).inverse();
           time_span = t0.elapsed().as_secs_f64();
           *v_time += time_span;
 
@@ -749,7 +731,6 @@ impl PolyCommitVerifier {
             return false;
           }
         }
-        //panic!("stop");
       }
     }
     true

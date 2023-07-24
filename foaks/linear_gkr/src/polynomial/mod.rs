@@ -1,5 +1,3 @@
-mod lib;
-
 use prime_field::FieldElement;
 #[derive(Debug, Clone)]
 
@@ -26,13 +24,13 @@ impl LinearPoly {
 
   pub fn new(a: FieldElement, b: FieldElement) -> Self { Self { a, b } }
 
-  // Create a monomial with no variables
-  pub fn new_constant_monomial(b: FieldElement) -> Self {
-    Self {
-      a: FieldElement::from_real(0),
-      b,
-    }
-  }
+  // Create a monomial with no variables // Never used
+  // pub fn new_constant_monomial(b: FieldElement) -> Self {
+  //   Self {
+  //     a: FieldElement::from_real(0),
+  //     b,
+  //   }
+  // }
 
   pub fn eval(&self, x: FieldElement) -> FieldElement { self.a * x + self.b }
 }
@@ -74,16 +72,16 @@ impl QuadraticPoly {
 
   pub fn new(a: FieldElement, b: FieldElement, c: FieldElement) -> Self { Self { a, b, c } }
 
-  //todo: debug function
   pub fn eval(&self, x: &FieldElement) -> FieldElement { self.a * *x * *x + self.b * *x + self.c }
 
-  pub fn multi(self, x: LinearPoly) -> CubicPoly {
-    let a = self.a * x.a;
-    let b = self.a * x.b + self.b * x.a;
-    let c = self.b * x.b + self.c * x.a;
-    let d = self.c * x.b;
-    CubicPoly::new(a, b, c, d)
-  }
+  // Never used
+  // pub fn multi(self, x: LinearPoly) -> CubicPoly {
+  //   let a = self.a * x.a;
+  //   let b = self.a * x.b + self.b * x.a;
+  //   let c = self.b * x.b + self.c * x.a;
+  //   let d = self.c * x.b;
+  //   CubicPoly::new(a, b, c, d)
+  // }
 }
 
 impl core::ops::Add for QuadraticPoly {
