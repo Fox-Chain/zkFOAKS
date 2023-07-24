@@ -35,8 +35,13 @@ impl LinearPC {
       ..Default::default()
     }
   }
-  pub fn commit(&mut self, src: Vec<FieldElement>) -> Vec<HashDigest> {
+  pub fn commit(&mut self, src: &[FieldElement]) -> Vec<HashDigest> {
     let n = src.len();
+    let mut stash = Vec::with_capacity(n / COLUMN_SIZE * 2);
+    self.codeword_size = Vec::with_capacity(COLUMN_SIZE);
+    self.encoded_codeword = Vec::with_capacity(COLUMN_SIZE);
+    self.coef = Vec::with_capacity(COLUMN_SIZE);
+
     assert_eq!(n % COLUMN_SIZE, 0);
 
     //new refactored code
@@ -55,7 +60,7 @@ impl LinearPC {
       self.codeword_size.push(size);
       self.encoded_codeword[i][..size].copy_from_slice(&dst);
     }
-    let stash = (0..(n / COLUMN_SIZE * 2))
+    stash = (0..(n / COLUMN_SIZE * 2))
       .map(|i| {
         (0..(COLUMN_SIZE / 2)).fold(HashDigest::default(), |acc, j| {
           merkle_tree::hash_double_field_element_merkle_damgard(

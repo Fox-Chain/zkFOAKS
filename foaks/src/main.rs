@@ -40,7 +40,7 @@ fn main() -> Result<(), Error> {
   let coefs = generate_randomness(n);
 
   let commit_t0 = Instant::now();
-  let h = linear_pc.commit(coefs);
+  let h = linear_pc.commit(&coefs);
   let commit_time_diff = commit_t0.elapsed();
   let open_t0 = Instant::now();
 
