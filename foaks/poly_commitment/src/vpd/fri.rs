@@ -205,7 +205,7 @@ pub fn request_init_commit(
     let mut j = 0;
     let end = 1 << log_leaf_size;
     while j < end {
-      let x = witness_rs_codeword_interleaved[oracle_indicator][(i << log_leaf_size | j)];
+      let x = witness_rs_codeword_interleaved[oracle_indicator][i << log_leaf_size | j];
       let y = witness_rs_codeword_interleaved[oracle_indicator][(i << log_leaf_size | j) + 1];
       data[0] = HashDigest::memcpy_from_field_elements([x, y]);
 

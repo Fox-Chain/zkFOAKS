@@ -175,7 +175,7 @@ impl PolyCommitProver {
     let mut t0 = time::Instant::now();
     assert!(self.ctx.pre_prepare_executed);
     let mut default_fri_ctx = FRIContext::new();
-    let mut fri_ctx = self.fri_ctx.as_mut().unwrap_or(&mut default_fri_ctx);
+    let fri_ctx = self.fri_ctx.as_mut().unwrap_or(&mut default_fri_ctx);
 
     fri_ctx.virtual_oracle_witness =
       vec![FieldElement::default(); self.ctx.slice_size * self.ctx.slice_count];
