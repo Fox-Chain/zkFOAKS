@@ -158,22 +158,22 @@ impl LinearCodeEncodeContext {
 
 pub fn generate_random_expander(l: usize, r: usize, d: usize) -> Graph {
   let degree = d;
-  let mut neighbor = vec![vec![]; l];
-  let mut weight = vec![vec![]; l];
+  let mut neighbor = Vec::with_capacity(l);
+  let mut weight = Vec::with_capacity(l);
 
   let mut r_neighbor = vec![vec![]; r];
   let mut r_weight = vec![vec![]; r];
 
   for i in 0..l {
-    neighbor[i] = vec![0; d];
-    weight[i] = vec![FieldElement::zero(); d];
-    for j in 0..d {
+    neighbor.push(Vec::with_capacity(d));
+    weight.push(Vec::with_capacity(d));
+    for _ in 0..d {
       let target = rand::random::<usize>() % r;
       let tmp_weight = FieldElement::new_random();
-      neighbor[i][j] = target;
+      neighbor[i].push(target);
       r_neighbor[target].push(i);
       r_weight[target].push(tmp_weight);
-      weight[i][j] = tmp_weight;
+      weight[i].push(tmp_weight);
     }
   }
 

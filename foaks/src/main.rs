@@ -3,13 +3,14 @@ use linear_pc::LinearPC;
 use prime_field::FieldElement;
 use std::{env, time::Instant};
 
+const REQUIRED_THRESHOLD: usize = 14;
+
 #[derive(Debug)]
 enum Error {
   ParseParamsError,
 }
 fn main() -> Result<(), Error> {
   let args: Vec<String> = env::args().collect();
-  const REQUIRED_THRESHOLD: usize = 14;
   let lg_n = match args.get(1) {
     Some(number) => match number.parse::<usize>() {
       Ok(n) => {
