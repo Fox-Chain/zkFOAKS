@@ -25,8 +25,9 @@ pub struct LinearCodeEncodeContext {
 }
 
 impl LinearCodeEncodeContext {
+  // Todo: Refactor, use Vec::with_capacity(100) instead of vec![vec![]; 100]
   pub fn init() -> Self {
-    let scratch = vec![vec![vec![FieldElement::zero()]; 100]; 2];
+    let scratch = vec![vec![vec![]; 100]; 2];
     let c = vec![Graph::default(); 100];
     let d = vec![Graph::default(); 100];
 
@@ -38,11 +39,12 @@ impl LinearCodeEncodeContext {
     }
   }
 
-  pub fn encode(&mut self, src: Vec<FieldElement>, n: usize) -> (usize, Vec<FieldElement>) {
+  pub fn encode(&mut self, src: &[FieldElement]) -> (usize, Vec<FieldElement>) {
+    let n = src.len();
     let dep = 0;
     if !self.encode_initialized {
       self.encode_initialized = true;
-      let mut i = 0usize;
+      let mut i = 0;
       while (n >> i) > 1 {
         let size = (2 * n) >> i;
         self.scratch[0][i] = vec![FieldElement::default(); size];
@@ -64,7 +66,7 @@ impl LinearCodeEncodeContext {
           self.scratch[1][dep][target] + self.c[dep].weight[i][d] * src[i];
       }
     }
-    let l: usize = self.encode_scratch(r, Some((n, dep + 1)));
+    let l: usize = self.encode_scratch(r, n, dep + 1);
 
     assert_eq!(self.d[dep].l, l);
     // R consumed
@@ -85,11 +87,8 @@ impl LinearCodeEncodeContext {
     (n + l + r, dst.to_vec())
   }
 
-  pub fn encode_scratch(&mut self, n: usize, pre_n_and_dep: Option<(usize, usize)>) -> usize {
-    let (pre_n, dep) = match pre_n_and_dep {
-      Some((pre_n, dep)) => (pre_n, dep),
-      None => (0, 0),
-    };
+  pub fn encode_scratch(&mut self, n: usize, pre_n: usize, dep: usize) -> usize {
+    //let pre_n = self.scratch[0][dep - 1].len();
     if n <= DISTANCE_THRESHOLD {
       for i in 0..n {
         self.scratch[0][dep - 1][pre_n + i] = self.scratch[1][dep - 1][i];
@@ -112,7 +111,7 @@ impl LinearCodeEncodeContext {
           self.scratch[1][dep][target] + self.c[dep].weight[i][d] * val;
       }
     }
-    let l: usize = self.encode_scratch(r, Some((n, dep + 1)));
+    let l: usize = self.encode_scratch(r, n, dep + 1);
     assert_eq!(self.d[dep].l, l);
     // R consumed
     r = self.d[dep].r;

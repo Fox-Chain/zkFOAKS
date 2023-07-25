@@ -37,7 +37,6 @@ impl LinearPC {
   }
   pub fn commit(&mut self, src: &[FieldElement]) -> Vec<HashDigest> {
     let n = src.len();
-    let mut stash = Vec::with_capacity(n / COLUMN_SIZE * 2);
     self.codeword_size = Vec::with_capacity(COLUMN_SIZE);
     self.encoded_codeword = Vec::with_capacity(COLUMN_SIZE);
     self.coef = Vec::with_capacity(COLUMN_SIZE);
@@ -54,13 +53,11 @@ impl LinearPC {
       let src_slice = &src[begin..end];
       self.coef.push(src_slice.to_vec());
 
-      let (size, dst) = self
-        .lce_ctx
-        .encode((src[begin..]).to_vec(), n / COLUMN_SIZE);
+      let (size, dst) = self.lce_ctx.encode(src_slice);
       self.codeword_size.push(size);
       self.encoded_codeword[i][..size].copy_from_slice(&dst);
     }
-    stash = (0..(n / COLUMN_SIZE * 2))
+    let stash: Vec<HashDigest> = (0..(n / COLUMN_SIZE * 2))
       .map(|i| {
         (0..(COLUMN_SIZE / 2)).fold(HashDigest::default(), |acc, j| {
           merkle_tree::hash_double_field_element_merkle_damgard(
@@ -72,7 +69,7 @@ impl LinearPC {
       })
       .collect();
 
-    create_tree(stash, n / COLUMN_SIZE * 2, &mut self.mt, true);
+    create_tree(&stash, n / COLUMN_SIZE * 2, &mut self.mt, true);
     self.mt.clone()
   }
 
@@ -236,7 +233,7 @@ impl LinearPC {
 
     //merkle commit to combined_codeword
     create_tree(
-      combined_codeword_hash,
+      &combined_codeword_hash,
       n / COLUMN_SIZE * 2,
       &mut combined_codeword_mt,
       false,
@@ -254,9 +251,8 @@ impl LinearPC {
 
     //check for encode
     {
-      let (test_codeword_size, test_codeword) = self
-        .lce_ctx
-        .encode(combined_message.clone(), n / COLUMN_SIZE);
+      let sliced_message = &combined_message[..n / COLUMN_SIZE];
+      let (test_codeword_size, test_codeword) = self.lce_ctx.encode(sliced_message);
       assert_eq!(test_codeword_size, self.codeword_size[0]);
       for i in 0..test_codeword_size {
         assert_eq!(test_codeword[i], combined_codeword[i]);

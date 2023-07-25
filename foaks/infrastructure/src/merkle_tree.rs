@@ -28,7 +28,7 @@ pub fn hash_double_field_element_merkle_damgard(
 }
 
 pub fn create_tree(
-  src_data: Vec<HashDigest>,
+  src_data: &[HashDigest],
   element_num: usize,
   dst: &mut Vec<HashDigest>,
   alloc_required: bool,
