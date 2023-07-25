@@ -4,7 +4,7 @@ use linear_code::linear_code_encode::*;
 use std::time::Instant;
 
 //declaration of variables
-fn main() {
+fn encode_test() {
   prime_field::init();
   let lgN: i32 = 20;
   let N: usize = 1 << lgN;

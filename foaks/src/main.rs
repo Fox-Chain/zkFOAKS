@@ -6,33 +6,25 @@ use std::{env, time::Instant};
 const REQUIRED_THRESHOLD: usize = 14;
 
 #[derive(Debug)]
-enum Error {
+enum MainError {
+  BelowThreshold,
   ParseParamsError,
+  NoNumberProvided,
 }
-fn main() -> Result<(), Error> {
+
+fn parse_number(input: &str) -> Result<usize, MainError> {
+  match input.parse::<usize>() {
+    Ok(n) if n >= REQUIRED_THRESHOLD => Ok(n),
+    Ok(_) => Err(MainError::BelowThreshold),
+    Err(_) => Err(MainError::ParseParamsError),
+  }
+}
+
+fn main() -> Result<(), MainError> {
   let args: Vec<String> = env::args().collect();
   let lg_n = match args.get(1) {
-    Some(number) => match number.parse::<usize>() {
-      Ok(n) => {
-        if n < REQUIRED_THRESHOLD {
-          eprintln!(
-            "Error: The number is below the required threshold of {}.",
-            REQUIRED_THRESHOLD
-          );
-          std::process::exit(1);
-        } else {
-          n
-        }
-      }
-      Err(_) => {
-        eprintln!("Error: Failed to parse the number.");
-        std::process::exit(1);
-      }
-    },
-    None => {
-      eprintln!("Error: No number provided.");
-      std::process::exit(1);
-    }
+    Some(number) => parse_number(number)?,
+    None => return Err(MainError::NoNumberProvided),
   };
 
   let n = 1 << lg_n;
