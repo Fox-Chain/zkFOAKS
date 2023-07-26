@@ -81,7 +81,7 @@ impl LinearPC {
     println!("Depth {}", self.gates_count.len());
     assert_eq!((1 << my_log(n).expect("Failed to compute logarithm")), n);
 
-    self.verifier.a_c.inputs = vec![FieldElement::zero(); n];
+    self.verifier.a_c.inputs = Vec::with_capacity(n);
     self.verifier.a_c.total_depth = self.gates_count.len() + 1;
     //Refactored code, add + 1 to the size of the circuit to avoid panic
     self.verifier.a_c.circuit = vec![Layer::default(); self.verifier.a_c.total_depth + 1];
@@ -109,7 +109,7 @@ impl LinearPC {
       vec![Gate::new(); 1 << self.verifier.a_c.circuit[self.gates_count.len() + 1].bit_length];
 
     for i in 0..n {
-      self.verifier.a_c.inputs[i] = input[i];
+      self.verifier.a_c.inputs.push(input[i]);
       self.verifier.a_c.circuit[0].gates[i] = Gate::from_params(3, 0, 0);
       self.verifier.a_c.circuit[1].gates[i] = Gate::from_params(4, i, 0);
     }
@@ -308,12 +308,11 @@ impl LinearPC {
     }
 
     // generate circuit
-
     self.generate_circuit(&mut q, n / COLUMN_SIZE, &combined_message);
 
     //self.verifier.get_prover(&p); //Refactored, inside of zk_verifier has not
     // zk_prover self.prover.get_circuit(self.verifier.aritmetic_circuit);
-    // //Refactored, inside of zk_prover.init_array()
+    // Refactored, inside of zk_prover.init_array()
     let max_bit_length = self.verifier.a_c.circuit.iter().map(|c| c.bit_length).max();
 
     // p.init_array(max_bit_length); Refactored inside verifier.verify()
@@ -390,10 +389,9 @@ impl LinearPC {
     );
     (
       output_depth_output_size.0 + 1,
-      self
+      *self
         .gates_count
         .get(&(output_depth_output_size.0 + 1))
-        .copied()
         .expect("Failed to retrieve gates_count value"),
     )
   }
