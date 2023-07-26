@@ -162,9 +162,12 @@ pub fn inverse_fast_fourier_transform(
   }
 
   let sub_eval: Vec<FieldElement> = if coefficient_len != order {
-    (0..coefficient_len)
-      .map(|i| evaluations[i * (order / coefficient_len)])
-      .collect()
+    let mut sub_eval = Vec::with_capacity(coefficient_len);
+    let step = order / coefficient_len;
+    for i in 0..coefficient_len {
+      sub_eval.push(evaluations[i * step]);
+    }
+    sub_eval
   } else {
     evaluations.to_vec()
   };

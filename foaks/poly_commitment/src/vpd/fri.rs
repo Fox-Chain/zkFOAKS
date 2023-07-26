@@ -161,10 +161,12 @@ pub fn request_init_commit(
     //root_of_unity = FieldElement::get_root_of_unity(*log_current_witness_size_per_slice).unwrap();
 
     if witness_rs_mapping.is_empty() {
-      for _ in 0..=oracle_indicator + 1 {
-        witness_rs_mapping.push(vec![]);
+      witness_rs_mapping.reserve(oracle_indicator + 2);
+      while witness_rs_mapping.len() <= oracle_indicator + 1 {
+        witness_rs_mapping.push(Vec::new());
       }
     }
+
     witness_rs_mapping[oracle_indicator].push(vec![0; 1 << *log_current_witness_size_per_slice]);
 
     // let a = FieldElement::zero(); No usages
@@ -304,7 +306,7 @@ pub fn request_step_commit(lvl: usize, pow: usize, fri_ctx: &mut FRIContext) -> 
   let mut new_size = 0;
 
   let mut pow_0: usize;
-  let mut value_vec: Vec<(FieldElement, FieldElement)> = vec![];
+  let mut value_vec: Vec<(FieldElement, FieldElement)> = Vec::with_capacity(SLICE_NUMBER);
   let mut visited_element = false;
 
   for i in 0..SLICE_NUMBER {

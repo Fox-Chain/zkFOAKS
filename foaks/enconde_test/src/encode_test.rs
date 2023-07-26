@@ -1,9 +1,13 @@
 //import linear_code_encode modules
 use linear_code::linear_code_encode::*;
+use prime_field::FieldElement::*;
+
 //module to measure execution time.
 use std::time::Instant;
 
 //declaration of variables
+fn main() { encode_test(); }
+
 fn encode_test() {
   prime_field::init();
   let lgN: i32 = 20;

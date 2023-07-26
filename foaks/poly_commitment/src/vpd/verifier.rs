@@ -178,18 +178,18 @@ impl FRIContext {
     let log_current_witness_size_per_slice_cp = self.log_current_witness_size_per_slice;
     let mut codeword_size = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
     // repeat until the codeword is constant
-    let mut ret: Vec<HashDigest> =
-      vec![HashDigest::default(); log_length + RS_CODE_RATE - LOG_SLICE_NUMBER];
+    let mut ret: Vec<HashDigest> = Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
     let mut randomness: Vec<FieldElement> =
-      vec![FieldElement::default(); log_length + RS_CODE_RATE - LOG_SLICE_NUMBER];
+      Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
 
     let mut ptr = 0;
+
     while codeword_size > 1 << RS_CODE_RATE {
       assert!(ptr < log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
 
-      randomness[ptr] = FieldElement::new_random();
+      randomness.push(FieldElement::new_random());
 
-      ret[ptr] = self.commit_phase_step(randomness[ptr], slice_count);
+      ret.push(self.commit_phase_step(randomness[ptr], slice_count));
       codeword_size /= 2;
       ptr += 1;
     }
