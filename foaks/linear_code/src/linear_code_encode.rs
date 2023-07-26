@@ -39,7 +39,7 @@ impl LinearCodeEncodeContext {
     }
   }
 
-  pub fn encode(&mut self, src: &[FieldElement]) -> (usize, Vec<FieldElement>) {
+  pub fn encode(&mut self, src: &[FieldElement]) -> Vec<FieldElement> {
     let n = src.len();
     let dep = 0;
     if !self.encode_initialized {
@@ -84,7 +84,7 @@ impl LinearCodeEncodeContext {
     }
 
     let dst = &self.scratch[0][dep][..(n + l + r)];
-    (n + l + r, dst.to_vec())
+    dst.to_vec()
   }
 
   pub fn encode_scratch(&mut self, n: usize, pre_n: usize, dep: usize) -> usize {

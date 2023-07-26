@@ -53,7 +53,8 @@ impl LinearPC {
       let src_slice = &src[begin..end];
       self.coef.push(src_slice.to_vec());
 
-      let (size, dst) = self.lce_ctx.encode(src_slice);
+      let dst = self.lce_ctx.encode(src_slice);
+      let size = dst.len();
       self.codeword_size.push(size);
       self.encoded_codeword[i][..size].copy_from_slice(&dst);
     }
@@ -73,13 +74,8 @@ impl LinearPC {
     self.mt.clone()
   }
 
-  fn generate_circuit(
-    &mut self,
-    query: &mut [usize],
-    n: usize,
-    query_count: usize,
-    input: Vec<FieldElement>,
-  ) {
+  fn generate_circuit(&mut self, query: &mut [usize], n: usize, input: &[FieldElement]) {
+    let query_count = query.len();
     query.sort();
     self.prepare_gates_count(n, query_count);
     println!("Depth {}", self.gates_count.len());
@@ -213,17 +209,18 @@ impl LinearPC {
 
     //prover construct the combined codeword
 
-    let mut combined_codeword = vec![FieldElement::zero(); self.codeword_size[0]];
+    let codeword_size_0 = self.codeword_size[0];
+    let mut combined_codeword = vec![FieldElement::zero(); codeword_size_0];
     let mut combined_codeword_hash = vec![HashDigest::default(); n / COLUMN_SIZE * 2];
     let mut combined_codeword_mt = vec![HashDigest::default(); n / COLUMN_SIZE * 4];
     for i in 0..COLUMN_SIZE {
-      for j in 0..self.codeword_size[0] {
+      for j in 0..codeword_size_0 {
         combined_codeword[j] = combined_codeword[j] + r0[i] * self.encoded_codeword[i][j];
       }
     }
 
     for i in 0..(n / COLUMN_SIZE * 2) {
-      if i < self.codeword_size[0] {
+      if i < codeword_size_0 {
         combined_codeword_hash[i] = merkle_tree::hash_single_field_element(combined_codeword[i]);
       } else {
         combined_codeword_hash[i] = merkle_tree::hash_single_field_element(FieldElement::zero());
@@ -238,7 +235,7 @@ impl LinearPC {
 
     // Todo: check if this is correct: enumerate().take()?
     for (i, coef_i) in self.coef.iter().enumerate().take(COLUMN_SIZE) {
-      for (j, &coef_ij) in coef_i.iter().enumerate().take(self.codeword_size[0]) {
+      for (j, &coef_ij) in coef_i.iter().enumerate().take(codeword_size_0) {
         combined_message[j] = combined_message[j] + r0[i] * coef_ij;
       }
     }
@@ -246,18 +243,17 @@ impl LinearPC {
     //check for encode
     {
       let sliced_message = &combined_message[..n / COLUMN_SIZE];
-      let (test_codeword_size, test_codeword) = self.lce_ctx.encode(sliced_message);
-      assert_eq!(test_codeword_size, self.codeword_size[0]);
-      for i in 0..test_codeword_size {
-        assert_eq!(test_codeword[i], combined_codeword[i]);
-      }
+      let test_codeword = self.lce_ctx.encode(sliced_message);
+      let test_codeword_size = test_codeword.len();
+      assert_eq!(test_codeword_size, codeword_size_0);
+      assert_eq!(test_codeword, combined_codeword);
     }
 
     //verifier random check columns
     let v_t0 = Instant::now();
 
     for _ in 0..query_count {
-      let q = rand::random::<usize>() % self.codeword_size[0];
+      let q = rand::random::<usize>() % codeword_size_0;
       let mut sum = FieldElement::zero();
       for j in 0..COLUMN_SIZE {
         sum = sum + r0[j] * self.encoded_codeword[j][q];
@@ -277,7 +273,7 @@ impl LinearPC {
 
       assert!(merkle_tree::verify_claim(
         com_mt[1],
-        com_mt.clone(),
+        &com_mt,
         column_hash,
         q,
         n / COLUMN_SIZE * 2,
@@ -286,7 +282,7 @@ impl LinearPC {
       ));
       assert!(merkle_tree::verify_claim(
         combined_codeword_mt[1],
-        combined_codeword_mt.clone(),
+        &combined_codeword_mt,
         merkle_tree::hash_single_field_element(combined_codeword[q]),
         q,
         n / COLUMN_SIZE * 2,
@@ -306,19 +302,14 @@ impl LinearPC {
     }
 
     // prover commit private input
-    let mut q = vec![0; query_count];
-    q.iter_mut().for_each(|value| {
-      *value = rand::random::<usize>() % self.codeword_size[0];
-    });
+    let mut q = Vec::with_capacity(query_count);
+    for _ in 0..query_count {
+      q.push(rand::random::<usize>() % self.codeword_size[0]);
+    }
 
     // generate circuit
 
-    self.generate_circuit(
-      &mut q,
-      n / COLUMN_SIZE,
-      query_count,
-      combined_message.clone(),
-    );
+    self.generate_circuit(&mut q, n / COLUMN_SIZE, &combined_message);
 
     //self.verifier.get_prover(&p); //Refactored, inside of zk_verifier has not
     // zk_prover self.prover.get_circuit(self.verifier.aritmetic_circuit);

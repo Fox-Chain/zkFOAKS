@@ -65,7 +65,7 @@ pub fn create_tree(src_data: &[HashDigest], dst: &mut Vec<HashDigest>, alloc_req
 // New way to implement verify_claim()
 pub fn verify_claim(
   root_hash: HashDigest,
-  tree: Vec<HashDigest>,
+  tree: &[HashDigest],
   mut leaf_hash: HashDigest,
   pos_element_arr: usize,
   n: usize,
