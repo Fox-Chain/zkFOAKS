@@ -516,23 +516,22 @@ impl LinearPC {
   ) -> (FieldElement, bool) {
     assert_eq!(n % COLUMN_SIZE, 0);
     //tensor product of r0 otimes r1
-    let mut r0 = vec![FieldElement::zero(); COLUMN_SIZE];
-    let mut r1 = vec![FieldElement::zero(); n / COLUMN_SIZE];
+    let mut r0 = Vec::with_capacity(COLUMN_SIZE);
+    let mut r1 = Vec::with_capacity(n / COLUMN_SIZE);
 
-    let x_n = FieldElement::fast_pow(
-      x,
+    let x_n = x.fast_pow(
       (n / COLUMN_SIZE)
         .try_into()
-        .expect("Failed to convert to u32"),
+        .expect("Failed to convert to u128"),
     );
 
-    r0[0] = FieldElement::real_one();
+    r0.push(FieldElement::real_one());
     for j in 1..COLUMN_SIZE {
-      r0[j] = r0[j - 1] * x_n;
+      r0.push(r0[j - 1] * x_n);
     }
-    r1[0] = FieldElement::real_one();
+    r1.push(FieldElement::real_one());
     for j in 1..(n / COLUMN_SIZE) {
-      r1[j] = r1[j - 1] * x;
+      r1.push(r1[j - 1] * x);
     }
     self.tensor_product_protocol(r0, r1, COLUMN_SIZE, n / COLUMN_SIZE, n, com_mt)
   }
@@ -547,7 +546,7 @@ impl LinearPC {
     println!("open_and_verify_multi");
     assert_eq!(n % COLUMN_SIZE, 0);
     //tensor product of r0 otimes r1
-    let mut r0 = [FieldElement::zero(); COLUMN_SIZE];
+    let mut r0: [FieldElement; 128] = [FieldElement::zero(); COLUMN_SIZE];
     let mut r1 = vec![FieldElement::zero(); n / COLUMN_SIZE];
     let mut log_column_size = 0;
 
@@ -558,14 +557,8 @@ impl LinearPC {
       log_column_size += 1;
     }
 
-    dfs(&mut r0, r, COLUMN_SIZE, 0, FieldElement::real_one());
-    dfs(
-      &mut r1,
-      &r[log_column_size..],
-      n / COLUMN_SIZE,
-      0,
-      FieldElement::real_one(),
-    );
+    dfs(&mut r0, r, 0, FieldElement::real_one());
+    dfs(&mut r1, &r[log_column_size..], 0, FieldElement::real_one());
 
     self.tensor_product_protocol(r0.to_vec(), r1, COLUMN_SIZE, n / COLUMN_SIZE, n, com_mt)
   }
@@ -579,18 +572,18 @@ fn smallest_pow2_larger_or_equal_to(x: usize) -> usize {
   panic!();
 }
 
-fn dfs(dst: &mut [FieldElement], r: &[FieldElement], size: usize, depth: usize, val: FieldElement) {
+fn dfs(dst: &mut [FieldElement], r: &[FieldElement], depth: usize, val: FieldElement) {
+  let size = dst.len();
   if size == 1 {
     dst[0] = val;
   } else {
     dfs(
       &mut dst[..size / 2],
       r,
-      size / 2,
       depth + 1,
       val * (FieldElement::real_one() - r[depth]),
     );
-    dfs(&mut dst[size / 2..], r, size / 2, depth, val * r[depth]);
+    dfs(&mut dst[size / 2..], r, depth, val * r[depth]);
   }
 }
 
