@@ -27,12 +27,8 @@ pub fn hash_double_field_element_merkle_damgard(
   my_hash(data)
 }
 
-pub fn create_tree(
-  src_data: &[HashDigest],
-  element_num: usize,
-  dst: &mut Vec<HashDigest>,
-  alloc_required: bool,
-) {
+pub fn create_tree(src_data: &[HashDigest], dst: &mut Vec<HashDigest>, alloc_required: bool) {
+  let element_num = src_data.len();
   let mut size_after_padding = 1;
   while size_after_padding < element_num {
     size_after_padding *= 2;

@@ -7,7 +7,7 @@ use infrastructure::{
 };
 use linear_code::{
   linear_code_encode::LinearCodeEncodeContext,
-  parameter::{CN, COLUMN_SIZE, DISTANCE_THRESHOLD, DN},
+  parameter::{CN, COLUMN_SIZE, DISTANCE_THRESHOLD, DN, TARGET_DISTANCE},
 };
 use linear_gkr::{
   circuit_fast_track::{Gate, Layer},
@@ -69,7 +69,7 @@ impl LinearPC {
       })
       .collect();
 
-    create_tree(&stash, n / COLUMN_SIZE * 2, &mut self.mt, true);
+    create_tree(&stash, &mut self.mt, true);
     self.mt.clone()
   }
 
@@ -192,20 +192,20 @@ impl LinearPC {
 
   pub fn tensor_product_protocol(
     &mut self,
-    r0: Vec<FieldElement>,
-    r1: Vec<FieldElement>,
-    size_r0: usize,
-    size_r1: usize,
+    r0: &[FieldElement],
+    r1: &[FieldElement],
     n: usize,
     com_mt: Vec<HashDigest>,
   ) -> (FieldElement, bool) {
+    let size_r0 = r0.len();
+    let size_r1 = r1.len();
     assert_eq!(size_r0 * size_r1, n);
 
     let mut visited_com = vec![false; n / COLUMN_SIZE * 4];
     let mut visited_combined_com = vec![false; n / COLUMN_SIZE * 4];
 
     let mut proof_size = 0;
-    let query_count = (-128f32 / (1f32 - 0.07f32).log2()) as usize;
+    let query_count = (-128f32 / (1f32 - TARGET_DISTANCE).log2()) as usize;
     println!("Query count: {}", query_count);
     println!("Column size: {}", COLUMN_SIZE);
     println!("Number of merkle pathes: {}", query_count);
@@ -222,22 +222,16 @@ impl LinearPC {
       }
     }
 
-    let zero = FieldElement::zero();
     for i in 0..(n / COLUMN_SIZE * 2) {
       if i < self.codeword_size[0] {
         combined_codeword_hash[i] = merkle_tree::hash_single_field_element(combined_codeword[i]);
       } else {
-        combined_codeword_hash[i] = merkle_tree::hash_single_field_element(zero);
+        combined_codeword_hash[i] = merkle_tree::hash_single_field_element(FieldElement::zero());
       }
     }
 
     //merkle commit to combined_codeword
-    create_tree(
-      &combined_codeword_hash,
-      n / COLUMN_SIZE * 2,
-      &mut combined_codeword_mt,
-      false,
-    );
+    create_tree(&combined_codeword_hash, &mut combined_codeword_mt, false);
 
     //prover construct the combined original message
     let mut combined_message = vec![FieldElement::zero(); n];
@@ -533,7 +527,7 @@ impl LinearPC {
     for j in 1..(n / COLUMN_SIZE) {
       r1.push(r1[j - 1] * x);
     }
-    self.tensor_product_protocol(r0, r1, COLUMN_SIZE, n / COLUMN_SIZE, n, com_mt)
+    self.tensor_product_protocol(&r0, &r1, n, com_mt)
   }
 
   //Refactored
@@ -560,7 +554,7 @@ impl LinearPC {
     dfs(&mut r0, r, 0, FieldElement::real_one());
     dfs(&mut r1, &r[log_column_size..], 0, FieldElement::real_one());
 
-    self.tensor_product_protocol(r0.to_vec(), r1, COLUMN_SIZE, n / COLUMN_SIZE, n, com_mt)
+    self.tensor_product_protocol(&r0, &r1, n, com_mt)
   }
 }
 fn smallest_pow2_larger_or_equal_to(x: usize) -> usize {

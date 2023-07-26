@@ -207,7 +207,6 @@ pub fn request_init_commit(
   }
   merkle_tree::create_tree(
     &leaf_hash[oracle_indicator],
-    1 << (*log_current_witness_size_per_slice - 1),
     &mut witness_merkle[oracle_indicator],
     true,
   );
