@@ -47,13 +47,9 @@ impl LinearCodeEncodeContext {
       let mut i = 0;
       while (n >> i) > 1 {
         let size = (2 * n) >> i;
-        self.scratch[0][i] = Vec::with_capacity(size);
-        self.scratch[0][i].extend(std::iter::repeat(FieldElement::default()).take(size));
-
-        self.scratch[1][i] = Vec::with_capacity(size);
-        self.scratch[1][i].extend(std::iter::repeat(FieldElement::default()).take(size));
-
-        i += 1;
+        self.scratch[0][i] = vec![FieldElement::default(); size];
+        self.scratch[1][i] = vec![FieldElement::default(); size];
+        i += 1
       }
     }
 

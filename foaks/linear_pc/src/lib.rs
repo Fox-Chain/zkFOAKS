@@ -530,8 +530,8 @@ impl LinearPC {
     assert_eq!(n % COLUMN_SIZE, 0);
     //tensor product of r0 otimes r1
     let mut r0: [FieldElement; 128] = [FieldElement::zero(); COLUMN_SIZE];
-    let mut r1 = Vec::with_capacity(n / COLUMN_SIZE);
-    r1.extend(std::iter::repeat(FieldElement::zero()).take(n / COLUMN_SIZE));
+    let mut r1 = vec![FieldElement::zero(); n / COLUMN_SIZE];
+
     let mut log_column_size = 0;
 
     loop {

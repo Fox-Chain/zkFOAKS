@@ -161,10 +161,7 @@ pub fn request_init_commit(
     //root_of_unity = FieldElement::get_root_of_unity(*log_current_witness_size_per_slice).unwrap();
 
     if witness_rs_mapping.is_empty() {
-      witness_rs_mapping.reserve(oracle_indicator + 2);
-      while witness_rs_mapping.len() <= oracle_indicator + 1 {
-        witness_rs_mapping.push(Vec::new());
-      }
+      *witness_rs_mapping = vec![vec![]; oracle_indicator + 2];
     }
 
     witness_rs_mapping[oracle_indicator].push(vec![0; 1 << *log_current_witness_size_per_slice]);
