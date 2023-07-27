@@ -12,7 +12,7 @@ use prime_field::FieldElement;
 
 use crate::vpd::{
   fri::{
-    FRIContext, request_init_commit, request_init_value_with_merkle, request_step_commit, TripleVec,
+    request_init_commit, request_init_value_with_merkle, request_step_commit, FRIContext, TripleVec,
   },
   verifier::verify_merkle,
 };
@@ -325,9 +325,7 @@ impl PolyCommitProver {
             j << log_leaf_size | (i << 1);
         } else {
           let jj = j - self.ctx.slice_size / 2;
-          assert!(
-            (jj << log_leaf_size | (i << 1)) < self.ctx.slice_count * self.ctx.slice_size
-          );
+          assert!((jj << log_leaf_size | (i << 1)) < self.ctx.slice_count * self.ctx.slice_size);
           assert_eq!((jj << log_leaf_size) & (i << 1), 0);
 
           fri_ctx.virtual_oracle_witness[jj << log_leaf_size | (i << 1) | 1] = (g + const_sum)
@@ -515,13 +513,13 @@ impl PolyCommitVerifier {
         if i == 0 {
           time_span = t0.elapsed().as_secs_f64();
           *v_time += time_span;
-          (alpha_l, _) = request_init_value_with_merkle(
+          (alpha_l, new_size) = request_init_value_with_merkle(
+            // Todo: This new_size is not read in C++, but at the end we actually need it
             s0_pow.try_into().expect("Failed to convert s0_pow to u32"),
             s1_pow.try_into().expect("Failed to convert s1_pow to u32"),
             0,
             fri_ctx,
           );
-          // previous new_size is not read in C++
           (alpha_h, new_size) = request_init_value_with_merkle(
             s0_pow.try_into().expect("Failed to convert s0_pow to u32"),
             s1_pow.try_into().expect("Failed to convert s1_pow to u32"),
