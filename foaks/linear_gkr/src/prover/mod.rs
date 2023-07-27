@@ -125,7 +125,7 @@ impl ZkProver {
     mut output_size: usize,
   ) -> FieldElement {
     let t0 = time::Instant::now();
-    let mut output = vec![FieldElement::zero(); output_size];
+    let mut output = output_raw[..output_size].to_vec();
     output[..output_size].copy_from_slice(&output_raw[..output_size]);
     for i in 0..r_0_size {
       for j in 0..(output_size >> 1) {
@@ -228,9 +228,7 @@ impl ZkProver {
   pub fn get_witness(&mut self, inputs: Vec<FieldElement>, n: usize) {
     self.circuit_value[0] = Vec::with_capacity(1 << self.a_c.circuit[0].bit_length);
 
-    for item in inputs.iter().take(n) {
-      self.circuit_value[0].push(*item);
-    }
+    self.circuit_value[0].extend_from_slice(&inputs[..n]);
   }
 
   pub fn sumcheck_init(

@@ -5,11 +5,11 @@ use std::{
   mem,
 };
 
+use infrastructure::my_hash::HashDigest;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
   rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
 };
-use infrastructure::my_hash::HashDigest;
 use poly_commitment::PolyCommitVerifier;
 use prime_field::FieldElement;
 
@@ -823,8 +823,10 @@ impl ZkVerifier {
     _beta: FieldElement,
   ) -> Vec<FieldElement> {
     let gate_type_count = 15;
-    let mut ret_para = vec![FieldElement::zero(); gate_type_count];
-    let mut ret = vec![FieldElement::zero(); gate_type_count];
+    let zero = FieldElement::zero();
+
+    let mut ret_para = vec![zero; gate_type_count];
+    let mut ret = vec![zero; gate_type_count];
 
     for i in 0..gate_type_count {
       ret[i] = FieldElement::zero();
