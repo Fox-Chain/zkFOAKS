@@ -12,7 +12,7 @@ use prime_field::FieldElement;
 
 use crate::vpd::{
   fri::{
-    request_init_commit, request_init_value_with_merkle, request_step_commit, FRIContext, TripleVec,
+    FRIContext, request_init_commit, request_init_value_with_merkle, request_step_commit, TripleVec,
   },
   verifier::verify_merkle,
 };
@@ -233,7 +233,7 @@ impl PolyCommitProver {
 
     let log_leaf_size = LOG_SLICE_NUMBER + 1;
 
-    for i in 0..self.ctx.slice_count {
+    for (i, all_sum_item) in all_sum.iter_mut().enumerate().take(self.ctx.slice_count) {
       assert!(2 * self.ctx.slice_real_ele_cnt <= self.ctx.slice_size);
       let mut all_zero = true;
       let zero = FieldElement::zero();
@@ -312,21 +312,21 @@ impl PolyCommitProver {
         let g = p * q - aabb * h;
 
         if j < self.ctx.slice_size / 2 {
-          assert!((j << log_leaf_size | (i << 1) | 0) < self.ctx.slice_count * self.ctx.slice_size);
+          assert!((j << log_leaf_size | (i << 1)) < self.ctx.slice_count * self.ctx.slice_size);
           assert_eq!((j << log_leaf_size) & (i << 1), 0);
 
           let a = g + const_sum;
           let b = self.scratch_pad.inv_twiddle_factor
             [inv_twiddle_gap * j % self.scratch_pad.twiddle_factor_size];
           let c = FieldElement::from_real(self.ctx.slice_real_ele_cnt as u64);
-          fri_ctx.virtual_oracle_witness[j << log_leaf_size | (i << 1) | 0] = a * b * c;
+          fri_ctx.virtual_oracle_witness[j << log_leaf_size | (i << 1)] = a * b * c;
 
           fri_ctx.virtual_oracle_witness_mapping[j << LOG_SLICE_NUMBER | i] =
-            j << log_leaf_size | (i << 1) | 0;
+            j << log_leaf_size | (i << 1);
         } else {
           let jj = j - self.ctx.slice_size / 2;
           assert!(
-            (jj << log_leaf_size | (i << 1) | 0) < self.ctx.slice_count * self.ctx.slice_size
+            (jj << log_leaf_size | (i << 1)) < self.ctx.slice_count * self.ctx.slice_size
           );
           assert_eq!((jj << log_leaf_size) & (i << 1), 0);
 
@@ -336,13 +336,13 @@ impl PolyCommitProver {
             * FieldElement::from_real(self.ctx.slice_real_ele_cnt as u64);
 
           fri_ctx.virtual_oracle_witness_mapping[jj << LOG_SLICE_NUMBER | i] =
-            jj << log_leaf_size | (i << 1) | 0;
+            jj << log_leaf_size | (i << 1);
         }
       }
 
       re_mapping_time = remap_t0.elapsed().as_secs_f64();
       assert!(i < SLICE_NUMBER + 1);
-      all_sum[i] = (self.ctx.lq_coef[0] + self.ctx.h_coef[0])
+      *all_sum_item = (self.ctx.lq_coef[0] + self.ctx.h_coef[0])
         * FieldElement::from_real(self.ctx.slice_real_ele_cnt as u64);
 
       for j in 0..self.ctx.slice_size {
@@ -515,7 +515,7 @@ impl PolyCommitVerifier {
         if i == 0 {
           time_span = t0.elapsed().as_secs_f64();
           *v_time += time_span;
-          (alpha_l, new_size) = request_init_value_with_merkle(
+          (alpha_l, _) = request_init_value_with_merkle(
             s0_pow.try_into().expect("Failed to convert s0_pow to u32"),
             s1_pow.try_into().expect("Failed to convert s1_pow to u32"),
             0,
@@ -662,10 +662,10 @@ impl PolyCommitVerifier {
             }
           }
 
-          time_span = t0.elapsed().as_secs_f64();
-        // From original code
-        // This will not added into v time since the fft gkr already give the result, we didn't have time to integrate the fft gkr into the main body, so we have the evaluation code here
-        // v_time += time_span.count();
+          // time_span = t0.elapsed().as_secs_f64();
+          // From original code
+          // This will not added into v time since the fft gkr already give the result, we didn't have time to integrate the fft gkr into the main body, so we have the evaluation code here
+          // v_time += time_span.count();
         } else {
           time_span = t0.elapsed().as_secs_f64();
           *v_time += time_span;
@@ -722,9 +722,9 @@ impl PolyCommitVerifier {
 
       for i in 0..slice_count {
         let template =
-          fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(0 << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0];
+          fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(0 << (LOG_SLICE_NUMBER + 1)) | (i << 1)];
         for j in 0..(1 << (RS_CODE_RATE - 1)) {
-          if fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(j << (LOG_SLICE_NUMBER + 1)) | (i << 1) | 0]
+          if fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(j << (LOG_SLICE_NUMBER + 1)) | (i << 1)]
             != template
           {
             eprintln!("Fri rs code check fail {} {}", i, j);
