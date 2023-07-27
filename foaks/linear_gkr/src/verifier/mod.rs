@@ -5,11 +5,11 @@ use std::{
   mem,
 };
 
-use infrastructure::my_hash::HashDigest;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
   rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
 };
+use infrastructure::my_hash::HashDigest;
 use poly_commitment::PolyCommitVerifier;
 use prime_field::FieldElement;
 
@@ -170,8 +170,8 @@ impl ZkVerifier {
         alpha * self.direct_relay(i, &r_0, &r_u) + beta * self.direct_relay(i, &r_1, &r_u);
 
       if i == 1 {
-        for j in 0..self.a_c.circuit[i - 1].bit_length {
-          r_v[j] = FieldElement::zero();
+        for r_v_item in r_v.iter_mut().take(self.a_c.circuit[i - 1].bit_length) {
+          *r_v_item = FieldElement::zero();
         }
       }
 

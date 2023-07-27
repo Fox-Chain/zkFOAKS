@@ -1,16 +1,16 @@
 use std::mem;
 use std::time::Instant;
 
-use infrastructure::merkle_tree::create_tree;
-use infrastructure::my_hash::my_hash;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, RS_CODE_RATE, SLICE_NUMBER},
   my_hash::{self, HashDigest},
 };
+use infrastructure::merkle_tree::create_tree;
+use infrastructure::my_hash::my_hash;
 use prime_field::FieldElement;
 
-use crate::vpd::fri::FRIContext;
 use crate::LdtCommitment;
+use crate::vpd::fri::FRIContext;
 
 pub fn verify_merkle(
   hash_digest: HashDigest,
@@ -29,11 +29,11 @@ pub fn verify_merkle(
   let mut data: [HashDigest; 2];
   // don't mutate the current_hash, this is the output of the loop following
 
-  for i in 0..(len - 1) {
-    data = [current_hash, merkle_path[i]];
+  for merkle_path_item in merkle_path.iter().take(len - 1) {
+    data = [current_hash, *merkle_path_item];
 
     if (pow & 1_u128) != 0 {
-      data = [merkle_path[i], current_hash];
+      data = [*merkle_path_item, current_hash];
     }
     pow /= 2;
 
@@ -134,11 +134,11 @@ impl FRIContext {
     let mut htmp: HashDigest;
     let mut hash_val: Vec<HashDigest> = vec![HashDigest::default(); nxt_witness_size / 2];
 
-    for i in 0..nxt_witness_size / 2 {
+    for (i, hash_val_item) in hash_val.iter_mut().enumerate().take(nxt_witness_size / 2) {
       let mut data = [HashDigest::default(), HashDigest::default()];
       htmp = HashDigest::default();
       for j in 0..(1 << LOG_SLICE_NUMBER) {
-        let c = (i) << log_leaf_size | (j << 1) | 0;
+        let c = (i) << log_leaf_size | (j << 1);
         let d = (i) << log_leaf_size | (j << 1) | 1;
 
         let data_ele = [
@@ -150,7 +150,7 @@ impl FRIContext {
         data[1] = htmp;
         htmp = my_hash(data);
       }
-      hash_val[i] = htmp;
+      *hash_val_item = htmp;
     }
 
     let current_step_no = self.cpd.merkle[self.current_step_no].clone();

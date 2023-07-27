@@ -226,10 +226,10 @@ impl ZkProver {
   }
 
   pub fn get_witness(&mut self, inputs: Vec<FieldElement>, n: usize) {
-    self.circuit_value[0] = vec![FieldElement::zero(); 1 << self.a_c.circuit[0].bit_length];
+    self.circuit_value[0] = Vec::with_capacity(1 << self.a_c.circuit[0].bit_length);
 
-    for i in 0..n {
-      self.circuit_value[0][i] = inputs[i];
+    for item in inputs.iter().take(n) {
+      self.circuit_value[0].push(*item);
     }
   }
 

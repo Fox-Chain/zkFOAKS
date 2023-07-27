@@ -3,7 +3,7 @@ use std::{mem::size_of, time, usize, vec};
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, MAX_BIT_LENGTH, MAX_FRI_DEPTH, RS_CODE_RATE, SLICE_NUMBER},
   merkle_tree,
-  my_hash::{my_hash, HashDigest},
+  my_hash::{HashDigest, my_hash},
 };
 use prime_field::FieldElement;
 
@@ -171,11 +171,11 @@ pub fn request_init_commit(
       assert!((j << log_leaf_size | (i << 1) | 1) < (1 << (bit_len + RS_CODE_RATE)));
       assert!((j << log_leaf_size | (i << 1) | 1) < slice_size * slice_count);
 
-      witness_rs_mapping[oracle_indicator][i][j] = j << log_leaf_size | (i << 1) | 0;
+      witness_rs_mapping[oracle_indicator][i][j] = j << log_leaf_size | (i << 1);
       witness_rs_mapping[oracle_indicator][i][j + (1 << *log_current_witness_size_per_slice) / 2] =
-        j << log_leaf_size | (i << 1) | 0;
+        j << log_leaf_size | (i << 1);
 
-      witness_rs_codeword_interleaved[oracle_indicator][(j) << log_leaf_size | (i << 1) | 0] =
+      witness_rs_codeword_interleaved[oracle_indicator][(j) << log_leaf_size | (i << 1)] =
         witness_rs_codeword_before_arrange[oracle_indicator][i][j];
       witness_rs_codeword_interleaved[oracle_indicator][(j) << log_leaf_size | (i << 1) | 1] =
         witness_rs_codeword_before_arrange[oracle_indicator][i]
@@ -241,7 +241,7 @@ pub fn request_init_value_with_merkle(
   for i in 0..SLICE_NUMBER {
     value.push((
       fri_ctx.witness_rs_codeword_interleaved[oracle_indicator]
-        [pow_0 << log_leaf_size | i << 1 | 0],
+        [pow_0 << log_leaf_size | i << 1],
       fri_ctx.witness_rs_codeword_interleaved[oracle_indicator]
         [pow_0 << log_leaf_size | i << 1 | 1],
     ));
@@ -254,8 +254,8 @@ pub fn request_init_value_with_merkle(
       fri_ctx.witness_rs_mapping[oracle_indicator][i][pow_1]
     );
 
-    if !fri_ctx.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 0] {
-      fri_ctx.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 0] = true;
+    if !fri_ctx.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1] {
+      fri_ctx.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1] = true;
       new_size += size_of::<FieldElement>();
     }
 
