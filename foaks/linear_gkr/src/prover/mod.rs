@@ -125,7 +125,7 @@ impl ZkProver {
     mut output_size: usize,
   ) -> FieldElement {
     let t0 = time::Instant::now();
-    let mut output = output_raw[..output_size].to_vec();
+    let mut output = vec![FieldElement::zero(); output_size];
     output[..output_size].copy_from_slice(&output_raw[..output_size]);
     for i in 0..r_0_size {
       for j in 0..(output_size >> 1) {

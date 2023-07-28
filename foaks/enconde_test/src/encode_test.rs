@@ -20,20 +20,13 @@ fn encode_test() {
   //initialize an area of ​​memory used later in the code
   init_scratch_pad(N * rs_rate * 2);
   //Vector declaration and assignment
-  let random_value = prime_field::random();
-  let N = 10;
-  let rs_rate = 2;
-
-  let arr: Vec<_> = (0..N).map(|_| random_value).collect();
-  let dst: Vec<_> = (0..2 * N)
-    .map(|_| prime_field::field_element::FieldElement::default())
-    .collect();
-  let rscoef: Vec<_> = (0..N)
-    .map(|_| prime_field::field_element::FieldElement::default())
-    .collect();
-  let rsdst: Vec<_> = (0..rs_rate * N)
-    .map(|_| prime_field::field_element::FieldElement::default())
-    .collect();
+  let mut arr: Vec<prime_field::field_element::FieldElement> = vec![prime_field::random(); N];
+  let mut dst: Vec<prime_field::field_element::FieldElement> =
+    vec![prime_field::field_element::FieldElement::default(); 2 * N];
+  let mut rscoef: Vec<prime_field::field_element::FieldElement> =
+    vec![prime_field::field_element::FieldElement::default(); N];
+  let mut rsdst: Vec<prime_field::field_element::FieldElement> =
+    vec![prime_field::field_element::FieldElement::default(); rs_rate * N];
 
   //Random data generation
   for i in 0..N {
