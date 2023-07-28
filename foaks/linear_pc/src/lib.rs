@@ -44,10 +44,11 @@ impl LinearPC {
     assert_eq!(n % COLUMN_SIZE, 0);
 
     //new refactored code
+    let encoded_codeword_template = vec![FieldElement::zero(); n / COLUMN_SIZE * 2];
     for i in 0..COLUMN_SIZE {
       self
         .encoded_codeword
-        .push(vec![FieldElement::zero(); n / COLUMN_SIZE * 2]);
+        .push(encoded_codeword_template.clone());
       let begin = i * n / COLUMN_SIZE;
       let end = (i + 1) * n / COLUMN_SIZE;
       let src_slice = &src[begin..end];
@@ -58,6 +59,7 @@ impl LinearPC {
       self.codeword_size.push(size);
       self.encoded_codeword[i][..size].copy_from_slice(&dst);
     }
+
     let stash: Vec<HashDigest> = (0..(n / COLUMN_SIZE * 2))
       .map(|i| {
         (0..(COLUMN_SIZE / 2)).fold(HashDigest::default(), |acc, j| {

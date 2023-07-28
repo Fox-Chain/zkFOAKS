@@ -125,8 +125,9 @@ impl ZkProver {
     mut output_size: usize,
   ) -> FieldElement {
     let t0 = time::Instant::now();
-    let mut output = vec![FieldElement::zero(); output_size];
-    output[..output_size].copy_from_slice(&output_raw[..output_size]);
+    let mut output = Vec::with_capacity(output_size);
+    output.extend_from_slice(&output_raw[..output_size]);
+    output.resize(output_size, FieldElement::zero());
     for i in 0..r_0_size {
       for j in 0..(output_size >> 1) {
         output[j] = output[j << 1] * one_minus_r_0[i] + output[j << 1 | 1] * r_0[i];
@@ -150,7 +151,10 @@ impl ZkProver {
     assert!(self.a_c.total_depth < 1000000);
 
     for i in 1..(self.a_c.total_depth) {
-      self.circuit_value[i] = vec![FieldElement::zero(); 1 << self.a_c.circuit[i].bit_length];
+      let capacity = 1 << self.a_c.circuit[i].bit_length;
+      self.circuit_value[i] = Vec::with_capacity(capacity);
+      self.circuit_value[i].resize(capacity, FieldElement::zero());
+
       for j in 0..(1 << self.a_c.circuit[i].bit_length) {
         let g = j;
         let ty = self.a_c.circuit[i].gates[g].ty;
