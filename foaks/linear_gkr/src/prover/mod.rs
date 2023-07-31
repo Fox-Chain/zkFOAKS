@@ -151,7 +151,9 @@ impl ZkProver {
     assert!(self.a_c.total_depth < 1000000);
 
     for i in 1..(self.a_c.total_depth) {
-      self.circuit_value[i] = vec![FieldElement::zero(); 1 << self.a_c.circuit[i].bit_length];
+      let capacity = 1 << self.a_c.circuit[i].bit_length;
+      self.circuit_value[i] = Vec::with_capacity(capacity);
+      self.circuit_value[i].resize(capacity, FieldElement::zero());
 
       for j in 0..(1 << self.a_c.circuit[i].bit_length) {
         let g = j;

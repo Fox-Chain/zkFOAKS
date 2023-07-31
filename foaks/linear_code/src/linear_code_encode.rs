@@ -71,9 +71,9 @@ impl LinearCodeEncodeContext {
     assert_eq!(self.d[dep].l, l);
     // R consumed
     r = self.d[dep].r;
-    for i in 0..r {
-      self.scratch[0][dep][n + l + i] = FieldElement::from_real(0);
-    }
+    let zeros = vec![FieldElement::from_real(0); r];
+    self.scratch[0][dep][n + l..n + l + r].copy_from_slice(&zeros);
+
     for i in 0..l {
       let val = self.scratch[0][dep][n + i];
       for d in 0..self.d[dep].degree {

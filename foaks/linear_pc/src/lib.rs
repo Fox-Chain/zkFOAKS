@@ -147,9 +147,12 @@ impl LinearPC {
       self.generate_enc_circuit(self.lce_ctx.c[0].r, n + self.lce_ctx.c[0].r, 1, 2);
     // add final output
     let final_output_depth = output_depth_output_size.0 + 1;
-    for (i, _) in (0..output_depth_output_size.1).enumerate() {
-      self.verifier.a_c.circuit[final_output_depth].gates[i] = Gate::from_params(10, i, 0);
-    }
+    (0..output_depth_output_size.1)
+      .enumerate()
+      .for_each(|(i, _)| {
+        self.verifier.a_c.circuit[final_output_depth].gates[i] = Gate::from_params(10, i, 0);
+      });
+
     //let d_input_offset = n; //Never used
     let output_so_far = output_depth_output_size.1;
     self.verifier.a_c.circuit[final_output_depth].src_expander_d_mempool =
@@ -356,14 +359,15 @@ impl LinearPC {
     // expander part
     self.gates_count.insert(1, n + self.lce_ctx.c[0].r);
     let output_depth_output_size = self.prepare_enc_count(self.lce_ctx.c[0].r, n, 1);
-
-    self.gates_count.insert(
-      output_depth_output_size.0 + 1,
-      n + output_depth_output_size.1 + self.lce_ctx.d[0].r,
-    );
     self
       .gates_count
-      .insert(output_depth_output_size.0 + 2, query_count);
+      .entry(output_depth_output_size.0 + 1)
+      .or_insert(n + output_depth_output_size.1 + self.lce_ctx.d[0].r);
+
+    self
+      .gates_count
+      .entry(output_depth_output_size.0 + 2)
+      .or_insert(query_count);
   }
 
   fn prepare_enc_count(
@@ -459,8 +463,13 @@ impl LinearPC {
     mempool_ptr = 0;
 
     // relay the output
-    for i in 0..output_size_so_far {
-      self.verifier.a_c.circuit[final_output_depth].gates[i] = Gate::from_params(10, i, 0);
+    for (i, gate) in self.verifier.a_c.circuit[final_output_depth]
+      .gates
+      .iter_mut()
+      .enumerate()
+      .take(output_size_so_far)
+    {
+      *gate = Gate::from_params(10, i, 0);
     }
 
     self.verifier.a_c.circuit[final_output_depth].src_expander_d_mempool =
