@@ -206,18 +206,23 @@ impl ZkVerifier {
         //   j, i, alpha_beta_sum.real, alpha_beta_sum.img
         // );
 
-        if eval_zero + eval_one != alpha_beta_sum {
-          //todo: Improve error handling
-          eprintln!(
-            "Verification fail, phase1, circuit {}, current bit {}",
-            i, j
-          );
-          return (false, 0.0);
-        } else {
-          //println!(
-          //  "Verification pass, phase1, circuit {}, current bit {}",
-          //i, j
-          //);
+        fn verify_evaluations(
+          eval_zero: f64,
+          eval_one: f64,
+          alpha_beta_sum: f64,
+          i: usize,
+          j: usize,
+        ) -> Result<f64, String> {
+          if eval_zero + eval_one != alpha_beta_sum {
+            let error_message = format!(
+              "Verification fail, phase1, circuit {}, current bit {}",
+              i, j
+            );
+            eprintln!("{}", error_message);
+            return Err(error_message);
+          } else {
+            return Ok(alpha_beta_sum);
+          }
         }
         alpha_beta_sum = poly.eval(&r_u[j].clone());
       }
@@ -234,23 +239,16 @@ impl ZkVerifier {
 
         previous_random = r_v[j];
 
-        if poly.eval(&FieldElement::zero())
-          + poly.eval(&FieldElement::real_one())
-          + direct_relay_value * zk_prover.v_u
-          != alpha_beta_sum
-        {
-          //todo: Improve error handling
-          eprintln!(
-            "Verification fail, phase2, circuit {}, current bit {}",
-            i, j
-          );
-          return (false, 0.0);
-        } else {
-          //println!(
-          //  "Verification fail, phase1, circuit {}, current bit {}",
-          //i, j
-          //);
-        }
+        assert_eq!(
+          poly.eval(&FieldElement::zero())
+            + poly.eval(&FieldElement::real_one())
+            + direct_relay_value * zk_prover.v_u,
+          alpha_beta_sum,
+          "Verification fail, phase2, circuit {}, current bit {}",
+          i,
+          j
+        );
+
         alpha_beta_sum = poly.eval(&r_v[j].clone()) + direct_relay_value * zk_prover.v_u;
       }
       //Add one more round for maskR
@@ -328,7 +326,7 @@ impl ZkVerifier {
           + bit_test_value * (FieldElement::real_one() - v_v) * v_u)
           + direct_relay_value * v_u
       {
-        //Todo: improve error handling
+        //Todo: ror handling
         eprintln!("Verification fail, semi final, circuit level {}", i,);
         return (false, 0.0);
       }
