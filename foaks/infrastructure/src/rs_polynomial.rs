@@ -153,13 +153,14 @@ pub fn inverse_fast_fourier_transform(
   dst: &mut [FieldElement],
 ) {
   if coefficient_len > order {
-    eprintln!(
-      "Got insufficient number {} of evaluations for inverse fast fourier transform. Creating \
-       polynomial of order {} instead.",
-      coefficient_len, order
+    let error_message = format!(
+        "Got insufficient number {} of evaluations for inverse fast fourier transform. Creating \
+         polynomial of order {} instead.",
+        coefficient_len, order
     );
+    eprintln!("{}", error_message);
     coefficient_len = order;
-  }
+}
 
   let sub_eval: Vec<FieldElement> = if coefficient_len != order {
     (0..coefficient_len)
