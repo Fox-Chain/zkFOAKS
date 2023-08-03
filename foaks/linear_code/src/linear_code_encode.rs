@@ -40,6 +40,8 @@ impl LinearCodeEncodeContext {
   }
 
   pub fn encode(&mut self, src: &[FieldElement]) -> Vec<FieldElement> {
+    // Todo Refactor, reuse code from encode_scratch
+    // Todo Refactor, delete self.c[dep].degree, self.d[dep].degree
     let n = src.len();
     let dep = 0;
     if !self.encode_initialized {
@@ -74,63 +76,60 @@ impl LinearCodeEncodeContext {
     let zeros = vec![FieldElement::from_real(0); r];
     self.scratch[0][dep][n + l..n + l + r].copy_from_slice(&zeros);
 
-    for i in 0..l {
-      let val = self.scratch[0][dep][n + i];
+    for (i, val) in self.scratch[0][dep][n..n + l].to_owned().iter().enumerate() {
       for d in 0..self.d[dep].degree {
         let target = self.d[dep].neighbor[i][d];
         self.scratch[0][dep][n + l + target] =
-          self.scratch[0][dep][n + l + target] + val * self.d[dep].weight[i][d];
+          self.scratch[0][dep][n + l + target] + *val * self.d[dep].weight[i][d];
       }
     }
 
-    let dst = &self.scratch[0][dep][..(n + l + r)];
-    dst.to_vec()
+    let dst = &self.scratch[0][dep][..n + l + r];
+    dst.to_owned()
   }
 
   pub fn encode_scratch(&mut self, n: usize, pre_n: usize, dep: usize) -> usize {
-    //let pre_n = self.scratch[0][dep - 1].len();
     if n <= DISTANCE_THRESHOLD {
-      for i in 0..n {
-        self.scratch[0][dep - 1][pre_n + i] = self.scratch[1][dep - 1][i];
-      }
+      let slc = self.scratch[1][dep - 1][..n].to_owned();
+      self.scratch[0][dep - 1][pre_n..pre_n + n].copy_from_slice(&slc);
       return n;
     }
-    for i in 0..n {
-      self.scratch[0][dep][i] = self.scratch[1][dep - 1][i];
-    }
+    let slc = self.scratch[1][dep - 1][..n].to_owned();
+    self.scratch[0][dep][..n].copy_from_slice(&slc);
+
     let mut r = (ALPHA * (n as f64)) as usize;
-    self.scratch[1][dep]
-      .iter_mut()
-      .for_each(|item| *item = FieldElement::zero());
+    self.scratch[1][dep].fill(FieldElement::zero());
 
     //expander mult
-    for i in 0..n {
-      let val = self.scratch[1][dep - 1][i];
+    for (i, val) in self.scratch[1][dep - 1]
+      .to_owned()
+      .iter()
+      .enumerate()
+      .take(n)
+    {
       for d in 0..self.c[dep].degree {
         let target = self.c[dep].neighbor[i][d];
         self.scratch[1][dep][target] =
-          self.scratch[1][dep][target] + self.c[dep].weight[i][d] * val;
+          self.scratch[1][dep][target] + self.c[dep].weight[i][d] * *val;
       }
     }
     let l: usize = self.encode_scratch(r, n, dep + 1);
     assert_eq!(self.d[dep].l, l);
     // R consumed
     r = self.d[dep].r;
-    for i in 0..r {
-      self.scratch[0][dep][n + l + i] = FieldElement::from_real(0);
-    }
-    for i in 0..l {
-      let val = self.scratch[0][dep][n + i];
+    let zeros = vec![FieldElement::from_real(0); r];
+    self.scratch[0][dep][n + l..n + l + r].copy_from_slice(&zeros);
+
+    for (i, val) in self.scratch[0][dep][n..n + l].to_owned().iter().enumerate() {
       for d in 0..self.d[dep].degree {
         let target = self.d[dep].neighbor[i][d];
         self.scratch[0][dep][n + l + target] =
-          self.scratch[0][dep][n + l + target] + val * self.d[dep].weight[i][d];
+          self.scratch[0][dep][n + l + target] + *val * self.d[dep].weight[i][d];
       }
     }
 
-    for i in 0..(n + l + r) {
-      self.scratch[0][dep - 1][pre_n + i] = self.scratch[0][dep][i];
-    }
+    let slc = self.scratch[0][dep][..n + l + r].to_owned();
+    self.scratch[0][dep - 1][pre_n..pre_n + n + l + r].copy_from_slice(&slc);
 
     n + l + r
   }
