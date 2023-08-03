@@ -361,16 +361,17 @@ impl ZkVerifier {
       &mut zk_prover.poly_prover.scratch_pad,
     );
 
-    let input_0_verify = self.poly_verifier.verify_poly_commitment(
+    let (v_time, proof_size, p_time, input_0_verify) = self.poly_verifier.verify_poly_commitment(
       &all_sum,
       self.a_c.circuit[0].bit_length,
       &public_array,
-      &mut verification_time,
-      &mut self.proof_size,
-      &mut zk_prover.total_time,
       merkle_root_l,
       merkle_root_h,
     );
+
+    verification_time += v_time;
+    self.proof_size += proof_size;
+    zk_prover.total_time += p_time;
 
     zk_prover.poly_prover.total_time_pc_p += self.poly_verifier.pc_prover.total_time_pc_p;
 

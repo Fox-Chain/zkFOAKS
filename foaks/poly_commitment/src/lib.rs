@@ -376,12 +376,9 @@ impl PolyCommitVerifier {
     all_sum: &[FieldElement],
     log_length: usize,
     public_array: &[FieldElement],
-    v_time: &mut f64,
-    proof_size: &mut usize,
-    p_time: &mut f64,
     merkle_tree_l: HashDigest,
     merkle_tree_h: HashDigest,
-  ) -> bool {
+  ) -> (f64, usize, f64, bool) {
     let command = format!("./fft_gkr {} log_fftgkr.txt", log_length - LOG_SLICE_NUMBER);
     // Use output, should error the error
     Command::new("sh")
@@ -422,9 +419,9 @@ impl PolyCommitVerifier {
       .parse()
       .expect("Error converting p_time_fft to f64");
 
-    *v_time += v_time_fft;
-    *p_time += p_time_fft;
-    *proof_size += proof_size_fft;
+    let mut v_time = v_time_fft;
+    let p_time = p_time_fft;
+    let mut proof_size = proof_size_fft;
 
     let com = self
       .pc_prover
@@ -512,7 +509,7 @@ impl PolyCommitVerifier {
 
         if i == 0 {
           time_span = t0.elapsed().as_secs_f64();
-          *v_time += time_span;
+          v_time += time_span;
           (alpha_l, new_size) = request_init_value_with_merkle(
             // Todo: This new_size is not read in C++, but at the end we actually need it
             s0_pow.try_into().expect("Failed to convert s0_pow to u32"),
@@ -527,7 +524,7 @@ impl PolyCommitVerifier {
             fri_ctx,
           );
 
-          *proof_size += new_size;
+          proof_size += new_size;
 
           t0 = time::Instant::now();
 
@@ -545,7 +542,7 @@ impl PolyCommitVerifier {
             min_pow(s0_pow, s1_pow),
             &alpha_l.0,
           ) {
-            return false;
+            return (v_time, proof_size, p_time, false);
           }
           if !verify_merkle(
             merkle_tree_h,
@@ -554,10 +551,10 @@ impl PolyCommitVerifier {
             min_pow(s0_pow, s1_pow),
             &alpha_h.0,
           ) {
-            return false;
+            return (v_time, proof_size, p_time, false);
           }
 
-          *v_time += t0.elapsed().as_secs_f64();
+          v_time += t0.elapsed().as_secs_f64();
           (beta, new_size) = request_step_commit(
             0,
             (pow / 2)
@@ -566,8 +563,8 @@ impl PolyCommitVerifier {
             fri_ctx,
           );
 
-          *proof_size += new_size;
-
+          proof_size += new_size;
+          // Todo Check Orion whether we add t0 to v_time
           t0 = time::Instant::now();
 
           if !verify_merkle(
@@ -577,7 +574,7 @@ impl PolyCommitVerifier {
             pow / 2,
             &beta.0,
           ) {
-            return false;
+            return (v_time, proof_size, p_time, false);
           }
 
           let inv_mu = root_of_unity.fast_pow(pow / 2).inverse();
@@ -656,7 +653,7 @@ impl PolyCommitVerifier {
                 "a: {}, b:{}, Fri check consistency first round fail {}",
                 a, b, j
               );
-              return false;
+              return (v_time, proof_size, p_time, false);
             }
           }
 
@@ -666,7 +663,7 @@ impl PolyCommitVerifier {
           // v_time += time_span.count();
         } else {
           time_span = t0.elapsed().as_secs_f64();
-          *v_time += time_span;
+          v_time += time_span;
 
           alpha = beta.clone();
           (beta, new_size) = request_step_commit(
@@ -677,7 +674,7 @@ impl PolyCommitVerifier {
             fri_ctx,
           );
 
-          *proof_size += new_size;
+          proof_size += new_size;
 
           t0 = time::Instant::now();
 
@@ -688,12 +685,12 @@ impl PolyCommitVerifier {
             pow / 2,
             &beta.0,
           ) {
-            return false;
+            return (v_time, proof_size, p_time, false);
           }
 
           let inv_mu = root_of_unity.fast_pow(pow / 2).inverse();
           time_span = t0.elapsed().as_secs_f64();
-          *v_time += time_span;
+          v_time += time_span;
 
           for j in 0..slice_count {
             let p_val_0 = gen_val(&alpha, inv_mu, i, j);
@@ -706,7 +703,7 @@ impl PolyCommitVerifier {
               && p_val_1 != beta.0[j].1
             {
               eprintln!("Fri check consistency {} round fail", i);
-              return false;
+              return (v_time, proof_size, p_time, false);
             }
           }
         }
@@ -726,11 +723,11 @@ impl PolyCommitVerifier {
             != template
           {
             eprintln!("Fri rs code check fail {} {}", i, j);
-            return false;
+            return (v_time, proof_size, p_time, false);
           }
         }
       }
     }
-    true
+    (v_time, proof_size, p_time, true)
   }
 }
