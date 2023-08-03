@@ -36,31 +36,29 @@ impl LinearPC {
     }
   }
   pub fn commit(&mut self, src: &[FieldElement]) -> Vec<HashDigest> {
-    let n = src.len();
+    //Todo: Refactor, delete self.codeword_size field
+    let n: usize = src.len();
     self.codeword_size = Vec::with_capacity(COLUMN_SIZE);
     self.encoded_codeword = Vec::with_capacity(COLUMN_SIZE);
     self.coef = Vec::with_capacity(COLUMN_SIZE);
 
     assert_eq!(n % COLUMN_SIZE, 0);
 
-    //new refactored code
-    let encoded_codeword_template = vec![FieldElement::zero(); n / COLUMN_SIZE * 2];
+    let segment = n / COLUMN_SIZE;
     for i in 0..COLUMN_SIZE {
-      self
-        .encoded_codeword
-        .push(encoded_codeword_template.clone());
-      let begin = i * n / COLUMN_SIZE;
-      let end = (i + 1) * n / COLUMN_SIZE;
+      let begin = i * segment;
+      let end = (i + 1) * segment;
       let src_slice = &src[begin..end];
       self.coef.push(src_slice.to_vec());
 
-      let dst = self.lce_ctx.encode(src_slice);
+      let mut dst = self.lce_ctx.encode(src_slice);
       let size = dst.len();
       self.codeword_size.push(size);
-      self.encoded_codeword[i][..size].copy_from_slice(&dst);
+      dst.resize(2 * segment, FieldElement::zero());
+      self.encoded_codeword.push(dst);
     }
 
-    let stash: Vec<HashDigest> = (0..(n / COLUMN_SIZE * 2))
+    let stash: Vec<HashDigest> = (0..(segment * 2))
       .map(|i| {
         (0..(COLUMN_SIZE / 2)).fold(HashDigest::default(), |acc, j| {
           merkle_tree::hash_double_field_element_merkle_damgard(
@@ -201,8 +199,9 @@ impl LinearPC {
     let size_r1 = r1.len();
     assert_eq!(size_r0 * size_r1, n);
 
-    let mut visited_com = vec![false; n / COLUMN_SIZE * 4];
-    let mut visited_combined_com = vec![false; n / COLUMN_SIZE * 4];
+    let segment = n / COLUMN_SIZE;
+    let mut visited_com = vec![false; segment * 4];
+    let mut visited_combined_com = vec![false; segment * 4];
 
     let mut proof_size = 0;
     let query_count = (-128f32 / (1f32 - TARGET_DISTANCE).log2()) as usize;
@@ -215,15 +214,15 @@ impl LinearPC {
 
     let codeword_size_0 = self.codeword_size[0];
     let mut combined_codeword = vec![FieldElement::zero(); codeword_size_0];
-    let mut combined_codeword_hash = vec![HashDigest::default(); n / COLUMN_SIZE * 2];
-    let mut combined_codeword_mt = vec![HashDigest::default(); n / COLUMN_SIZE * 4];
+    let mut combined_codeword_hash = vec![HashDigest::default(); segment * 2];
+    let mut combined_codeword_mt = vec![HashDigest::default(); segment * 4];
     for (i, elem_r0) in r0.iter().enumerate().take(COLUMN_SIZE) {
       for (j, elem_c_c) in combined_codeword.iter_mut().enumerate() {
         *elem_c_c = *elem_c_c + *elem_r0 * self.encoded_codeword[i][j];
       }
     }
 
-    for i in 0..(n / COLUMN_SIZE * 2) {
+    for i in 0..(segment * 2) {
       if i < codeword_size_0 {
         combined_codeword_hash[i] = merkle_tree::hash_single_field_element(combined_codeword[i]);
       } else {
@@ -246,7 +245,7 @@ impl LinearPC {
 
     //check for encode
     {
-      let sliced_message = &combined_message[..n / COLUMN_SIZE];
+      let sliced_message = &combined_message[..segment];
       let test_codeword = self.lce_ctx.encode(sliced_message);
       let test_codeword_size = test_codeword.len();
       assert_eq!(test_codeword_size, codeword_size_0);
@@ -280,7 +279,7 @@ impl LinearPC {
         &com_mt,
         column_hash,
         q,
-        n / COLUMN_SIZE * 2,
+        segment * 2,
         &mut visited_com,
         &mut proof_size,
       ));
@@ -289,7 +288,7 @@ impl LinearPC {
         &combined_codeword_mt,
         merkle_tree::hash_single_field_element(combined_codeword[q]),
         q,
-        n / COLUMN_SIZE * 2,
+        segment * 2,
         &mut visited_combined_com,
         &mut proof_size,
       ));
@@ -301,7 +300,7 @@ impl LinearPC {
 
     // setup code-switching
     let mut answer = FieldElement::zero();
-    for i in 0..(n / COLUMN_SIZE) {
+    for i in 0..(segment) {
       answer = answer + r1[i] * combined_message[i];
     }
 
@@ -312,7 +311,7 @@ impl LinearPC {
     }
 
     // generate circuit
-    self.generate_circuit(&mut q, n / COLUMN_SIZE, &combined_message);
+    self.generate_circuit(&mut q, segment, &combined_message);
 
     //self.verifier.get_prover(&p); //Refactored, inside of zk_verifier has not
     // zk_prover self.prover.get_circuit(self.verifier.aritmetic_circuit);
@@ -327,7 +326,7 @@ impl LinearPC {
     // p.get_witness(combined_message, N / column_size); Refactored inside
     // verifier.verify()
 
-    let witness = &combined_message[..n / COLUMN_SIZE];
+    let witness = &combined_message[..segment];
 
     let (result, time_diff) = self.verifier.verify(
       max_bit_length.expect("Failed to retrieve max_bit_length"),
