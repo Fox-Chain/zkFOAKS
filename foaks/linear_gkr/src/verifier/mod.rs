@@ -139,11 +139,13 @@ impl ZkVerifier {
       // never used
       //let rho = FieldElement::new_random();
 
+      let previous_bit_length = self.a_c.circuit[i - 1].bit_length;
+
       zk_prover.sumcheck_init(
         i,
         self.a_c.circuit[i].bit_length,
-        self.a_c.circuit[i - 1].bit_length,
-        self.a_c.circuit[i - 1].bit_length,
+        previous_bit_length,
+        previous_bit_length,
         alpha,
         beta,
         r_0.clone(),
@@ -158,14 +160,14 @@ impl ZkVerifier {
       let mut r_v;
 
       //next level random
-      let r_u = generate_randomness(self.a_c.circuit[i - 1].bit_length);
-      r_v = generate_randomness(self.a_c.circuit[i - 1].bit_length);
+      let r_u = generate_randomness(previous_bit_length);
+      r_v = generate_randomness(previous_bit_length);
 
       direct_relay_value =
         alpha * self.direct_relay(i, &r_0, &r_u) + beta * self.direct_relay(i, &r_1, &r_u);
 
       if i == 1 {
-        for r_v_item in r_v.iter_mut().take(self.a_c.circuit[i - 1].bit_length) {
+        for r_v_item in r_v.iter_mut().take(previous_bit_length) {
           *r_v_item = FieldElement::zero();
         }
       }
@@ -179,17 +181,17 @@ impl ZkVerifier {
       // security.
       //let linear_combine = generate_randomness(1)[0]; // mem leak
 
-      let mut one_minus_r_u = vec![FieldElement::zero(); self.a_c.circuit[i - 1].bit_length];
-      let mut one_minus_r_v = vec![FieldElement::zero(); self.a_c.circuit[i - 1].bit_length];
+      let mut one_minus_r_u = vec![FieldElement::zero(); previous_bit_length];
+      let mut one_minus_r_v = vec![FieldElement::zero(); previous_bit_length];
 
-      for j in 0..(self.a_c.circuit[i - 1].bit_length) {
+      for j in 0..(previous_bit_length) {
         one_minus_r_u[j] = FieldElement::from_real(1) - r_u[j];
         one_minus_r_v[j] = FieldElement::from_real(1) - r_v[j];
         //one_minus_r_u.push(FieldElement::from_real(1) - r_u[j]);
         //one_minus_r_v.push(FieldElement::from_real(1) - r_v[j]);
       }
 
-      for j in 0..(self.a_c.circuit[i - 1].bit_length) {
+      for j in 0..(previous_bit_length) {
         let poly = zk_prover.sumcheck_phase1_update(previous_random, j);
         self.proof_size += mem::size_of::<QuadraticPoly>();
         previous_random = r_u[j];
@@ -224,7 +226,7 @@ impl ZkVerifier {
 
       zk_prover.sumcheck_phase2_init(previous_random, r_u.clone(), one_minus_r_u.clone());
       let mut previous_random = FieldElement::zero();
-      for j in 0..self.a_c.circuit[i - 1].bit_length {
+      for j in 0..previous_bit_length {
         if i == 1 {
           r_v[j] = FieldElement::zero();
         }
@@ -299,7 +301,7 @@ impl ZkVerifier {
       let bit_test_value = predicates_value[13];
       let custom_comb_value = predicates_value[14];
 
-      let mut r = Vec::new();
+      let mut r = Vec::with_capacity(previous_bit_length * 2);
       for j in 0..self.a_c.circuit[i - 1].bit_length {
         r.push(r_u[j]);
       }

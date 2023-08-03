@@ -3,7 +3,7 @@ use std::{mem::size_of, time, usize, vec};
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, MAX_BIT_LENGTH, MAX_FRI_DEPTH, RS_CODE_RATE, SLICE_NUMBER},
   merkle_tree,
-  my_hash::{HashDigest, my_hash},
+  my_hash::{my_hash, HashDigest},
 };
 use prime_field::FieldElement;
 
@@ -18,13 +18,6 @@ pub struct CommitPhaseData {
   pub rs_codeword: [Vec<FieldElement>; MAX_FRI_DEPTH],
   pub poly_coef: [Vec<FieldElement>; MAX_FRI_DEPTH],
   pub rs_codeword_mapping: [Vec<usize>; MAX_FRI_DEPTH],
-}
-
-// namespace fri
-impl CommitPhaseData {
-  pub fn new() -> Self { Default::default() }
-
-  pub fn delete_self(&mut self) { std::mem::take(self); }
 }
 
 #[derive(Debug, Clone)]
@@ -187,8 +180,8 @@ pub fn request_init_commit(
     vec![HashDigest::default(); 1 << (*log_current_witness_size_per_slice - 1)];
 
   for i in 0..(1 << (*log_current_witness_size_per_slice - 1)) {
-    let mut tmp_hash = HashDigest::new();
-    let mut data = [HashDigest::new(), HashDigest::new()];
+    let mut tmp_hash = HashDigest::default();
+    let mut data = [HashDigest::default(), HashDigest::default()];
     let mut j = 0;
     let end = 1 << log_leaf_size;
     while j < end {
@@ -240,8 +233,7 @@ pub fn request_init_value_with_merkle(
 
   for i in 0..SLICE_NUMBER {
     value.push((
-      fri_ctx.witness_rs_codeword_interleaved[oracle_indicator]
-        [pow_0 << log_leaf_size | i << 1],
+      fri_ctx.witness_rs_codeword_interleaved[oracle_indicator][pow_0 << log_leaf_size | i << 1],
       fri_ctx.witness_rs_codeword_interleaved[oracle_indicator]
         [pow_0 << log_leaf_size | i << 1 | 1],
     ));

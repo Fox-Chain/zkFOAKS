@@ -1,16 +1,16 @@
 use std::mem;
 use std::time::Instant;
 
+use infrastructure::merkle_tree::create_tree;
+use infrastructure::my_hash::my_hash;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, RS_CODE_RATE, SLICE_NUMBER},
   my_hash::{self, HashDigest},
 };
-use infrastructure::merkle_tree::create_tree;
-use infrastructure::my_hash::my_hash;
 use prime_field::FieldElement;
 
-use crate::LdtCommitment;
 use crate::vpd::fri::FRIContext;
+use crate::LdtCommitment;
 
 pub fn verify_merkle(
   hash_digest: HashDigest,
@@ -42,7 +42,7 @@ pub fn verify_merkle(
 
   data = unsafe { mem::zeroed() };
 
-  let mut value_hash = HashDigest::new();
+  let mut value_hash = HashDigest::default();
 
   for value in values {
     data[0] = HashDigest::memcpy_from_field_elements([value.0, value.1]);

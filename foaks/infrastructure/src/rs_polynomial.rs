@@ -51,12 +51,6 @@ impl ScratchPad {
       twiddle_factor_size,
     }
   }
-
-  pub fn delete(&mut self) {
-    mem::take(&mut self.dst[0]);
-    mem::take(&mut self.dst[1]);
-    mem::take(&mut self.twiddle_factor);
-  }
 }
 
 pub fn fast_fourier_transform(
@@ -154,13 +148,13 @@ pub fn inverse_fast_fourier_transform(
 ) {
   if coefficient_len > order {
     let error_message = format!(
-        "Got insufficient number {} of evaluations for inverse fast fourier transform. Creating \
+      "Got insufficient number {} of evaluations for inverse fast fourier transform. Creating \
          polynomial of order {} instead.",
-        coefficient_len, order
+      coefficient_len, order
     );
     eprintln!("{}", error_message);
     coefficient_len = order;
-}
+  }
 
   let sub_eval: Vec<FieldElement> = if coefficient_len != order {
     (0..coefficient_len)
