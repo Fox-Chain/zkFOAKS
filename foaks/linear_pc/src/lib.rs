@@ -110,8 +110,8 @@ impl LinearPC {
     self.verifier.a_c.circuit[self.gates_count.len() + 1].gates =
       vec![Gate::new(); 1 << self.verifier.a_c.circuit[self.gates_count.len() + 1].bit_length];
 
-    for i in 0..n {
-      self.verifier.a_c.inputs.push(input[i]);
+    for (i, elem) in input.iter().enumerate().take(n) {
+      self.verifier.a_c.inputs.push(*elem);
       self.verifier.a_c.circuit[0].gates[i] = Gate::from_params(3, 0, 0);
       self.verifier.a_c.circuit[1].gates[i] = Gate::from_params(4, i, 0);
     }
@@ -184,9 +184,8 @@ impl LinearPC {
         gate.weight[j] = weight;
       }
     }
-    for i in 0..query_count {
-      self.verifier.a_c.circuit[final_output_depth + 1].gates[i] =
-        Gate::from_params(10, query[i], 0);
+    for (i, elem) in query.iter().enumerate() {
+      self.verifier.a_c.circuit[final_output_depth + 1].gates[i] = Gate::from_params(10, *elem, 0);
     }
     assert_eq!(c_mempool_ptr, CN * self.lce_ctx.c[0].l);
   }
@@ -218,9 +217,9 @@ impl LinearPC {
     let mut combined_codeword = vec![FieldElement::zero(); codeword_size_0];
     let mut combined_codeword_hash = vec![HashDigest::default(); n / COLUMN_SIZE * 2];
     let mut combined_codeword_mt = vec![HashDigest::default(); n / COLUMN_SIZE * 4];
-    for i in 0..COLUMN_SIZE {
-      for j in 0..codeword_size_0 {
-        combined_codeword[j] = combined_codeword[j] + r0[i] * self.encoded_codeword[i][j];
+    for (i, elem_r0) in r0.iter().enumerate().take(COLUMN_SIZE) {
+      for (j, elem_c_c) in combined_codeword.iter_mut().enumerate() {
+        *elem_c_c = *elem_c_c + *elem_r0 * self.encoded_codeword[i][j];
       }
     }
 
@@ -260,8 +259,8 @@ impl LinearPC {
     for _ in 0..query_count {
       let q = rand::random::<usize>() % codeword_size_0;
       let mut sum = FieldElement::zero();
-      for j in 0..COLUMN_SIZE {
-        sum = sum + r0[j] * self.encoded_codeword[j][q];
+      for (j, elem) in r0.iter().enumerate().take(COLUMN_SIZE) {
+        sum = sum + *elem * self.encoded_codeword[j][q];
       }
       proof_size += std::mem::size_of::<FieldElement>() * COLUMN_SIZE;
 

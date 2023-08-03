@@ -53,17 +53,17 @@ impl LinearCodeEncodeContext {
       }
     }
 
-    self.scratch[0][dep][..n].copy_from_slice(&src[..n]);
+    self.scratch[0][dep][..n].copy_from_slice(src);
     let mut r: usize = (ALPHA * (n as f64)) as usize;
 
     self.scratch[1][dep].fill(FieldElement::zero());
 
     //expander mult
-    for i in 0..n {
+    for (i, elem) in src.iter().enumerate() {
       for d in 0..self.c[dep].degree {
         let target = self.c[dep].neighbor[i][d];
         self.scratch[1][dep][target] =
-          self.scratch[1][dep][target] + self.c[dep].weight[i][d] * src[i];
+          self.scratch[1][dep][target] + self.c[dep].weight[i][d] * *elem;
       }
     }
     let l: usize = self.encode_scratch(r, n, dep + 1);

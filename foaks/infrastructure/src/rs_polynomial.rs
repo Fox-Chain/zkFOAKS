@@ -1,5 +1,3 @@
-use std::mem;
-
 use prime_field::FieldElement;
 
 use crate::utility::my_log;
