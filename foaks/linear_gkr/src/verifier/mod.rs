@@ -125,13 +125,8 @@ impl ZkVerifier {
     let t_a = Instant::now();
 
     println!("Calc V_output(r)");
-    let mut a_0 = zk_prover.v_res(
-      one_minus_r_0.clone(),
-      r_0.clone(),
-      result,
-      capacity,
-      1 << capacity,
-    );
+    assert_eq!(result.len(), 1 << capacity);
+    let mut a_0 = zk_prover.v_res(&one_minus_r_0, &r_0, result);
 
     let time_span = t_a.elapsed();
     println!("    Time:: {}", time_span.as_secs_f64());

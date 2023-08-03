@@ -118,16 +118,13 @@ impl ZkProver {
 
   pub fn v_res(
     &mut self,
-    one_minus_r_0: Vec<FieldElement>,
-    r_0: Vec<FieldElement>,
-    output_raw: Vec<FieldElement>,
-    r_0_size: usize,
-    mut output_size: usize,
+    one_minus_r_0: &[FieldElement],
+    r_0: &[FieldElement],
+    mut output: Vec<FieldElement>,
   ) -> FieldElement {
+    let r_0_size = r_0.len();
+    let mut output_size = output.len();
     let t0 = time::Instant::now();
-    let mut output = Vec::with_capacity(output_size);
-    output.extend_from_slice(&output_raw[..output_size]);
-    output.resize(output_size, FieldElement::zero());
     for i in 0..r_0_size {
       for j in 0..(output_size >> 1) {
         output[j] = output[j << 1] * one_minus_r_0[i] + output[j << 1 | 1] * r_0[i];
