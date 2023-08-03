@@ -81,17 +81,15 @@ impl ZkVerifier {
 
   pub fn verify(
     &mut self,
-    output_path: &String,
     bit_length: usize,
-    inputs: Vec<FieldElement>,
-    n: usize,
+    inputs: &[FieldElement],
     query_count: usize,
     combined_codeword: Vec<FieldElement>,
     q: Vec<usize>,
   ) -> (bool, f64) {
     let mut zk_prover = ZkProver::new();
     zk_prover.init_array(bit_length, self.a_c.clone());
-    zk_prover.get_witness(inputs, n);
+    zk_prover.get_witness(inputs);
 
     self.proof_size = 0;
     //there is a way to compress binlinear pairing element
@@ -198,28 +196,14 @@ impl ZkVerifier {
         //todo: Debug eval() fn
         let eval_zero = poly.eval(&FieldElement::zero());
         let eval_one = poly.eval(&FieldElement::real_one());
-        // println!(
-        //   "j:{}, i:{}, alpha_beta_sum.real:{}, img{}",
-        //   j, i, alpha_beta_sum.real, alpha_beta_sum.img
-        // );
 
-        fn verify_evaluations(
-          eval_zero: f64,
-          eval_one: f64,
-          alpha_beta_sum: f64,
-          i: usize,
-          j: usize,
-        ) -> Result<f64, String> {
-          if eval_zero + eval_one != alpha_beta_sum {
-            let error_message = format!(
-              "Verification fail, phase1, circuit {}, current bit {}",
-              i, j
-            );
-            eprintln!("{}", error_message);
-            return Err(error_message);
-          } else {
-            return Ok(alpha_beta_sum);
-          }
+        if eval_zero + eval_one != alpha_beta_sum {
+          //todo: Improve error handling
+          eprintln!(
+            "Verification fail, phase1, circuit {}, current bit {}",
+            i, j
+          );
+          return (false, 0.0);
         }
         alpha_beta_sum = poly.eval(&r_u[j].clone());
       }
@@ -403,6 +387,8 @@ impl ZkVerifier {
       );
       self.v_time = verification_time - verification_rdl_time;
       println!("Proof size (bytes) {}", self.proof_size);
+
+      let output_path = &String::from("log.txt");
 
       ZkVerifier::write_file(
         output_path,

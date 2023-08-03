@@ -224,10 +224,9 @@ impl ZkProver {
     self.circuit_value[self.a_c.total_depth - 1].clone()
   }
 
-  pub fn get_witness(&mut self, inputs: Vec<FieldElement>, n: usize) {
+  pub fn get_witness(&mut self, inputs: &[FieldElement]) {
     self.circuit_value[0] = Vec::with_capacity(1 << self.a_c.circuit[0].bit_length);
-
-    self.circuit_value[0].extend_from_slice(&inputs[..n]);
+    self.circuit_value[0].extend_from_slice(inputs);
   }
 
   pub fn sumcheck_init(

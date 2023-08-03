@@ -328,11 +328,11 @@ impl LinearPC {
     // p.get_witness(combined_message, N / column_size); Refactored inside
     // verifier.verify()
 
+    let witness = &combined_message[..n / COLUMN_SIZE];
+
     let (result, time_diff) = self.verifier.verify(
-      &String::from("log.txt"),
       max_bit_length.expect("Failed to retrieve max_bit_length"),
-      combined_message.clone(),
-      n / COLUMN_SIZE,
+      witness,
       query_count,
       combined_codeword,
       q,
