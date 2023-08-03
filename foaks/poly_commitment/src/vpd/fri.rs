@@ -198,8 +198,8 @@ pub fn request_init_commit(
     leaf_hash[oracle_indicator][i] = tmp_hash;
   }
   merkle_tree::create_tree(
-    &leaf_hash[oracle_indicator],
     &mut witness_merkle[oracle_indicator],
+    &leaf_hash[oracle_indicator],
     true,
   );
 

@@ -155,8 +155,8 @@ impl FRIContext {
 
     let current_step_no = self.cpd.merkle[self.current_step_no].clone();
     create_tree(
-      &hash_val,
       self.cpd.merkle[self.current_step_no].as_mut(),
+      &hash_val,
       current_step_no.is_empty(),
     );
 

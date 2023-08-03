@@ -70,7 +70,7 @@ impl LinearPC {
       })
       .collect();
 
-    create_tree(&stash, &mut self.mt, true);
+    create_tree(&mut self.mt, &stash, true);
     self.mt.clone()
   }
 
@@ -214,7 +214,7 @@ impl LinearPC {
 
     let codeword_size_0 = self.codeword_size[0];
     let mut combined_codeword = vec![FieldElement::zero(); codeword_size_0];
-    let mut combined_codeword_hash = vec![HashDigest::default(); segment * 2];
+    let mut combined_codeword_hash = Vec::with_capacity(segment * 2);
     let mut combined_codeword_mt = vec![HashDigest::default(); segment * 4];
     for (i, elem_r0) in r0.iter().enumerate().take(COLUMN_SIZE) {
       for (j, elem_c_c) in combined_codeword.iter_mut().enumerate() {
@@ -222,21 +222,19 @@ impl LinearPC {
       }
     }
 
-    for i in 0..(segment * 2) {
-      if i < codeword_size_0 {
-        combined_codeword_hash[i] = merkle_tree::hash_single_field_element(combined_codeword[i]);
-      } else {
-        combined_codeword_hash[i] = merkle_tree::hash_single_field_element(FieldElement::zero());
-      }
+    for elem in combined_codeword.iter() {
+      combined_codeword_hash.push(merkle_tree::hash_single_field_element(*elem));
     }
+    let hash_zero_field_element = merkle_tree::hash_single_field_element(FieldElement::zero());
+    let hash_zeros = vec![hash_zero_field_element; segment * 2 - codeword_size_0];
+    combined_codeword_hash.extend_from_slice(&hash_zeros);
 
     //merkle commit to combined_codeword
-    create_tree(&combined_codeword_hash, &mut combined_codeword_mt, false);
+    create_tree(&mut combined_codeword_mt, &combined_codeword_hash, false);
 
     //prover construct the combined original message
     let mut combined_message = vec![FieldElement::zero(); n];
 
-    // Todo: check if this is correct: enumerate().take()?
     for (i, coef_i) in self.coef.iter().enumerate().take(COLUMN_SIZE) {
       for (j, &coef_ij) in coef_i.iter().enumerate().take(codeword_size_0) {
         combined_message[j] = combined_message[j] + r0[i] * coef_ij;
