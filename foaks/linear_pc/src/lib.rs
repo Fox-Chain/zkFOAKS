@@ -1,5 +1,9 @@
 use std::{collections::HashMap, time::Instant};
 
+mod parameters;
+
+use crate::parameters::*;
+
 use infrastructure::{
   merkle_tree::{self, create_tree},
   my_hash::HashDigest,
@@ -107,15 +111,27 @@ impl LinearPC {
 
     self.verifier.a_c.circuit[self.gates_count.len() + 1].gates =
       vec![Gate::new(); 1 << self.verifier.a_c.circuit[self.gates_count.len() + 1].bit_length];
-
+    //pub const Add = 0,
+    // pub const	Mult = 1,
+    // pub const	Dummy = 2,
+    // pub const Sum = 5,
+    // pub const ExpSum = 12,
+    // pub const DirectRelay = 4,
+    // pub const NotGate = 6,
+    // pub const Minus = 7,
+    // pub const XorGate = 8,
+    // 	pub const BitTest = 13,
+    // pub const Relay = 10,
+    // pub const CustomLinearComb = 14,
+    // pub const Input = 3isize
     for (i, elem) in input.iter().enumerate().take(n) {
       self.verifier.a_c.inputs.push(*elem);
-      self.verifier.a_c.circuit[0].gates[i] = Gate::from_params(3, 0, 0);
-      self.verifier.a_c.circuit[1].gates[i] = Gate::from_params(4, i, 0);
+      self.verifier.a_c.circuit[0].gates[i] = Gate::from_params(Input, Add, Add);
+      self.verifier.a_c.circuit[1].gates[i] = Gate::from_params(DirectRelay, i, Add);
     }
     //Todo: improve gate_types::input with constant values
     for i in 0..n {
-      self.verifier.a_c.circuit[2].gates[i] = Gate::from_params(10, i, 0);
+      self.verifier.a_c.circuit[2].gates[i] = Gate::from_params(Relay, i, Add);
     }
 
     self.verifier.a_c.circuit[2].src_expander_c_mempool = vec![0; CN * self.lce_ctx.c[0].l];
@@ -124,7 +140,7 @@ impl LinearPC {
     let mut c_mempool_ptr = 0;
     let mut d_mempool_ptr = 0;
     for i in 0..self.lce_ctx.c[0].r {
-      self.verifier.a_c.circuit[2].gates[i + n] = Gate::from_params(14, 0, 0);
+      self.verifier.a_c.circuit[2].gates[i + n] = Gate::from_params(CustomLinearComb, Add, Add);
       self.verifier.a_c.circuit[2].gates[i + n].parameter_length =
         self.lce_ctx.c[0].r_neighbor[i].len();
       self.verifier.a_c.circuit[2].gates[i + n].src =
@@ -148,7 +164,7 @@ impl LinearPC {
     (0..output_depth_output_size.1)
       .enumerate()
       .for_each(|(i, _)| {
-        self.verifier.a_c.circuit[final_output_depth].gates[i] = Gate::from_params(10, i, 0);
+        self.verifier.a_c.circuit[final_output_depth].gates[i] = Gate::from_params(Relay, i, Add);
       });
 
     //let d_input_offset = n; //Never used
@@ -183,7 +199,8 @@ impl LinearPC {
       }
     }
     for (i, elem) in query.iter().enumerate() {
-      self.verifier.a_c.circuit[final_output_depth + 1].gates[i] = Gate::from_params(10, *elem, 0);
+      self.verifier.a_c.circuit[final_output_depth + 1].gates[i] =
+        Gate::from_params(Relay, *elem, Add);
     }
     assert_eq!(c_mempool_ptr, CN * self.lce_ctx.c[0].l);
   }
@@ -417,7 +434,7 @@ impl LinearPC {
       .enumerate()
       .take(output_size_so_far)
     {
-      *gate = Gate::from_params(10, i, 0);
+      *gate = Gate::from_params(Relay, i, Add);
     }
 
     self.verifier.a_c.circuit[input_depth + 1].src_expander_c_mempool =
@@ -465,7 +482,7 @@ impl LinearPC {
       .enumerate()
       .take(output_size_so_far)
     {
-      *gate = Gate::from_params(10, i, 0);
+      *gate = Gate::from_params(Relay, i, Add);
     }
 
     self.verifier.a_c.circuit[final_output_depth].src_expander_d_mempool =
@@ -580,17 +597,18 @@ fn dfs(dst: &mut [FieldElement], r: &[FieldElement], depth: usize, val: FieldEle
 
 // enum GateTypes
 // {
-// 	Add = 0,
-// 	Mult = 1,
-// 	Dummy = 2,
-// 	Sum = 5,
-// 	ExpSum = 12,
-// 	DirectRelay = 4,
-// 	NotGate = 6,
-// 	Minus = 7,
-// 	XorGate = 8,
-// 	BitTest = 13,
-// 	Relay = 10,
-// 	CustomLinearComb = 14,
-// 	Input = 3isize
+// pub const Add = 0,
+// pub const	Mult = 1,
+// pub const	Dummy = 2,
+// pub const Sum = 5,
+// pub const ExpSum = 12,
+// pub const DirectRelay = 4,
+// pub const NotGate = 6,
+// pub const Minus = 7,
+// pub const XorGate = 8,
+// 	pub const BitTest = 13,
+// pub const Relay = 10,
+// pub const CustomLinearComb = 14,
+// pub const Input = 3isize
 // }
+//pub const LOG_SLICE_NUMBER: usize = 6;
