@@ -126,12 +126,12 @@ impl LinearPC {
     // pub const Input = 3isize
     for (i, elem) in input.iter().enumerate().take(n) {
       self.verifier.a_c.inputs.push(*elem);
-      self.verifier.a_c.circuit[0].gates[i] = Gate::from_params(Input, Add, Add);
-      self.verifier.a_c.circuit[1].gates[i] = Gate::from_params(DirectRelay, i, Add);
+      self.verifier.a_c.circuit[0].gates[i] = Gate::from_params(INPUT, 0, 0);
+      self.verifier.a_c.circuit[1].gates[i] = Gate::from_params(DIRECTRELAY, i, 0);
     }
     //Todo: improve gate_types::input with constant values
     for i in 0..n {
-      self.verifier.a_c.circuit[2].gates[i] = Gate::from_params(Relay, i, Add);
+      self.verifier.a_c.circuit[2].gates[i] = Gate::from_params(RELAY, i, 0);
     }
 
     self.verifier.a_c.circuit[2].src_expander_c_mempool = vec![0; CN * self.lce_ctx.c[0].l];
@@ -140,7 +140,7 @@ impl LinearPC {
     let mut c_mempool_ptr = 0;
     let mut d_mempool_ptr = 0;
     for i in 0..self.lce_ctx.c[0].r {
-      self.verifier.a_c.circuit[2].gates[i + n] = Gate::from_params(CustomLinearComb, Add, Add);
+      self.verifier.a_c.circuit[2].gates[i + n] = Gate::from_params(CUSTOMLINEARCOMB, 0, 0);
       self.verifier.a_c.circuit[2].gates[i + n].parameter_length =
         self.lce_ctx.c[0].r_neighbor[i].len();
       self.verifier.a_c.circuit[2].gates[i + n].src =
@@ -164,7 +164,7 @@ impl LinearPC {
     (0..output_depth_output_size.1)
       .enumerate()
       .for_each(|(i, _)| {
-        self.verifier.a_c.circuit[final_output_depth].gates[i] = Gate::from_params(Relay, i, Add);
+        self.verifier.a_c.circuit[final_output_depth].gates[i] = Gate::from_params(RELAY, i, 0);
       });
 
     //let d_input_offset = n; //Never used
@@ -200,7 +200,7 @@ impl LinearPC {
     }
     for (i, elem) in query.iter().enumerate() {
       self.verifier.a_c.circuit[final_output_depth + 1].gates[i] =
-        Gate::from_params(Relay, *elem, Add);
+        Gate::from_params(RELAY, *elem, 0);
     }
     assert_eq!(c_mempool_ptr, CN * self.lce_ctx.c[0].l);
   }
@@ -434,7 +434,7 @@ impl LinearPC {
       .enumerate()
       .take(output_size_so_far)
     {
-      *gate = Gate::from_params(Relay, i, Add);
+      *gate = Gate::from_params(RELAY, i, 0);
     }
 
     self.verifier.a_c.circuit[input_depth + 1].src_expander_c_mempool =
@@ -482,7 +482,7 @@ impl LinearPC {
       .enumerate()
       .take(output_size_so_far)
     {
-      *gate = Gate::from_params(Relay, i, Add);
+      *gate = Gate::from_params(RELAY, i, 0);
     }
 
     self.verifier.a_c.circuit[final_output_depth].src_expander_d_mempool =
