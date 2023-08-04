@@ -197,14 +197,14 @@ impl ZkVerifier {
         let eval_zero = poly.eval(&FieldElement::zero());
         let eval_one = poly.eval(&FieldElement::real_one());
 
-        if eval_zero + eval_one != alpha_beta_sum {
-          //todo: Improve error handling
-          eprintln!(
-            "Verification fail, phase1, circuit {}, current bit {}",
-            i, j
-          );
-          return (false, 0.0);
-        }
+        assert_eq!(
+          eval_zero + eval_one,
+          alpha_beta_sum,
+          "Verification fail, phase1, circuit {}, current bit {}",
+          i,
+          j
+        );
+
         alpha_beta_sum = poly.eval(&r_u[j].clone());
       }
 
