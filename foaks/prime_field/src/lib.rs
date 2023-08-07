@@ -1,6 +1,8 @@
 #![feature(bigint_helper_methods)]
+pub mod constants;
 pub mod error;
 pub mod ops;
+use constants::{MAX_ORDER, MOD, PRIME};
 use ethnum::{i256, AsI256};
 use rand::Rng;
 use serde::Serialize;
@@ -10,13 +12,6 @@ use std::{
 };
 
 use self::error::{PrimeFieldError, RootOfUnityError};
-
-pub const MOD: u64 = 2305843009213693951;
-
-pub const MASK: u32 = 4294967295; // 2^32 - 1
-pub const PRIME: u64 = 2305843009213693951; // 2^61 - 1
-
-pub const MAX_ORDER: usize = 62;
 
 pub struct FieldElementContext {
   pub packed_mod: __m256i,
@@ -178,10 +173,6 @@ impl FieldElement {
 
     Ok(rou)
   }
-
-  //pub fn random() -> Self {
-  //  unimplemented!()
-  //}
 }
 
 fn verify_lt_mod_once(mut a: u64) -> u64 {

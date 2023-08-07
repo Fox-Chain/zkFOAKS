@@ -1,8 +1,6 @@
 use prime_field::FieldElement;
 
-use crate::utility::my_log;
-
-const MAX_ORDER: usize = 28;
+use crate::{constants::MAX_ORDER_FFT, utility::my_log};
 
 #[derive(Default, Debug, Clone)]
 pub struct ScratchPad {
@@ -61,12 +59,12 @@ pub fn fast_fourier_transform(
   twiddle_fac: Option<Vec<FieldElement>>,
 ) {
   let twiddle_fac = twiddle_fac.unwrap_or_else(|| scratch_pad.twiddle_factor.clone());
-  let mut rot_mul: [FieldElement; MAX_ORDER] = [FieldElement::default(); MAX_ORDER];
+  let mut rot_mul: [FieldElement; MAX_ORDER_FFT] = [FieldElement::default(); MAX_ORDER_FFT];
 
   let mut log_order: Option<usize> = None;
   rot_mul[0] = root_of_unity;
 
-  for i in 0..MAX_ORDER {
+  for i in 0..MAX_ORDER_FFT {
     if i > 0 {
       rot_mul[i] = rot_mul[i - 1] * rot_mul[i - 1];
     }
@@ -77,7 +75,7 @@ pub fn fast_fourier_transform(
   }
 
   let mut log_coefficient: Option<usize> = None;
-  for i in 0..MAX_ORDER {
+  for i in 0..MAX_ORDER_FFT {
     if (1usize << i) == coefficient_len {
       log_coefficient = Some(i);
     }
@@ -172,7 +170,7 @@ pub fn inverse_fast_fourier_transform(
   let mut tmp = new_rou;
 
   let mut log_order: Option<usize> = None;
-  for i in 0..MAX_ORDER {
+  for i in 0..MAX_ORDER_FFT {
     if (1usize << i) == order {
       log_order = Some(i);
       break;
@@ -180,7 +178,7 @@ pub fn inverse_fast_fourier_transform(
   }
 
   let mut log_coefficient: Option<usize> = None;
-  for i in 0..MAX_ORDER {
+  for i in 0..MAX_ORDER_FFT {
     if (1usize << i) == coefficient_len {
       log_coefficient = Some(i);
       break;

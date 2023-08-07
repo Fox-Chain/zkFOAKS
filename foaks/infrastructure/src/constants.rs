@@ -8,3 +8,5 @@ pub const MAX_BIT_LENGTH: usize = 30;
 pub const SIZE: usize = 1000000;
 
 //pub const PACKED_SIZE: usize = 4;
+
+pub const MAX_ORDER_FFT: usize = 28;

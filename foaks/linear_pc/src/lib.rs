@@ -111,19 +111,7 @@ impl LinearPC {
 
     self.verifier.a_c.circuit[self.gates_count.len() + 1].gates =
       vec![Gate::new(); 1 << self.verifier.a_c.circuit[self.gates_count.len() + 1].bit_length];
-    //pub const Add = 0,
-    // pub const	Mult = 1,
-    // pub const	Dummy = 2,
-    // pub const Sum = 5,
-    // pub const ExpSum = 12,
-    // pub const DirectRelay = 4,
-    // pub const NotGate = 6,
-    // pub const Minus = 7,
-    // pub const XorGate = 8,
-    // 	pub const BitTest = 13,
-    // pub const Relay = 10,
-    // pub const CustomLinearComb = 14,
-    // pub const Input = 3isize
+
     for (i, elem) in input.iter().enumerate().take(n) {
       self.verifier.a_c.inputs.push(*elem);
       self.verifier.a_c.circuit[0].gates[i] = Gate::from_params(INPUT, 0, 0);
@@ -594,21 +582,3 @@ fn dfs(dst: &mut [FieldElement], r: &[FieldElement], depth: usize, val: FieldEle
     dfs(&mut dst[size / 2..], r, depth, val * r[depth]);
   }
 }
-
-// enum GateTypes
-// {
-// pub const Add = 0,
-// pub const	Mult = 1,
-// pub const	Dummy = 2,
-// pub const Sum = 5,
-// pub const ExpSum = 12,
-// pub const DirectRelay = 4,
-// pub const NotGate = 6,
-// pub const Minus = 7,
-// pub const XorGate = 8,
-// 	pub const BitTest = 13,
-// pub const Relay = 10,
-// pub const CustomLinearComb = 14,
-// pub const Input = 3isize
-// }
-//pub const LOG_SLICE_NUMBER: usize = 6;
