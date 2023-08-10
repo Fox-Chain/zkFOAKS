@@ -38,14 +38,13 @@ pub fn create_tree(dst: &mut Vec<HashDigest>, src_data: &[HashDigest], alloc_req
   let mut start_idx = size_after_padding;
   let mut current_lvl_size = size_after_padding;
 
-  // TODO: parallel
-  for i in (0..current_lvl_size).rev() {
-    if i < element_num {
-      dst[i + start_idx] = src_data[i];
-    } else {
-      dst[i + start_idx] = my_hash([HashDigest::default(); 2]);
-    }
-  }
+  // Refactored secction
+  assert_eq!(current_lvl_size, element_num);
+  // @dev If assert_eq! fails,then check original code(C/C++)
+
+  // @dev original code(C/C++) uses reversed bucle
+  dst[start_idx..start_idx + current_lvl_size].copy_from_slice(src_data);
+
   current_lvl_size /= 2;
   start_idx -= current_lvl_size;
   while current_lvl_size >= 1 {

@@ -1,7 +1,3 @@
-#![feature(slice_as_chunks)]
-
-extern crate core;
-
 pub mod constants;
 pub mod merkle_tree;
 pub mod my_hash;
