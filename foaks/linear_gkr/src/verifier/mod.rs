@@ -5,11 +5,11 @@ use std::{
   mem,
 };
 
-use infrastructure::my_hash::HashDigest;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
   rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
 };
+use infrastructure::my_hash::HashDigest;
 use poly_commitment::PolyCommitVerifier;
 use prime_field::FieldElement;
 
@@ -51,6 +51,30 @@ pub struct ZkVerifier {
   vpd_randomness: Vec<FieldElement>,
   one_minus_vpd_randomness: Vec<FieldElement>,
   pub ctx: VerifierContext,
+}
+
+pub struct PredicateArgs<'a> {
+  depth: usize,
+  r_0: &'a Vec<FieldElement>,
+  r_1: &'a Vec<FieldElement>,
+  r_u: &'a Vec<FieldElement>,
+  r_v: &'a Vec<FieldElement>,
+  _alpha: FieldElement,
+  _beta: FieldElement
+}
+
+pub struct BetaInitArgs<'a> {
+  depth: usize,
+  alpha: FieldElement,
+  beta: FieldElement,
+  r_0: &'a Vec<FieldElement>,
+  r_1: &'a Vec<FieldElement>,
+  r_u: &'a Vec<FieldElement>,
+  r_v: &'a Vec<FieldElement>,
+  one_minus_r_0: &'a Vec<FieldElement>,
+  one_minus_r_1: &'a Vec<FieldElement>,
+  one_minus_r_u: &'a Vec<FieldElement>,
+  one_minus_r_v: &'a Vec<FieldElement>,
 }
 
 impl ZkVerifier {
@@ -243,27 +267,31 @@ impl ZkVerifier {
 
       let predicates_calc = Instant::now();
       self.beta_init(
-        i,
-        alpha,
-        beta,
-        &r_0,
-        &r_1,
-        &r_u,
-        &r_v,
-        &one_minus_r_0,
-        &one_minus_r_1,
-        &one_minus_r_u,
-        &one_minus_r_v,
+        BetaInitArgs {
+          depth: i.clone(),
+          alpha,
+          beta,
+          r_0: &r_0,
+          r_1: &r_1,
+          r_u: &r_u,
+          r_v: &r_v,
+          one_minus_r_0: &one_minus_r_0,
+          one_minus_r_1: &one_minus_r_1,
+          one_minus_r_u: &one_minus_r_u,
+          one_minus_r_v: &one_minus_r_v,
+        }
       );
 
       let predicates_value = self.predicates(
-        i,
-        r_0.clone(),
-        r_1.clone(),
-        r_u.clone(),
-        r_v.clone(),
-        alpha,
-        beta,
+        PredicateArgs {
+          depth: i,
+          r_0: &r_0,
+          r_1: &r_1,
+          r_u: &r_u,
+          r_v: &r_v,
+          _alpha: alpha,
+          _beta: beta
+        }
       );
 
       let predicates_calc_span = predicates_calc.elapsed();
@@ -610,18 +638,19 @@ impl ZkVerifier {
 
   pub fn beta_init(
     &mut self,
-    depth: usize,
-    alpha: FieldElement,
-    beta: FieldElement,
-    r_0: &[FieldElement],
-    r_1: &[FieldElement],
-    r_u: &[FieldElement],
-    r_v: &[FieldElement],
-    one_minus_r_0: &[FieldElement],
-    one_minus_r_1: &[FieldElement],
-    one_minus_r_u: &[FieldElement],
-    one_minus_r_v: &[FieldElement],
-  ) {
+    BetaInitArgs {
+      depth,
+      alpha,
+      beta,
+      r_0,
+      r_1,
+      r_u,
+      r_v,
+      one_minus_r_0,
+      one_minus_r_1,
+      one_minus_r_u,
+      one_minus_r_v
+    }: BetaInitArgs) {
     let debug_mode = false;
     if !self.a_c.circuit[depth].is_parallel || debug_mode {
       self.beta_g_r0_first_half[0] = alpha;
@@ -796,13 +825,15 @@ impl ZkVerifier {
 
   pub fn predicates(
     &mut self,
-    depth: usize,
-    r_0: Vec<FieldElement>,
-    r_1: Vec<FieldElement>,
-    r_u: Vec<FieldElement>,
-    r_v: Vec<FieldElement>,
-    _alpha: FieldElement,
-    _beta: FieldElement,
+    PredicateArgs {
+      depth,
+      r_0,
+      r_1,
+      r_u,
+      r_v,
+      _alpha,
+      _beta
+  }: PredicateArgs
   ) -> Vec<FieldElement> {
     let gate_type_count = 15;
     let zero = FieldElement::zero();
@@ -1200,11 +1231,10 @@ impl ZkVerifier {
             if !relay_set {
               tmp_u_val = vec![FieldElement::zero(); 1 << self.a_c.circuit[depth - 1].bit_length];
 
-              for i in 0..(1 << self.a_c.circuit[depth - 1].bit_length) {
+              for (i, tmp_item) in tmp_u_val.iter_mut().enumerate().take(1 << self.a_c.circuit[depth - 1].bit_length) {
                 let u_first_half = i & ((1 << first_half_uv) - 1);
                 let u_second_half = i >> first_half_uv;
-                tmp_u_val[i] =
-                  self.beta_u_first_half[u_first_half] * self.beta_u_second_half[u_second_half];
+                *tmp_item = self.beta_u_first_half[u_first_half] * self.beta_u_second_half[u_second_half];
               }
 
               relay_set = true;
