@@ -147,19 +147,18 @@ impl ZkProver {
     assert!(self.a_c.total_depth < 1000000);
 
     for i in 1..(self.a_c.total_depth) {
-      self.circuit_value[i] = vec![FieldElement::zero(); 1 << self.a_c.circuit[i].bit_length];
+      self.circuit_value[i] = vec![FieldElement::zero(); self.a_c.circuit[i].gates.len()];
 
-      for j in 0..(1 << self.a_c.circuit[i].bit_length) {
-        let g = j;
-        let ty = self.a_c.circuit[i].gates[g].ty;
-        let u = self.a_c.circuit[i].gates[g].u;
-        let v = self.a_c.circuit[i].gates[g].v;
+      for (g, gate) in self.a_c.circuit[i].gates.iter().enumerate() {
+        let ty = gate.ty;
+        let u = gate.u;
+        let v = gate.v;
 
         if ty == 0 {
           self.circuit_value[i][g] = self.circuit_value[i - 1][u] + self.circuit_value[i - 1][v];
         } else if ty == 1 {
-          assert!(u < (1 << self.a_c.circuit[i - 1].bit_length));
-          assert!(v < (1 << self.a_c.circuit[i - 1].bit_length));
+          assert!(u < (self.a_c.circuit[i - 1].gates.len()));
+          assert!(v < (self.a_c.circuit[i - 1].gates.len()));
           self.circuit_value[i][g] = self.circuit_value[i - 1][u] * self.circuit_value[i - 1][v];
         } else if ty == 2 {
           self.circuit_value[i][g] = FieldElement::from_real(0);
@@ -181,8 +180,8 @@ impl ZkProver {
           let y = self.circuit_value[i - 1][v];
           self.circuit_value[i][g] = x + y - FieldElement::from_real(2) * x * y;
         } else if ty == 9 {
-          assert!(u < (1 << self.a_c.circuit[i - 1].bit_length));
-          assert!(v < (1 << self.a_c.circuit[i - 1].bit_length));
+          assert!(u < (self.a_c.circuit[i - 1].gates.len()));
+          assert!(v < (self.a_c.circuit[i - 1].gates.len()));
           let x = self.circuit_value[i - 1][u];
           let y = self.circuit_value[i - 1][v];
           self.circuit_value[i][g] = y - x * y;
@@ -197,7 +196,7 @@ impl ZkProver {
           }
         } else if ty == 13 {
           assert_eq!(u, v);
-          assert!(u < (1 << self.a_c.circuit[i - 1].bit_length),);
+          assert!(u < (self.a_c.circuit[i - 1].gates.len()),);
           self.circuit_value[i][g] = self.circuit_value[i - 1][u]
             * (FieldElement::from_real(1) - self.circuit_value[i - 1][v]);
         } else if ty == 14 {
@@ -224,7 +223,7 @@ impl ZkProver {
   }
 
   pub fn get_witness(&mut self, inputs: &[FieldElement]) {
-    self.circuit_value[0] = Vec::with_capacity(1 << self.a_c.circuit[0].bit_length);
+    self.circuit_value[0] = Vec::with_capacity(self.a_c.circuit[0].gates.len());
     self.circuit_value[0].extend_from_slice(inputs);
   }
 
@@ -257,7 +256,7 @@ impl ZkProver {
 
   pub fn sumcheck_phase1_init(&mut self) {
     let t0 = time::Instant::now();
-    self.total_uv = 1 << self.a_c.circuit[self.sumcheck_layer_id - 1].bit_length;
+    self.total_uv = self.a_c.circuit[self.sumcheck_layer_id - 1].gates.len();
     let zero = FieldElement::zero();
     for i in 0..self.total_uv {
       self.v_mult_add[i] =
@@ -635,8 +634,8 @@ impl ZkProver {
     let first_g_half = self.length_g >> 1;
     let mask_g_fhalf = (1 << (self.length_g >> 1)) - 1;
 
-    self.total_uv = 1 << self.a_c.circuit[self.sumcheck_layer_id - 1].bit_length;
-    let total_g = 1 << self.a_c.circuit[self.sumcheck_layer_id].bit_length;
+    self.total_uv = self.a_c.circuit[self.sumcheck_layer_id - 1].gates.len();
+    let total_g = self.a_c.circuit[self.sumcheck_layer_id].gates.len();
     let zero = FieldElement::zero();
 
     for i in 0..self.total_uv {

@@ -352,11 +352,11 @@ impl ZkVerifier {
 
     println!("GKR Prove Time: {}", zk_prover.total_time);
     let mut all_sum = vec![FieldElement::zero(); SLICE_NUMBER];
-    println!("GKR witness size: {}", 1 << self.a_c.circuit[0].bit_length);
+    println!("GKR witness size: {}", self.a_c.circuit[0].gates.len());
     let merkle_root_l = zk_prover
       .poly_prover
       .commit_private_array(&zk_prover.circuit_value[0], self.a_c.circuit[0].bit_length);
-    self.ctx.q_eval_real = vec![FieldElement::zero(); 1 << self.a_c.circuit[0].bit_length];
+    self.ctx.q_eval_real = vec![FieldElement::zero(); self.a_c.circuit[0].gates.len()];
     self.dfs_for_public_eval(
       0usize,
       FieldElement::real_one(),
@@ -1142,10 +1142,10 @@ impl ZkVerifier {
       let first_half_uv = self.a_c.circuit[depth - 1].bit_length / 2;
 
       //Todo: Debug tmp_u_val
-      let mut tmp_u_val = vec![FieldElement::zero(); 1 << self.a_c.circuit[depth - 1].bit_length];
+      let mut tmp_u_val = vec![FieldElement::zero(); self.a_c.circuit[depth - 1].gates.len()];
       let zero_v = self.beta_v_first_half[0] * self.beta_v_second_half[0];
       let mut relay_set = false;
-      for i in 0..(1 << self.a_c.circuit[depth].bit_length) {
+      for i in 0..(self.a_c.circuit[depth].gates.len()) {
         let g = i;
         let u = self.a_c.circuit[depth].gates[i].u;
         let v = self.a_c.circuit[depth].gates[i].v;
@@ -1226,12 +1226,12 @@ impl ZkVerifier {
           }
           10 => {
             if !relay_set {
-              tmp_u_val = vec![FieldElement::zero(); 1 << self.a_c.circuit[depth - 1].bit_length];
+              tmp_u_val = vec![FieldElement::zero(); self.a_c.circuit[depth - 1].gates.len()];
 
               for (i, tmp_item) in tmp_u_val
                 .iter_mut()
                 .enumerate()
-                .take(1 << self.a_c.circuit[depth - 1].bit_length)
+                .take(self.a_c.circuit[depth - 1].gates.len())
               {
                 let u_first_half = i & ((1 << first_half_uv) - 1);
                 let u_second_half = i >> first_half_uv;
