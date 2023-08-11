@@ -54,7 +54,6 @@ pub struct ZkProver {
   alpha: FieldElement,
   beta: FieldElement,
 
-  //< c++ code: const prime_field::field_element *r_0, *r_1; How to deal with "const"
   r_0: Vec<FieldElement>,
   r_1: Vec<FieldElement>,
   one_minus_r_0: Vec<FieldElement>,
@@ -106,8 +105,7 @@ impl ZkProver {
     self.v_mult_add = vec![LinearPoly::zero(); 1 << max_bit_length];
     self.add_v_array = vec![LinearPoly::zero(); 1 << max_bit_length];
 
-    // Gian: The original repo init total_time and call get_circuit() in the main
-    // fn()
+    // In The original repo init, total_time, and get_circuit() are in the main fn()
     self.total_time = 0.0;
     self.get_circuit(aritmetic_circuit);
   }
@@ -120,17 +118,13 @@ impl ZkProver {
 
   pub fn v_res(
     &mut self,
-    one_minus_r_0: Vec<FieldElement>,
-    r_0: Vec<FieldElement>,
-    output_raw: Vec<FieldElement>,
-    r_0_size: usize,
-    mut output_size: usize,
+    one_minus_r_0: &[FieldElement],
+    r_0: &[FieldElement],
+    mut output: Vec<FieldElement>,
   ) -> FieldElement {
+    let r_0_size = r_0.len();
+    let mut output_size = output.len();
     let t0 = time::Instant::now();
-    let mut output = vec![FieldElement::zero(); output_size];
-    for i in 0..output_size {
-      output[i] = output_raw[i];
-    }
     for i in 0..r_0_size {
       for j in 0..(output_size >> 1) {
         output[j] = output[j << 1] * one_minus_r_0[i] + output[j << 1 | 1] * r_0[i];
@@ -148,18 +142,14 @@ impl ZkProver {
 
     for i in 0..(1 << self.a_c.circuit[0].bit_length) {
       let g = i;
-      //let u = self.aritmetic_circuit.circuit[0].gates[g].u;
       let ty = self.a_c.circuit[0].gates[g].ty;
-      // println!(
-      //   "ty:{ty}	circuit_value[0][{g}].real:{}, img:{}",
-      //   self.circuit_value[0][g].real, self.circuit_value[0][g].img
-      // );
       assert!(ty == 3 || ty == 2);
     }
     assert!(self.a_c.total_depth < 1000000);
 
     for i in 1..(self.a_c.total_depth) {
       self.circuit_value[i] = vec![FieldElement::zero(); 1 << self.a_c.circuit[i].bit_length];
+
       for j in 0..(1 << self.a_c.circuit[i].bit_length) {
         let g = j;
         let ty = self.a_c.circuit[i].gates[g].ty;
@@ -169,17 +159,15 @@ impl ZkProver {
         if ty == 0 {
           self.circuit_value[i][g] = self.circuit_value[i - 1][u] + self.circuit_value[i - 1][v];
         } else if ty == 1 {
-          // Gian: Since u is usize type, no need to assert u >=0
           assert!(u < (1 << self.a_c.circuit[i - 1].bit_length));
           assert!(v < (1 << self.a_c.circuit[i - 1].bit_length));
           self.circuit_value[i][g] = self.circuit_value[i - 1][u] * self.circuit_value[i - 1][v];
         } else if ty == 2 {
           self.circuit_value[i][g] = FieldElement::from_real(0);
         } else if ty == 3 {
-          // It suppose to be input gate, it just read the 'u' input, what about 'v' input
           self.circuit_value[i][g] = FieldElement::from_real(u as u64);
         } else if ty == 4 {
-          self.circuit_value[i][g] = self.circuit_value[i - 1][u].clone();
+          self.circuit_value[i][g] = self.circuit_value[i - 1][u];
         } else if ty == 5 {
           self.circuit_value[i][g] = FieldElement::from_real(0);
           for k in u..v {
@@ -200,10 +188,10 @@ impl ZkProver {
           let y = self.circuit_value[i - 1][v];
           self.circuit_value[i][g] = y - x * y;
         } else if ty == 10 {
-          self.circuit_value[i][g] = self.circuit_value[i - 1][u].clone();
+          self.circuit_value[i][g] = self.circuit_value[i - 1][u];
         } else if ty == 12 {
           self.circuit_value[i][g] = FieldElement::from_real(0);
-          assert!(v - u + 1 <= 60);
+          assert!(v - u < 60);
           for k in u..=v {
             self.circuit_value[i][g] = self.circuit_value[i][g]
               + self.circuit_value[i - 1][k] * FieldElement::from_real(1u64 << (k - u));
@@ -217,18 +205,12 @@ impl ZkProver {
           self.circuit_value[i][g] = FieldElement::from_real(0);
           for k in 0..self.a_c.circuit[i].gates[g].parameter_length {
             let weight = self.a_c.circuit[i].gates[g].weight[k];
-            // if i > 4 {
-            //   println!(
-            //     "\ti:{i}, g:{g}, k:{k}, weight.real:{}, img:{}",
-            //     weight.real, weight.img
-            //   );
-            // }
             let idx = self.a_c.circuit[i].gates[g].src[k];
             self.circuit_value[i][g] =
               self.circuit_value[i][g] + self.circuit_value[i - 1][idx] * weight;
           }
         } else {
-          assert!(false);
+          panic!("gate type not supported");
         }
       }
     }
@@ -242,12 +224,9 @@ impl ZkProver {
     self.circuit_value[self.a_c.total_depth - 1].clone()
   }
 
-  //Todo: Improve this function with Rust features
-  pub fn get_witness(&mut self, inputs: Vec<FieldElement>, n: usize) {
-    self.circuit_value[0] = vec![FieldElement::zero(); 1 << self.a_c.circuit[0].bit_length];
-    for i in 0..n {
-      self.circuit_value[0][i] = inputs[i];
-    }
+  pub fn get_witness(&mut self, inputs: &[FieldElement]) {
+    self.circuit_value[0] = Vec::with_capacity(1 << self.a_c.circuit[0].bit_length);
+    self.circuit_value[0].extend_from_slice(inputs);
   }
 
   pub fn sumcheck_init(
@@ -282,11 +261,8 @@ impl ZkProver {
     self.total_uv = 1 << self.a_c.circuit[self.sumcheck_layer_id - 1].bit_length;
     let zero = FieldElement::zero();
     for i in 0..self.total_uv {
-      //todo! linear_poly != FieldElement
       self.v_mult_add[i] =
-        LinearPoly::new_single_input(self.circuit_value[self.sumcheck_layer_id - 1][i].clone());
-
-      //self.v_mult_add[i] = self.circuit_value[self.sumcheck_layer_id - 1][i];
+        LinearPoly::new_single_input(self.circuit_value[self.sumcheck_layer_id - 1][i]);
       self.add_v_array[i].a = zero;
       self.add_v_array[i].b = zero;
       self.add_mult_sum[i].a = zero;
@@ -327,7 +303,6 @@ impl ZkProver {
     //todo
     //	#pragma omp parallel for
 
-    //intermediates0._iter_mut().for_each(|element| {
     for i in 0..(1 << self.length_g) {
       let u = self.a_c.circuit[self.sumcheck_layer_id].gates[i].u;
       let v = self.a_c.circuit[self.sumcheck_layer_id].gates[i].v;
@@ -484,8 +459,6 @@ impl ZkProver {
         //direct relay gate
         {
           if !self.ctx.gate_meet[self.a_c.circuit[self.sumcheck_layer_id].gates[i].ty] {
-            //prletf("first meet %d gate\n", C ->
-            // circuit[self.sumcheck_layer_id].gates[i].ty);
             self.ctx.gate_meet[self.a_c.circuit[self.sumcheck_layer_id].gates[i].ty] = true;
           }
           self.add_mult_sum[u].b = self.add_mult_sum[u].b + intermediates1[i];
@@ -559,7 +532,6 @@ impl ZkProver {
     current_bit: usize,
   ) -> QuadraticPoly {
     let t0 = time::Instant::now();
-    let ret;
 
     for i in 0..self.total_uv >> 1 {
       let g_zero = i << 1;
@@ -621,7 +593,7 @@ impl ZkProver {
       swap(&mut self.ctx.rets_prev, &mut self.ctx.rets_cur);
       iter += 1;
     }
-    ret = self.ctx.rets_prev[0];
+    let ret = self.ctx.rets_prev[0];
 
     self.total_uv >>= 1;
 
@@ -673,8 +645,7 @@ impl ZkProver {
       self.add_mult_sum[i].b = zero;
       self.add_v_array[i].a = zero;
       self.add_v_array[i].b = zero;
-      //todo! linear_poly != FieldElement
-      //self.v_mult_add[i] = self.circuit_value[self.sumcheck_layer_id - 1][i];
+
       self.v_mult_add[i] =
         LinearPoly::new_single_input(self.circuit_value[self.sumcheck_layer_id - 1][i]);
     }
@@ -996,6 +967,4 @@ impl ZkProver {
     self.v_v = self.v_mult_add[0].eval(previous_random);
     (self.v_u, self.v_v)
   }
-
-  pub fn proof_init() {} //Used, but is not implemented neither in virgo repo nor orion repo
 }

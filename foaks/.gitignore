@@ -1,2 +1,6 @@
 /target
 log.txt
+log_fftgkr.txt
+perf.*
+bench.sh
+*.svg

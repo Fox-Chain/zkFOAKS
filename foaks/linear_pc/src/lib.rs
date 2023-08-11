@@ -1,4 +1,8 @@
-use std::{collections::HashMap, fs::read_to_string, time::Instant};
+use std::{collections::HashMap, time::Instant};
+
+mod parameters;
+
+use crate::parameters::*;
 
 use infrastructure::{
   merkle_tree::{self, create_tree},
@@ -7,15 +11,13 @@ use infrastructure::{
 };
 use linear_code::{
   linear_code_encode::LinearCodeEncodeContext,
-  parameter::{CN, COLUMN_SIZE, DISTANCE_THRESHOLD, DN},
+  parameter::{CN, COLUMN_SIZE, DISTANCE_THRESHOLD, DN, TARGET_DISTANCE},
 };
 use linear_gkr::{
   circuit_fast_track::{Gate, Layer},
   verifier::ZkVerifier,
 };
 use prime_field::FieldElement;
-
-mod test;
 
 #[derive(Default)]
 pub struct LinearPC {
@@ -24,108 +26,100 @@ pub struct LinearPC {
   codeword_size: Vec<usize>,
   mt: Vec<HashDigest>,
   verifier: ZkVerifier,
-  pub lce_ctx: LinearCodeEncodeContext,
+  lce_ctx: LinearCodeEncodeContext,
   gates_count: HashMap<usize, usize>,
 }
 
 impl LinearPC {
-  pub fn init() -> Self {
+  pub fn init(n: usize) -> Self {
+    let mut lce_ctx = LinearCodeEncodeContext::init();
+    lce_ctx.expander_init(n / COLUMN_SIZE, None);
     Self {
-      lce_ctx: LinearCodeEncodeContext::init(),
+      lce_ctx,
       ..Default::default()
     }
   }
-  pub unsafe fn commit(&mut self, src: Vec<FieldElement>, n: usize) -> Vec<HashDigest> {
-    let mut stash = vec![HashDigest::new(); n / COLUMN_SIZE * 2];
-    self.codeword_size = vec![0; COLUMN_SIZE];
+  pub fn commit(&mut self, src: &[FieldElement]) -> Vec<HashDigest> {
+    //Todo: Refactor, delete self.codeword_size field
+    let n: usize = src.len();
+    self.codeword_size = Vec::with_capacity(COLUMN_SIZE);
+    self.encoded_codeword = Vec::with_capacity(COLUMN_SIZE);
+    self.coef = Vec::with_capacity(COLUMN_SIZE);
+
     assert_eq!(n % COLUMN_SIZE, 0);
-    self.encoded_codeword = vec![vec![FieldElement::zero()]; COLUMN_SIZE];
-    self.coef = vec![Vec::new(); COLUMN_SIZE];
 
-    //new code
+    let segment = n / COLUMN_SIZE;
     for i in 0..COLUMN_SIZE {
-      self.encoded_codeword[i] = vec![FieldElement::zero(); n / COLUMN_SIZE * 2];
-      self.coef[i] = vec![FieldElement::zero(); n / COLUMN_SIZE];
-      let src_slice = &src[(i * n / COLUMN_SIZE)..((i + 1) * n / COLUMN_SIZE)];
-      self.coef[i].copy_from_slice(src_slice);
-      //memset(encoded_codeword[i], 0, sizeof(prime_field::field_element) * n /
-      // COLUMN_SIZE * 2);
+      let begin = i * segment;
+      let end = (i + 1) * segment;
+      let src_slice = &src[begin..end];
+      self.coef.push(src_slice.to_vec());
 
-      self.codeword_size[i] = self.lce_ctx.encode(
-        (src[i * n / COLUMN_SIZE..]).to_vec(),
-        &mut self.encoded_codeword[i],
-        n / COLUMN_SIZE,
-      );
+      let mut dst = self.lce_ctx.encode(src_slice);
+      let size = dst.len();
+      self.codeword_size.push(size);
+      dst.resize(2 * segment, FieldElement::zero());
+      self.encoded_codeword.push(dst);
     }
 
-    for i in 0..(n / COLUMN_SIZE * 2) {
-      stash[i] = HashDigest::default();
-      for j in 0..(COLUMN_SIZE / 2) {
-        stash[i] = merkle_tree::hash_double_field_element_merkle_damgard(
-          self.encoded_codeword[2 * j][i],
-          self.encoded_codeword[2 * j + 1][i],
-          stash[i],
-        );
-      }
-    }
+    let stash: Vec<HashDigest> = (0..(segment * 2))
+      .map(|i| {
+        (0..(COLUMN_SIZE / 2)).fold(HashDigest::default(), |acc, j| {
+          merkle_tree::hash_double_field_element_merkle_damgard(
+            self.encoded_codeword[2 * j][i],
+            self.encoded_codeword[2 * j + 1][i],
+            acc,
+          )
+        })
+      })
+      .collect();
 
-    create_tree(
-      stash,
-      n / COLUMN_SIZE * 2,
-      &mut self.mt,
-      //Some(std::mem::size_of::<HashDigest>()),
-      true,
-    );
+    create_tree(&mut self.mt, &stash, true);
     self.mt.clone()
   }
 
-  fn generate_circuit(
-    &mut self,
-    query: &mut Vec<usize>,
-    n: usize,
-    query_count: usize,
-    input: Vec<FieldElement>,
-  ) {
+  fn generate_circuit(&mut self, query: &mut [usize], n: usize, input: &[FieldElement]) {
+    let query_count = query.len();
     query.sort();
     self.prepare_gates_count(n, query_count);
     println!("Depth {}", self.gates_count.len());
-    assert_eq!((1 << my_log(n).unwrap()), n);
+    assert_eq!((1 << my_log(n).expect("Failed to compute logarithm")), n);
 
-    self.verifier.a_c.inputs = vec![FieldElement::zero(); n];
+    self.verifier.a_c.inputs = Vec::with_capacity(n);
     self.verifier.a_c.total_depth = self.gates_count.len() + 1;
     //Refactored code, add + 1 to the size of the circuit to avoid panic
     self.verifier.a_c.circuit = vec![Layer::default(); self.verifier.a_c.total_depth + 1];
-    self.verifier.a_c.circuit[0].bit_length = my_log(n).unwrap();
+    self.verifier.a_c.circuit[0].bit_length = my_log(n).expect("Failed to compute bit_length");
+
     self.verifier.a_c.circuit[0].gates =
       vec![Gate::new(); 1 << self.verifier.a_c.circuit[0].bit_length];
 
     for i in 0..self.gates_count.len() {
-      self.verifier.a_c.circuit[i + 1].bit_length = my_log(
-        smallest_pow2_larger_or_equal_to(*self.gates_count.get(&i).unwrap())
-          .try_into()
-          .unwrap(),
-      )
-      .unwrap();
+      self.verifier.a_c.circuit[i + 1].bit_length = my_log(smallest_pow2_larger_or_equal_to(
+        *self
+          .gates_count
+          .get(&i)
+          .expect("Failed to retrieve gates_count value"),
+      ))
+      .expect("Failed to compute bit_length");
+
       self.verifier.a_c.circuit[i + 1].gates =
         vec![Gate::new(); 1 << self.verifier.a_c.circuit[i + 1].bit_length];
     }
-    self.verifier.a_c.circuit[self.gates_count.len() + 1].bit_length = my_log(
-      smallest_pow2_larger_or_equal_to(query_count)
-        .try_into()
-        .unwrap(),
-    )
-    .unwrap();
+    self.verifier.a_c.circuit[self.gates_count.len() + 1].bit_length =
+      my_log(smallest_pow2_larger_or_equal_to(query_count)).expect("Failed to compute bit_length");
+
     self.verifier.a_c.circuit[self.gates_count.len() + 1].gates =
       vec![Gate::new(); 1 << self.verifier.a_c.circuit[self.gates_count.len() + 1].bit_length];
 
-    for i in 0..n {
-      self.verifier.a_c.inputs[i] = input[i];
-      self.verifier.a_c.circuit[0].gates[i] = Gate::from_params(3, 0, 0);
-      self.verifier.a_c.circuit[1].gates[i] = Gate::from_params(4, i, 0);
+    for (i, elem) in input.iter().enumerate().take(n) {
+      self.verifier.a_c.inputs.push(*elem);
+      self.verifier.a_c.circuit[0].gates[i] = Gate::from_params(INPUT, 0, 0);
+      self.verifier.a_c.circuit[1].gates[i] = Gate::from_params(DIRECTRELAY, i, 0);
     }
     //Todo: improve gate_types::input with constant values
     for i in 0..n {
-      self.verifier.a_c.circuit[2].gates[i] = Gate::from_params(10, i, 0);
+      self.verifier.a_c.circuit[2].gates[i] = Gate::from_params(RELAY, i, 0);
     }
 
     self.verifier.a_c.circuit[2].src_expander_c_mempool = vec![0; CN * self.lce_ctx.c[0].l];
@@ -134,10 +128,9 @@ impl LinearPC {
     let mut c_mempool_ptr = 0;
     let mut d_mempool_ptr = 0;
     for i in 0..self.lce_ctx.c[0].r {
-      self.verifier.a_c.circuit[2].gates[i + n] = Gate::from_params(14, 0, 0);
+      self.verifier.a_c.circuit[2].gates[i + n] = Gate::from_params(CUSTOMLINEARCOMB, 0, 0);
       self.verifier.a_c.circuit[2].gates[i + n].parameter_length =
         self.lce_ctx.c[0].r_neighbor[i].len();
-      //Todo: Check if this is correct for Edu
       self.verifier.a_c.circuit[2].gates[i + n].src =
         self.verifier.a_c.circuit[2].src_expander_c_mempool[c_mempool_ptr..].to_vec();
       self.verifier.a_c.circuit[2].gates[i + n].weight =
@@ -156,9 +149,12 @@ impl LinearPC {
       self.generate_enc_circuit(self.lce_ctx.c[0].r, n + self.lce_ctx.c[0].r, 1, 2);
     // add final output
     let final_output_depth = output_depth_output_size.0 + 1;
-    for i in 0..output_depth_output_size.1 {
-      self.verifier.a_c.circuit[final_output_depth].gates[i] = Gate::from_params(10, i, 0);
-    }
+    (0..output_depth_output_size.1)
+      .enumerate()
+      .for_each(|(i, _)| {
+        self.verifier.a_c.circuit[final_output_depth].gates[i] = Gate::from_params(RELAY, i, 0);
+      });
+
     //let d_input_offset = n; //Never used
     let output_so_far = output_depth_output_size.1;
     self.verifier.a_c.circuit[final_output_depth].src_expander_d_mempool =
@@ -178,37 +174,42 @@ impl LinearPC {
         self.verifier.a_c.circuit[final_output_depth].weight_expander_d_mempool[d_mempool_ptr..]
           .to_vec();
       d_mempool_ptr += self.lce_ctx.d[0].r_neighbor[i].len();
-      for j in 0..self.lce_ctx.d[0].r_neighbor[i].len() {
-        self.verifier.a_c.circuit[final_output_depth].gates[output_so_far + i].src[j] =
-          self.lce_ctx.d[0].r_neighbor[i][j] + n;
-        self.verifier.a_c.circuit[final_output_depth].gates[output_so_far + i].weight[j] =
-          self.lce_ctx.d[0].r_weight[i][j];
+      for (j, (&neighbor, &weight)) in self.lce_ctx.d[0].r_neighbor[i]
+        .iter()
+        .zip(self.lce_ctx.d[0].r_weight[i].iter())
+        .enumerate()
+      {
+        let gate_index = output_so_far + i;
+        let gate = &mut self.verifier.a_c.circuit[final_output_depth].gates[gate_index];
+
+        gate.src[j] = neighbor + n;
+        gate.weight[j] = weight;
       }
     }
-    for i in 0..query_count {
+    for (i, elem) in query.iter().enumerate() {
       self.verifier.a_c.circuit[final_output_depth + 1].gates[i] =
-        Gate::from_params(10, query[i], 0);
+        Gate::from_params(RELAY, *elem, 0);
     }
     assert_eq!(c_mempool_ptr, CN * self.lce_ctx.c[0].l);
   }
 
-  pub unsafe fn tensor_product_protocol(
+  pub fn tensor_product_protocol(
     &mut self,
-    r0: Vec<FieldElement>,
-    r1: Vec<FieldElement>,
-    size_r0: usize,
-    size_r1: usize,
+    r0: &[FieldElement],
+    r1: &[FieldElement],
     n: usize,
     com_mt: Vec<HashDigest>,
   ) -> (FieldElement, bool) {
-    //let mut verification_time = 0.0;
+    let size_r0 = r0.len();
+    let size_r1 = r1.len();
     assert_eq!(size_r0 * size_r1, n);
 
-    let mut visited_com = vec![false; n / COLUMN_SIZE * 4];
-    let mut visited_combined_com = vec![false; n / COLUMN_SIZE * 4];
+    let segment = n / COLUMN_SIZE;
+    let mut visited_com = vec![false; segment * 4];
+    let mut visited_combined_com = vec![false; segment * 4];
 
     let mut proof_size = 0;
-    let query_count = (-128f32 / (1f32 - 0.07f32).log2()) as usize;
+    let query_count = (-128f32 / (1f32 - TARGET_DISTANCE).log2()) as usize;
     println!("Query count: {}", query_count);
     println!("Column size: {}", COLUMN_SIZE);
     println!("Number of merkle pathes: {}", query_count);
@@ -216,66 +217,52 @@ impl LinearPC {
 
     //prover construct the combined codeword
 
-    let mut combined_codeword = vec![FieldElement::zero(); self.codeword_size[0]];
-    let mut combined_codeword_hash = vec![HashDigest::default(); n / COLUMN_SIZE * 2];
-    let mut combined_codeword_mt = vec![HashDigest::default(); n / COLUMN_SIZE * 4];
-    for i in 0..COLUMN_SIZE {
-      for j in 0..self.codeword_size[0] {
-        combined_codeword[j] = combined_codeword[j] + r0[i] * self.encoded_codeword[i][j];
+    let codeword_size_0 = self.codeword_size[0];
+    let mut combined_codeword = vec![FieldElement::zero(); codeword_size_0];
+    let mut combined_codeword_hash = Vec::with_capacity(segment * 2);
+    let mut combined_codeword_mt = vec![HashDigest::default(); segment * 4];
+    for (i, elem_r0) in r0.iter().enumerate().take(COLUMN_SIZE) {
+      for (j, elem_c_c) in combined_codeword.iter_mut().enumerate() {
+        *elem_c_c = *elem_c_c + *elem_r0 * self.encoded_codeword[i][j];
       }
     }
 
-    let zero = FieldElement::zero();
-    for i in 0..(n / COLUMN_SIZE * 2) {
-      if i < self.codeword_size[0] {
-        combined_codeword_hash[i] = merkle_tree::hash_single_field_element(combined_codeword[i]);
-      } else {
-        combined_codeword_hash[i] = merkle_tree::hash_single_field_element(zero);
-      }
+    for elem in combined_codeword.iter() {
+      combined_codeword_hash.push(merkle_tree::hash_single_field_element(*elem));
     }
+    let hash_zero_field_element = merkle_tree::hash_single_field_element(FieldElement::zero());
+    let hash_zeros = vec![hash_zero_field_element; segment * 2 - codeword_size_0];
+    combined_codeword_hash.extend_from_slice(&hash_zeros);
 
     //merkle commit to combined_codeword
-    create_tree(
-      combined_codeword_hash,
-      (n / COLUMN_SIZE * 2).try_into().unwrap(),
-      &mut combined_codeword_mt,
-      false,
-    );
+    create_tree(&mut combined_codeword_mt, &combined_codeword_hash, false);
 
     //prover construct the combined original message
     let mut combined_message = vec![FieldElement::zero(); n];
 
-    for i in 0..COLUMN_SIZE {
-      for j in 0..self.codeword_size[0] {
-        if self.coef[i].len() <= j {
-          continue;
-        } // We realized that beyond 512 the C++ code multiply garbage values
-        combined_message[j] = combined_message[j] + r0[i] * self.coef[i][j];
+    for (i, coef_i) in self.coef.iter().enumerate().take(COLUMN_SIZE) {
+      for (j, &coef_ij) in coef_i.iter().enumerate().take(codeword_size_0) {
+        combined_message[j] = combined_message[j] + r0[i] * coef_ij;
       }
     }
 
     //check for encode
     {
-      let mut test_codeword = vec![FieldElement::zero(); (n / COLUMN_SIZE * 2).try_into().unwrap()];
-      let test_codeword_size = self.lce_ctx.encode(
-        combined_message.clone(),
-        &mut test_codeword,
-        n / COLUMN_SIZE,
-      );
-      assert_eq!(test_codeword_size, self.codeword_size[0]);
-      for i in 0..test_codeword_size {
-        assert_eq!(test_codeword[i], combined_codeword[i]);
-      }
+      let sliced_message = &combined_message[..segment];
+      let test_codeword = self.lce_ctx.encode(sliced_message);
+      let test_codeword_size = test_codeword.len();
+      assert_eq!(test_codeword_size, codeword_size_0);
+      assert_eq!(test_codeword, combined_codeword);
     }
 
     //verifier random check columns
     let v_t0 = Instant::now();
 
     for _ in 0..query_count {
-      let q = rand::random::<usize>() % self.codeword_size[0];
+      let q = rand::random::<usize>() % codeword_size_0;
       let mut sum = FieldElement::zero();
-      for j in 0..COLUMN_SIZE {
-        sum = sum + r0[j] * self.encoded_codeword[j][q];
+      for (j, elem) in r0.iter().enumerate().take(COLUMN_SIZE) {
+        sum = sum + *elem * self.encoded_codeword[j][q];
       }
       proof_size += std::mem::size_of::<FieldElement>() * COLUMN_SIZE;
 
@@ -291,71 +278,62 @@ impl LinearPC {
       }
 
       assert!(merkle_tree::verify_claim(
-        com_mt[1].clone(),
-        com_mt.clone(),
+        com_mt[1],
+        &com_mt,
         column_hash,
         q,
-        (n / COLUMN_SIZE * 2).try_into().unwrap(),
+        segment * 2,
         &mut visited_com,
         &mut proof_size,
       ));
       assert!(merkle_tree::verify_claim(
-        combined_codeword_mt[1].clone(),
-        combined_codeword_mt.clone(),
+        combined_codeword_mt[1],
+        &combined_codeword_mt,
         merkle_tree::hash_single_field_element(combined_codeword[q]),
         q,
-        (n / COLUMN_SIZE * 2).try_into().unwrap(),
+        segment * 2,
         &mut visited_combined_com,
         &mut proof_size,
       ));
-
       assert_eq!(sum, combined_codeword[q]);
       //add merkle tree open
     }
     let time_span = v_t0.elapsed();
-    //verification_time += time_span.as_secs_f64();
     let mut verification_time = time_span.as_secs_f64();
 
     // setup code-switching
     let mut answer = FieldElement::zero();
-    for i in 0..(n / COLUMN_SIZE) {
+    for i in 0..(segment) {
       answer = answer + r1[i] * combined_message[i];
     }
 
     // prover commit private input
-    let mut q = vec![0; query_count];
-    for i in 0..query_count {
-      q[i] = rand::random::<usize>() % self.codeword_size[0];
+    let mut q = Vec::with_capacity(query_count);
+    for _ in 0..query_count {
+      q.push(rand::random::<usize>() % self.codeword_size[0]);
     }
 
     // generate circuit
-
-    self.generate_circuit(
-      &mut q,
-      n / COLUMN_SIZE,
-      query_count,
-      combined_message.clone(),
-    );
+    self.generate_circuit(&mut q, segment, &combined_message);
 
     //self.verifier.get_prover(&p); //Refactored, inside of zk_verifier has not
     // zk_prover self.prover.get_circuit(self.verifier.aritmetic_circuit);
-    // //Refactored, inside of zk_prover.init_array()
-    let mut max_bit_length: Option<usize> = None;
-    for i in 0..self.verifier.a_c.total_depth {
-      if Some(self.verifier.a_c.circuit[i].bit_length) > max_bit_length {
-        max_bit_length = Some(self.verifier.a_c.circuit[i].bit_length);
-      }
-    }
+    // Refactored, inside of zk_prover.init_array()
+    let max_bit_length = self.verifier.a_c.circuit.iter().map(|c| c.bit_length).max();
+
     // p.init_array(max_bit_length); Refactored inside verifier.verify()
-    self.verifier.init_array(max_bit_length.unwrap());
+    self
+      .verifier
+      .init_array(max_bit_length.expect("Failed to retrieve max_bit_length"));
+
     // p.get_witness(combined_message, N / column_size); Refactored inside
     // verifier.verify()
 
+    let witness = &combined_message[..segment];
+
     let (result, time_diff) = self.verifier.verify(
-      &String::from("log.txt"),
-      max_bit_length.unwrap(),
-      combined_message.clone(),
-      n / COLUMN_SIZE,
+      max_bit_length.expect("Failed to retrieve max_bit_length"),
+      witness,
       query_count,
       combined_codeword,
       q,
@@ -364,9 +342,7 @@ impl LinearPC {
     verification_time += time_diff;
     verification_time += self.verifier.v_time;
     proof_size += query_count * std::mem::size_of::<FieldElement>();
-    // Dont need to do this in Rust right?
-    //p.delete_self();
-    //v.delete_self();
+
     println!(
       "Proof size for tensor IOP {} bytes",
       proof_size + self.verifier.proof_size
@@ -384,14 +360,15 @@ impl LinearPC {
     // expander part
     self.gates_count.insert(1, n + self.lce_ctx.c[0].r);
     let output_depth_output_size = self.prepare_enc_count(self.lce_ctx.c[0].r, n, 1);
-
-    self.gates_count.insert(
-      output_depth_output_size.0 + 1,
-      n + output_depth_output_size.1 + self.lce_ctx.d[0].r,
-    );
     self
       .gates_count
-      .insert(output_depth_output_size.0 + 2, query_count);
+      .entry(output_depth_output_size.0 + 1)
+      .or_insert(n + output_depth_output_size.1 + self.lce_ctx.d[0].r);
+
+    self
+      .gates_count
+      .entry(output_depth_output_size.0 + 2)
+      .or_insert(query_count);
   }
 
   fn prepare_enc_count(
@@ -400,7 +377,7 @@ impl LinearPC {
     output_size_so_far: usize,
     depth: usize,
   ) -> (usize, usize) {
-    if input_size <= DISTANCE_THRESHOLD.try_into().unwrap() {
+    if input_size <= DISTANCE_THRESHOLD {
       return (depth, output_size_so_far);
     }
     // output
@@ -419,11 +396,10 @@ impl LinearPC {
     );
     (
       output_depth_output_size.0 + 1,
-      self
+      *self
         .gates_count
         .get(&(output_depth_output_size.0 + 1))
-        .copied()
-        .unwrap(),
+        .expect("Failed to retrieve gates_count value"),
     )
   }
 
@@ -434,13 +410,21 @@ impl LinearPC {
     recursion_depth: usize,
     input_depth: usize,
   ) -> (usize, usize) {
-    if input_size <= DISTANCE_THRESHOLD.try_into().unwrap() {
+    if input_size <= DISTANCE_THRESHOLD {
       return (input_depth, output_size_so_far);
     }
     // relay the output
-    for i in 0..output_size_so_far {
-      self.verifier.a_c.circuit[input_depth + 1].gates[i] = Gate::from_params(10, i, 0);
+
+    // Todo: check if this is correct: enumerate().take()?
+    for (i, gate) in self.verifier.a_c.circuit[input_depth + 1]
+      .gates
+      .iter_mut()
+      .enumerate()
+      .take(output_size_so_far)
+    {
+      *gate = Gate::from_params(RELAY, i, 0);
     }
+
     self.verifier.a_c.circuit[input_depth + 1].src_expander_c_mempool =
       vec![0; CN * self.lce_ctx.c[recursion_depth].l];
     self.verifier.a_c.circuit[input_depth + 1].weight_expander_c_mempool =
@@ -452,11 +436,6 @@ impl LinearPC {
       self.verifier.a_c.circuit[input_depth + 1].gates[output_size_so_far + i].ty = 14;
       self.verifier.a_c.circuit[input_depth + 1].gates[output_size_so_far + i].parameter_length =
         neighbor_size;
-
-      // For testing
-      // if (input_depth + 1) >= 3 && (output_size_so_far + i) >= 158 {
-      //   println!("478 neighbor_size {i}: {}, i: {}, g: {}", neighbor_size, input_depth + 1, output_size_so_far + i);
-      // }
 
       self.verifier.a_c.circuit[input_depth + 1].gates[output_size_so_far + i].src =
         self.verifier.a_c.circuit[input_depth + 1].src_expander_c_mempool[mempool_ptr..].to_vec();
@@ -485,8 +464,13 @@ impl LinearPC {
     mempool_ptr = 0;
 
     // relay the output
-    for i in 0..output_size_so_far {
-      self.verifier.a_c.circuit[final_output_depth].gates[i] = Gate::from_params(10, i, 0);
+    for (i, gate) in self.verifier.a_c.circuit[final_output_depth]
+      .gates
+      .iter_mut()
+      .enumerate()
+      .take(output_size_so_far)
+    {
+      *gate = Gate::from_params(RELAY, i, 0);
     }
 
     self.verifier.a_c.circuit[final_output_depth].src_expander_d_mempool =
@@ -499,12 +483,6 @@ impl LinearPC {
       self.verifier.a_c.circuit[final_output_depth].gates[output_size_so_far + i].ty = 14;
       self.verifier.a_c.circuit[final_output_depth].gates[output_size_so_far + i]
         .parameter_length = neighbor_size;
-
-      // For testing
-      // if final_output_depth >= 3 && (output_size_so_far + i) >= 158 {
-      //   println!("526 neighbor_size {i}: {}, i: {final_output_depth}, g: {}", neighbor_size, output_size_so_far + i);
-      // }
-
       self.verifier.a_c.circuit[final_output_depth].gates[output_size_so_far + i].src =
         self.verifier.a_c.circuit[final_output_depth].src_expander_d_mempool[mempool_ptr..]
           .to_vec();
@@ -533,33 +511,39 @@ impl LinearPC {
   ) -> (FieldElement, bool) {
     assert_eq!(n % COLUMN_SIZE, 0);
     //tensor product of r0 otimes r1
-    let mut r0 = vec![FieldElement::zero(); COLUMN_SIZE];
-    let mut r1 = vec![FieldElement::zero(); n / COLUMN_SIZE];
+    let mut r0 = Vec::with_capacity(COLUMN_SIZE);
+    let mut r1 = Vec::with_capacity(n / COLUMN_SIZE);
 
-    let x_n = FieldElement::fast_pow(x, (n / COLUMN_SIZE).try_into().unwrap());
-    r0[0] = FieldElement::real_one();
+    let x_n = x.fast_pow(
+      (n / COLUMN_SIZE)
+        .try_into()
+        .expect("Failed to convert to u128"),
+    );
+
+    r0.push(FieldElement::real_one());
     for j in 1..COLUMN_SIZE {
-      r0[j] = r0[j - 1] * x_n;
+      r0.push(r0[j - 1] * x_n);
     }
-    r1[0] = FieldElement::real_one();
+    r1.push(FieldElement::real_one());
     for j in 1..(n / COLUMN_SIZE) {
-      r1[j] = r1[j - 1] * x;
+      r1.push(r1[j - 1] * x);
     }
-    unsafe { self.tensor_product_protocol(r0, r1, COLUMN_SIZE, n / COLUMN_SIZE, n, com_mt) }
+    self.tensor_product_protocol(&r0, &r1, n, com_mt)
   }
 
+  //Refactored
   pub fn open_and_verify_multi(
     &mut self,
     r: &[FieldElement],
-    _size_r: usize, // not used in C++
     n: usize,
     com_mt: Vec<HashDigest>,
   ) -> (FieldElement, bool) {
     println!("open_and_verify_multi");
     assert_eq!(n % COLUMN_SIZE, 0);
     //tensor product of r0 otimes r1
-    let mut r0 = [FieldElement::zero(); COLUMN_SIZE];
+    let mut r0: [FieldElement; 128] = [FieldElement::zero(); COLUMN_SIZE];
     let mut r1 = vec![FieldElement::zero(); n / COLUMN_SIZE];
+
     let mut log_column_size = 0;
 
     loop {
@@ -569,18 +553,10 @@ impl LinearPC {
       log_column_size += 1;
     }
 
-    dfs(&mut r0, r, COLUMN_SIZE, 0, FieldElement::real_one());
-    dfs(
-      &mut r1,
-      &r[log_column_size..],
-      n / COLUMN_SIZE,
-      0,
-      FieldElement::real_one(),
-    );
+    dfs(&mut r0, r, 0, FieldElement::real_one());
+    dfs(&mut r1, &r[log_column_size..], 0, FieldElement::real_one());
 
-    unsafe {
-      self.tensor_product_protocol(r0.to_vec(), r1, COLUMN_SIZE, n / COLUMN_SIZE, n, com_mt)
-    }
+    self.tensor_product_protocol(&r0, &r1, n, com_mt)
   }
 }
 fn smallest_pow2_larger_or_equal_to(x: usize) -> usize {
@@ -592,49 +568,17 @@ fn smallest_pow2_larger_or_equal_to(x: usize) -> usize {
   panic!();
 }
 
-fn dfs(dst: &mut [FieldElement], r: &[FieldElement], size: usize, depth: usize, val: FieldElement) {
+fn dfs(dst: &mut [FieldElement], r: &[FieldElement], depth: usize, val: FieldElement) {
+  let size = dst.len();
   if size == 1 {
     dst[0] = val;
   } else {
     dfs(
       &mut dst[..size / 2],
       r,
-      size / 2,
       depth + 1,
       val * (FieldElement::real_one() - r[depth]),
     );
-    dfs(&mut dst[size / 2..], r, size / 2, depth, val * r[depth]);
+    dfs(&mut dst[size / 2..], r, depth, val * r[depth]);
   }
-}
-
-// enum GateTypes
-// {
-// 	Add = 0,
-// 	Mult = 1,
-// 	Dummy = 2,
-// 	Sum = 5,
-// 	ExpSum = 12,
-// 	DirectRelay = 4,
-// 	NotGate = 6,
-// 	Minus = 7,
-// 	XorGate = 8,
-// 	BitTest = 13,
-// 	Relay = 10,
-// 	CustomLinearComb = 14,
-// 	Input = 3isize
-// }
-
-pub fn read_random_file(path: &str) -> Vec<usize> {
-  let result_content = read_to_string(path).unwrap();
-  let result_lines = result_content.lines();
-  //let mut result = Vec::new();
-
-  result_lines
-    .into_iter()
-    .map(|x| {
-      let mut line = x.split_whitespace();
-      let ran = line.next().unwrap().parse().unwrap();
-      ran
-    })
-    .collect()
 }

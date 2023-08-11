@@ -1,17 +1,16 @@
 [package]
-name = "infrastructure"
+name = "encode_test"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ethnum = "1.2.2"
-hmac-sha256 = "1.1.4"
-serde = { version = "1.0.143", features = ["serde_derive"] }
+linear_code = { path = "../linear_code" }
 prime_field = { path = "../prime_field" }
+rand = "0.8.5"
+lazy_static = "1.4.0"
 bincode = "1.3.3"
-rust-crypto = "0.2"
-sha3 = "0.10.2"
-byteorder = "1"
-ring = "0.16.20"  #Temp library
+ethnum = "1.2.2"
+serde = { version = "1.0.143", features = ["serde_derive"] }
+intrinsics = { path = "../intrinsics" }

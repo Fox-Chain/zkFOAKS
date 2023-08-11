@@ -1,13 +1,6 @@
-use std::{
-  mem,
-  ops::{Deref, DerefMut},
-};
-
 use prime_field::FieldElement;
 
-use crate::utility::my_log;
-
-const MAX_ORDER: usize = 28;
+use crate::{constants::MAX_ORDER_FFT, utility::my_log};
 
 #[derive(Default, Debug, Clone)]
 pub struct ScratchPad {
@@ -38,15 +31,14 @@ impl ScratchPad {
     twiddle_factor.push(FieldElement::real_one());
     inv_twiddle_factor.push(FieldElement::real_one());
 
-    let mut prev_twiddle_factor = twiddle_factor[0];
-    let mut prev_inv_twiddle_factor = inv_twiddle_factor[0];
-    for _ in 1..order {
-      prev_twiddle_factor = rou * prev_twiddle_factor;
-      prev_inv_twiddle_factor = inv_rou * prev_inv_twiddle_factor;
+    let twiddle_factor = std::iter::successors(Some(twiddle_factor[0]), |&prev| Some(rou * prev))
+      .take(order)
+      .collect::<Vec<_>>();
 
-      twiddle_factor.push(prev_twiddle_factor);
-      inv_twiddle_factor.push(prev_inv_twiddle_factor);
-    }
+    let inv_twiddle_factor =
+      std::iter::successors(Some(inv_twiddle_factor[0]), |&prev| Some(inv_rou * prev))
+        .take(order)
+        .collect::<Vec<_>>();
 
     ScratchPad {
       dst,
@@ -55,26 +47,6 @@ impl ScratchPad {
       twiddle_factor_size,
     }
   }
-
-  pub fn delete(&mut self) {
-    mem::take(&mut self.dst[0]);
-    mem::take(&mut self.dst[1]);
-    mem::take(&mut self.twiddle_factor);
-  }
-}
-
-struct UnsafeSendSyncRawPtr<T>(*mut T);
-unsafe impl<T> Sync for UnsafeSendSyncRawPtr<T> {}
-unsafe impl<T> Send for UnsafeSendSyncRawPtr<T> {}
-
-impl<T> Deref for UnsafeSendSyncRawPtr<T> {
-  type Target = *mut T;
-
-  fn deref(&self) -> &Self::Target { &self.0 }
-}
-
-impl<T> DerefMut for UnsafeSendSyncRawPtr<T> {
-  fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
 }
 
 pub fn fast_fourier_transform(
@@ -86,13 +58,13 @@ pub fn fast_fourier_transform(
   scratch_pad: &mut ScratchPad,
   twiddle_fac: Option<Vec<FieldElement>>,
 ) {
-  let twiddle_fac = twiddle_fac.unwrap_or(scratch_pad.twiddle_factor.clone());
-  let mut rot_mul: [FieldElement; MAX_ORDER] = [FieldElement::default(); MAX_ORDER];
+  let twiddle_fac = twiddle_fac.unwrap_or_else(|| scratch_pad.twiddle_factor.clone());
+  let mut rot_mul: [FieldElement; MAX_ORDER_FFT] = [FieldElement::default(); MAX_ORDER_FFT];
 
   let mut log_order: Option<usize> = None;
   rot_mul[0] = root_of_unity;
 
-  for i in 0..MAX_ORDER {
+  for i in 0..MAX_ORDER_FFT {
     if i > 0 {
       rot_mul[i] = rot_mul[i - 1] * rot_mul[i - 1];
     }
@@ -103,7 +75,7 @@ pub fn fast_fourier_transform(
   }
 
   let mut log_coefficient: Option<usize> = None;
-  for i in 0..MAX_ORDER {
+  for i in 0..MAX_ORDER_FFT {
     if (1usize << i) == coefficient_len {
       log_coefficient = Some(i);
     }
@@ -112,19 +84,22 @@ pub fn fast_fourier_transform(
   assert!(log_order.is_some());
   assert!(log_coefficient.is_some());
 
-  let log_order = log_order.unwrap();
+  let log_order = log_order.expect("Expected log_order to have a value");
   assert_eq!(rot_mul[log_order], FieldElement::real_one());
 
-  let log_coefficient = log_coefficient.unwrap();
+  let log_coefficient = log_coefficient.expect("Expected log_coefficient to have a value");
   assert!(log_coefficient <= log_order);
 
   // initialize leaves
   let blk_sz = order / coefficient_len;
-  for j in 0..blk_sz {
-    for i in 0..coefficient_len {
-      scratch_pad.dst[log_coefficient & 1][(j << log_coefficient) | i] = coefficients[i];
-    }
-  }
+
+  (0..blk_sz).for_each(|j| {
+    let dst_base = j << log_coefficient;
+    (0..coefficient_len).for_each(|i| {
+      let dst_index = dst_base | i;
+      scratch_pad.dst[log_coefficient & 1][dst_index] = coefficients[i];
+    });
+  });
 
   {
     // initialize leaves
@@ -147,7 +122,7 @@ pub fn fast_fourier_transform(
             for j in 0..(1 << dep) {
               let l_value = pre_ptr[(double_k << (dep + 1)) | j];
               let r_value = x * pre_ptr[(double_k << (dep + 1) | (1 << dep)) | j];
-              cur_ptr[(k << dep) | j] = l_value.clone() + r_value.clone();
+              cur_ptr[(k << dep) | j] = l_value + r_value;
               cur_ptr[((k + blk_size / 2) << dep) | j] = l_value - r_value;
             }
           }
@@ -156,9 +131,7 @@ pub fn fast_fourier_transform(
     }
   }
 
-  for i in 0..order {
-    result[i] = scratch_pad.dst[0][i];
-  }
+  result[..order].copy_from_slice(&scratch_pad.dst[0][..order]);
 }
 
 pub fn inverse_fast_fourier_transform(
@@ -170,24 +143,22 @@ pub fn inverse_fast_fourier_transform(
   dst: &mut [FieldElement],
 ) {
   if coefficient_len > order {
-    eprintln!(
+    let error_message = format!(
       "Got insufficient number {} of evaluations for inverse fast fourier transform. Creating \
-       polynomial of order {} instead.",
+         polynomial of order {} instead.",
       coefficient_len, order
     );
+    eprintln!("{}", error_message);
     coefficient_len = order;
   }
 
-  let sub_eval: Vec<FieldElement>;
-  if coefficient_len != order {
-    let mut temp_eval: Vec<FieldElement> = Vec::with_capacity(coefficient_len);
-    for i in 0..coefficient_len {
-      temp_eval.push(evaluations[i * (order / coefficient_len)]);
-    }
-    sub_eval = temp_eval;
+  let sub_eval: Vec<FieldElement> = if coefficient_len != order {
+    (0..coefficient_len)
+      .map(|i| evaluations[i * (order / coefficient_len)])
+      .collect()
   } else {
-    sub_eval = evaluations.to_vec();
-  }
+    evaluations.to_vec()
+  };
 
   let mut new_rou = FieldElement::real_one();
   for _ in 0..(order / coefficient_len) {
@@ -199,7 +170,7 @@ pub fn inverse_fast_fourier_transform(
   let mut tmp = new_rou;
 
   let mut log_order: Option<usize> = None;
-  for i in 0..MAX_ORDER {
+  for i in 0..MAX_ORDER_FFT {
     if (1usize << i) == order {
       log_order = Some(i);
       break;
@@ -207,7 +178,7 @@ pub fn inverse_fast_fourier_transform(
   }
 
   let mut log_coefficient: Option<usize> = None;
-  for i in 0..MAX_ORDER {
+  for i in 0..MAX_ORDER_FFT {
     if (1usize << i) == coefficient_len {
       log_coefficient = Some(i);
       break;
@@ -215,7 +186,7 @@ pub fn inverse_fast_fourier_transform(
   }
 
   assert!(log_order.is_some() && log_coefficient.is_some());
-  let log_order = log_order.unwrap();
+  let log_order = log_order.expect("log_order expected to have a value");
 
   for _ in 0..log_order {
     inv_rou = inv_rou * tmp;
