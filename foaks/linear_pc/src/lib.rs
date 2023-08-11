@@ -569,16 +569,12 @@ fn smallest_pow2_larger_or_equal_to(x: usize) -> usize {
 }
 
 fn dfs(dst: &mut [FieldElement], r: &[FieldElement], depth: usize, val: FieldElement) {
-  let size = dst.len();
-  if size == 1 {
+  if dst.len() == 1 {
     dst[0] = val;
   } else {
-    dfs(
-      &mut dst[..size / 2],
-      r,
-      depth + 1,
-      val * (FieldElement::real_one() - r[depth]),
-    );
-    dfs(&mut dst[size / 2..], r, depth, val * r[depth]);
+    let (left, right) = dst.split_at_mut(dst.len() / 2);
+    let one_minus_r = FieldElement::real_one() - r[depth];
+    dfs(left, r, depth + 1, val * one_minus_r);
+    dfs(right, r, depth, val * r[depth]);
   }
 }

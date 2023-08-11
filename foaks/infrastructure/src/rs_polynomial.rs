@@ -75,10 +75,9 @@ pub fn fast_fourier_transform(
   }
 
   let mut log_coefficient: Option<usize> = None;
-  for i in 0..MAX_ORDER_FFT {
-    if (1usize << i) == coefficient_len {
-      log_coefficient = Some(i);
-    }
+
+  if coefficient_len.is_power_of_two() {
+    log_coefficient = Some(coefficient_len.trailing_zeros() as usize);
   }
 
   assert!(log_order.is_some());
@@ -170,11 +169,9 @@ pub fn inverse_fast_fourier_transform(
   let mut tmp = new_rou;
 
   let mut log_order: Option<usize> = None;
-  for i in 0..MAX_ORDER_FFT {
-    if (1usize << i) == order {
-      log_order = Some(i);
-      break;
-    }
+
+  if order.is_power_of_two() {
+    log_order = Some(order.trailing_zeros() as usize);
   }
 
   let mut log_coefficient: Option<usize> = None;

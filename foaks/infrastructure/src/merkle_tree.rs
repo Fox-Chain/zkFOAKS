@@ -48,14 +48,14 @@ pub fn create_tree(dst: &mut Vec<HashDigest>, src_data: &[HashDigest], alloc_req
   current_lvl_size /= 2;
   start_idx -= current_lvl_size;
   while current_lvl_size >= 1 {
-    // TODO: parallel
+    let chunk_start = start_idx + current_lvl_size;
+
     for i in 0..current_lvl_size {
-      let mut data = [HashDigest::default(); 2];
-      data[0] = dst[start_idx + current_lvl_size + i * 2];
-      data[1] = dst[start_idx + current_lvl_size + i * 2 + 1];
+      let data = [dst[chunk_start + i * 2], dst[chunk_start + i * 2 + 1]];
       dst[start_idx + i] = my_hash(data);
     }
-    current_lvl_size /= 2;
+
+    current_lvl_size >>= 1;
     start_idx -= current_lvl_size;
   }
 }

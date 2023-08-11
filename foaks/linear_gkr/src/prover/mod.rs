@@ -139,12 +139,11 @@ impl ZkProver {
 
   pub fn evaluate(&mut self) -> Vec<FieldElement> {
     let t0 = time::Instant::now();
-
-    for i in 0..(1 << self.a_c.circuit[0].bit_length) {
-      let g = i;
-      let ty = self.a_c.circuit[0].gates[g].ty;
+    for gate in &self.a_c.circuit[0].gates {
+      let ty = gate.ty;
       assert!(ty == 3 || ty == 2);
     }
+
     assert!(self.a_c.total_depth < 1000000);
 
     for i in 1..(self.a_c.total_depth) {
