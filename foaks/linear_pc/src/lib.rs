@@ -87,15 +87,19 @@ impl LinearPC {
 
     self.verifier.a_c.inputs = Vec::with_capacity(n);
     self.verifier.a_c.total_depth = self.gates_count.len() + 1;
-    //Refactored code, add + 1 to the size of the circuit to avoid panic
-    self.verifier.a_c.circuit = vec![Layer::default(); self.verifier.a_c.total_depth + 1];
-    self.verifier.a_c.circuit[0].bit_length = my_log(n).expect("Failed to compute bit_length");
+    self.verifier.a_c.circuit = Vec::with_capacity(self.verifier.a_c.total_depth);
+    let bit_length = my_log(n).expect("Failed to compute bit_length");
+    let layer_0 = Layer {
+      bit_length,
+      gates: vec![Gate::new(); 1 << bit_length],
+      ..Default::default()
+    };
 
-    self.verifier.a_c.circuit[0].gates =
-      vec![Gate::new(); 1 << self.verifier.a_c.circuit[0].bit_length];
+    self.verifier.a_c.circuit.push(layer_0);
 
-    for i in 0..self.gates_count.len() {
-      self.verifier.a_c.circuit[i + 1].bit_length = my_log(smallest_pow2_larger_or_equal_to(
+    //Refactored code, add - 1 to the bucle to avoid the last layer
+    for i in 0..self.gates_count.len() - 1 {
+      let bit_length = my_log(smallest_pow2_larger_or_equal_to(
         *self
           .gates_count
           .get(&i)
@@ -103,21 +107,34 @@ impl LinearPC {
       ))
       .expect("Failed to compute bit_length");
 
-      self.verifier.a_c.circuit[i + 1].gates =
-        vec![Gate::new(); 1 << self.verifier.a_c.circuit[i + 1].bit_length];
+      let gates = vec![Gate::new(); 1 << bit_length];
+
+      let layer_i = Layer {
+        bit_length,
+        gates,
+        ..Default::default()
+      };
+
+      self.verifier.a_c.circuit.push(layer_i);
     }
-    self.verifier.a_c.circuit[self.gates_count.len() + 1].bit_length =
+
+    let bit_length =
       my_log(smallest_pow2_larger_or_equal_to(query_count)).expect("Failed to compute bit_length");
 
-    self.verifier.a_c.circuit[self.gates_count.len() + 1].gates =
-      vec![Gate::new(); 1 << self.verifier.a_c.circuit[self.gates_count.len() + 1].bit_length];
+    let final_layer = Layer {
+      bit_length,
+      gates: vec![Gate::new(); 1 << bit_length],
+      ..Default::default()
+    };
+
+    self.verifier.a_c.circuit.push(final_layer);
 
     for (i, elem) in input.iter().enumerate().take(n) {
       self.verifier.a_c.inputs.push(*elem);
       self.verifier.a_c.circuit[0].gates[i] = Gate::from_params(INPUT, 0, 0);
       self.verifier.a_c.circuit[1].gates[i] = Gate::from_params(DIRECTRELAY, i, 0);
     }
-    //Todo: improve gate_types::input with constant values
+
     for i in 0..n {
       self.verifier.a_c.circuit[2].gates[i] = Gate::from_params(RELAY, i, 0);
     }

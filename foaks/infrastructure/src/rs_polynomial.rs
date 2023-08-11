@@ -190,7 +190,6 @@ pub fn inverse_fast_fourier_transform(
     tmp = tmp * tmp;
   }
   assert_eq!(inv_rou * new_rou, FieldElement::real_one());
-  println!("first");
   fast_fourier_transform(
     &sub_eval,
     order,
