@@ -58,16 +58,16 @@ pub fn fast_fourier_transform(
   scratch_pad: &mut ScratchPad,
   twiddle_fac: Option<Vec<FieldElement>>,
 ) {
+  assert_eq!(coefficient_len, coefficients.len());
+  println!("pass");
   let twiddle_fac = twiddle_fac.unwrap_or_else(|| scratch_pad.twiddle_factor.clone());
-  let mut rot_mul: [FieldElement; MAX_ORDER_FFT] = [FieldElement::default(); MAX_ORDER_FFT];
+  let mut rot_mul = Vec::with_capacity(MAX_ORDER_FFT);
 
   let mut log_order: Option<usize> = None;
-  rot_mul[0] = root_of_unity;
+  rot_mul.push(root_of_unity);
 
-  for i in 0..MAX_ORDER_FFT {
-    if i > 0 {
-      rot_mul[i] = rot_mul[i - 1] * rot_mul[i - 1];
-    }
+  for i in 1..MAX_ORDER_FFT {
+    rot_mul.push(rot_mul[i - 1] * rot_mul[i - 1]);
 
     if (1usize << i) == order {
       log_order = Some(i);
@@ -193,6 +193,7 @@ pub fn inverse_fast_fourier_transform(
     tmp = tmp * tmp;
   }
   assert_eq!(inv_rou * new_rou, FieldElement::real_one());
+  println!("first");
   fast_fourier_transform(
     &sub_eval,
     order,
