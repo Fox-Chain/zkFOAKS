@@ -213,10 +213,10 @@ impl ZkVerifier {
         //one_minus_r_v.push(FieldElement::from_real(1) - r_v[j]);
       }
 
-      for j in 0..(previous_bit_length) {
+      for (j, elem) in r_u.iter().enumerate() {
         let poly = zk_prover.sumcheck_phase1_update(previous_random, j);
         self.proof_size += mem::size_of::<QuadraticPoly>();
-        previous_random = r_u[j];
+        previous_random = *elem;
         //todo: Debug eval() fn
         let eval_zero = poly.eval(&FieldElement::zero());
         let eval_one = poly.eval(&FieldElement::real_one());
@@ -229,20 +229,20 @@ impl ZkVerifier {
           j
         );
 
-        alpha_beta_sum = poly.eval(&r_u[j].clone());
+        alpha_beta_sum = poly.eval(elem);
       }
 
       zk_prover.sumcheck_phase2_init(previous_random, r_u.clone(), one_minus_r_u.clone());
       let mut previous_random = FieldElement::zero();
-      for j in 0..previous_bit_length {
+      for (j, elem) in r_v.iter_mut().enumerate() {
         if i == 1 {
-          r_v[j] = FieldElement::zero();
+          *elem = FieldElement::zero();
         }
         let poly = zk_prover.sumcheck_phase2_update(previous_random, j);
         self.proof_size += mem::size_of::<QuadraticPoly>();
         //poly.c = poly.c; ???
 
-        previous_random = r_v[j];
+        previous_random = *elem;
 
         assert_eq!(
           poly.eval(&FieldElement::zero())
@@ -254,7 +254,7 @@ impl ZkVerifier {
           j
         );
 
-        alpha_beta_sum = poly.eval(&r_v[j].clone()) + direct_relay_value * zk_prover.v_u;
+        alpha_beta_sum = poly.eval(elem) + direct_relay_value * zk_prover.v_u;
       }
       //Add one more round for maskR
       //quadratic_poly poly p->sumcheck_finalroundR(previous_random, C.current[i -
@@ -267,7 +267,7 @@ impl ZkVerifier {
 
       let predicates_calc = Instant::now();
       self.beta_init(BetaInitArgs {
-        depth: i.clone(),
+        depth: i,
         alpha,
         beta,
         r_0: &r_0,
@@ -309,13 +309,9 @@ impl ZkVerifier {
       let bit_test_value = predicates_value[13];
       let custom_comb_value = predicates_value[14];
 
-      let mut r = Vec::with_capacity(previous_bit_length * 2);
-      for j in 0..self.a_c.circuit[i - 1].bit_length {
-        r.push(r_u[j]);
-      }
-      for j in 0..self.a_c.circuit[i - 1].bit_length {
-        r.push(r_v[j]);
-      }
+      let mut r = r_u.clone();
+      r.reserve(r_v.len());
+      r.extend(r_v.clone());
 
       if alpha_beta_sum
         != (add_value * (v_u + v_v)
