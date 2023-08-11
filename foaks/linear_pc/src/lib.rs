@@ -132,7 +132,7 @@ impl LinearPC {
     for (i, elem) in input.iter().enumerate().take(n) {
       self.verifier.a_c.inputs.push(*elem);
       self.verifier.a_c.circuit[0].gates[i] = Gate::from_params(INPUT, 0, 0);
-      self.verifier.a_c.circuit[1].gates[i] = Gate::from_params(DIRECTRELAY, i, 0);
+      self.verifier.a_c.circuit[1].gates[i] = Gate::from_params(DIRECT_RELAY, i, 0);
     }
 
     for i in 0..n {
@@ -145,7 +145,7 @@ impl LinearPC {
     let mut c_mempool_ptr = 0;
     let mut d_mempool_ptr = 0;
     for i in 0..self.lce_ctx.c[0].r {
-      self.verifier.a_c.circuit[2].gates[i + n] = Gate::from_params(CUSTOMLINEARCOMB, 0, 0);
+      self.verifier.a_c.circuit[2].gates[i + n] = Gate::from_params(CUSTOM_LINEAR_COMB, 0, 0);
       self.verifier.a_c.circuit[2].gates[i + n].parameter_length =
         self.lce_ctx.c[0].r_neighbor[i].len();
       self.verifier.a_c.circuit[2].gates[i + n].src =
@@ -165,12 +165,17 @@ impl LinearPC {
     let output_depth_output_size =
       self.generate_enc_circuit(self.lce_ctx.c[0].r, n + self.lce_ctx.c[0].r, 1, 2);
     // add final output
+    println!("RETURNING");
     let final_output_depth = output_depth_output_size.0 + 1;
-    (0..output_depth_output_size.1)
+
+    for (i, elem) in self.verifier.a_c.circuit[final_output_depth]
+      .gates
+      .iter_mut()
       .enumerate()
-      .for_each(|(i, _)| {
-        self.verifier.a_c.circuit[final_output_depth].gates[i] = Gate::from_params(RELAY, i, 0);
-      });
+      .take(output_depth_output_size.1)
+    {
+      *elem = Gate::from_params(RELAY, i, 0);
+    }
 
     //let d_input_offset = n; //Never used
     let output_so_far = output_depth_output_size.1;
@@ -180,7 +185,8 @@ impl LinearPC {
       vec![FieldElement::zero(); DN * self.lce_ctx.d[0].l];
 
     for i in 0..self.lce_ctx.d[0].r {
-      self.verifier.a_c.circuit[final_output_depth].gates[output_so_far + i].ty = 14;
+      self.verifier.a_c.circuit[final_output_depth].gates[output_so_far + i].ty =
+        CUSTOM_LINEAR_COMB;
       self.verifier.a_c.circuit[final_output_depth].gates[output_so_far + i].parameter_length =
         self.lce_ctx.d[0].r_neighbor[i].len();
 
@@ -191,16 +197,15 @@ impl LinearPC {
         self.verifier.a_c.circuit[final_output_depth].weight_expander_d_mempool[d_mempool_ptr..]
           .to_vec();
       d_mempool_ptr += self.lce_ctx.d[0].r_neighbor[i].len();
-      for (j, (&neighbor, &weight)) in self.lce_ctx.d[0].r_neighbor[i]
+
+      for (j, (neighbor, weight)) in self.lce_ctx.d[0].r_neighbor[i]
         .iter()
         .zip(self.lce_ctx.d[0].r_weight[i].iter())
         .enumerate()
       {
-        let gate_index = output_so_far + i;
-        let gate = &mut self.verifier.a_c.circuit[final_output_depth].gates[gate_index];
-
-        gate.src[j] = neighbor + n;
-        gate.weight[j] = weight;
+        self.verifier.a_c.circuit[final_output_depth].gates[output_so_far + i].src[j] =
+          *neighbor + n;
+        self.verifier.a_c.circuit[final_output_depth].gates[output_so_far + i].weight[j] = *weight
       }
     }
     for (i, elem) in query.iter().enumerate() {
@@ -332,7 +337,7 @@ impl LinearPC {
 
     // generate circuit
     self.generate_circuit(&mut q, segment, &combined_message);
-
+    println!("-----Circuit generated");
     //self.verifier.get_prover(&p); //Refactored, inside of zk_verifier has not
     // zk_prover self.prover.get_circuit(self.verifier.aritmetic_circuit);
     // Refactored, inside of zk_prover.init_array()
@@ -431,8 +436,6 @@ impl LinearPC {
       return (input_depth, output_size_so_far);
     }
     // relay the output
-
-    // Todo: check if this is correct: enumerate().take()?
     for (i, gate) in self.verifier.a_c.circuit[input_depth + 1]
       .gates
       .iter_mut()
@@ -497,7 +500,8 @@ impl LinearPC {
 
     for i in 0..self.lce_ctx.d[recursion_depth].r {
       let neighbor_size = self.lce_ctx.d[recursion_depth].r_neighbor[i].len();
-      self.verifier.a_c.circuit[final_output_depth].gates[output_size_so_far + i].ty = 14;
+      self.verifier.a_c.circuit[final_output_depth].gates[output_size_so_far + i].ty =
+        CUSTOM_LINEAR_COMB;
       self.verifier.a_c.circuit[final_output_depth].gates[output_size_so_far + i]
         .parameter_length = neighbor_size;
       self.verifier.a_c.circuit[final_output_depth].gates[output_size_so_far + i].src =
