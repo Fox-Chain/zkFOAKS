@@ -297,16 +297,14 @@ pub fn request_step_commit(lvl: usize, pow: usize, fri_ctx: &mut FRIContext) -> 
   let mut pow_0: usize;
   let mut value_vec: Vec<(FieldElement, FieldElement)> = Vec::with_capacity(SLICE_NUMBER);
   let mut visited_element = false;
-
   for i in 0..SLICE_NUMBER {
-    pow_0 = fri_ctx.cpd.rs_codeword_mapping[lvl][pow << LOG_SLICE_NUMBER | i];
-    pow_0 /= 2;
+    let pow_0 = fri_ctx.cpd.rs_codeword_mapping[lvl][pow << LOG_SLICE_NUMBER | i] / 2;
 
     if !fri_ctx.visited[lvl][pow_0 * 2] {
       fri_ctx.visited[lvl][pow_0 * 2] = true;
-    } else {
-      visited_element = true;
     }
+
+    visited_element |= fri_ctx.visited[lvl][pow_0 * 2];
 
     value_vec.push((
       fri_ctx.cpd.rs_codeword[lvl][pow_0 * 2],
