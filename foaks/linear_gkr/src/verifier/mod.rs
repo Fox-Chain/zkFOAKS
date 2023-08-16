@@ -5,15 +5,16 @@ use std::{
   mem,
 };
 
-use infrastructure::my_hash::HashDigest;
 use infrastructure::{
   constants::{LOG_SLICE_NUMBER, SLICE_NUMBER},
   rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
 };
+use infrastructure::my_hash::HashDigest;
 use poly_commitment::PolyCommitVerifier;
 use prime_field::FieldElement;
 
 use crate::{circuit_fast_track::LayeredCircuit, polynomial::QuadraticPoly, prover::ZkProver};
+use crate::prover::SumcheckInitArgs;
 
 #[derive(Default, Debug)]
 pub struct VerifierContext {
@@ -164,16 +165,18 @@ impl ZkVerifier {
       let previous_bit_length = self.a_c.circuit[i - 1].bit_length;
 
       zk_prover.sumcheck_init(
-        i,
-        self.a_c.circuit[i].bit_length,
-        previous_bit_length,
-        previous_bit_length,
-        alpha,
-        beta,
-        r_0.clone(),
-        r_1.clone(),
-        one_minus_r_0.clone(),
-        one_minus_r_1.clone(),
+        SumcheckInitArgs {
+          sumcheck_layer_id: i,
+          length_g: self.a_c.circuit[i].bit_length,
+          length_u: previous_bit_length,
+          length_v: previous_bit_length,
+          alpha,
+          beta,
+          r_0: r_0.clone(),
+          r_1: r_1.clone(),
+          one_minus_r_0: one_minus_r_0.clone(),
+          one_minus_r_1: one_minus_r_1.clone()
+        }
       );
 
       zk_prover.sumcheck_phase1_init();
