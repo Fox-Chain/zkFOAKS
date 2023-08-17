@@ -115,16 +115,18 @@ pub fn fast_fourier_transform(
         let gap = (twiddle_size / order) * (1 << (dep));
         assert_eq!(twiddle_size % order, 0);
         {
-          for k in 0..blk_size / 2 {
-            let double_k = (k) & (half_blk_size - 1);
+          (0..blk_size / 2).for_each(|k| {
+            let double_k = k & (half_blk_size - 1);
             let x = twiddle_fac[k * gap];
-            for j in 0..(1 << dep) {
+
+            (0..(1 << dep)).for_each(|j| {
               let l_value = pre_ptr[(double_k << (dep + 1)) | j];
               let r_value = x * pre_ptr[(double_k << (dep + 1) | (1 << dep)) | j];
+
               cur_ptr[(k << dep) | j] = l_value + r_value;
               cur_ptr[((k + blk_size / 2) << dep) | j] = l_value - r_value;
-            }
-          }
+            });
+          });
         }
       }
     }
@@ -160,9 +162,10 @@ pub fn inverse_fast_fourier_transform(
   };
 
   let mut new_rou = FieldElement::real_one();
-  for _ in 0..(order / coefficient_len) {
+  (0..(order / coefficient_len)).for_each(|_| {
     new_rou = new_rou * root_of_unity;
-  }
+  });
+
   order = coefficient_len;
 
   let mut inv_rou = FieldElement::real_one();
