@@ -165,7 +165,6 @@ impl LinearPC {
     let output_depth_output_size =
       self.generate_enc_circuit(self.lce_ctx.c[0].r, n + self.lce_ctx.c[0].r, 1, 2);
     // add final output
-    println!("RETURNING");
     let final_output_depth = output_depth_output_size.0 + 1;
 
     for (i, elem) in self.verifier.a_c.circuit[final_output_depth]
@@ -337,29 +336,23 @@ impl LinearPC {
 
     // generate circuit
     self.generate_circuit(&mut q, segment, &combined_message);
-    println!("-----Circuit generated");
     //self.verifier.get_prover(&p); //Refactored, inside of zk_verifier has not
     // zk_prover self.prover.get_circuit(self.verifier.aritmetic_circuit);
     // Refactored, inside of zk_prover.init_array()
     let max_bit_length = self.verifier.a_c.circuit.iter().map(|c| c.bit_length).max();
-
+    let max_bit_length = max_bit_length.expect("Failed to retrieve max_bit_length");
     // p.init_array(max_bit_length); Refactored inside verifier.verify()
-    self
-      .verifier
-      .init_array(max_bit_length.expect("Failed to retrieve max_bit_length"));
+    self.verifier.init_array(max_bit_length);
 
     // p.get_witness(combined_message, N / column_size); Refactored inside
     // verifier.verify()
 
-    let witness = &combined_message[..segment];
+    let witness = combined_message[..segment].to_vec();
 
-    let (result, time_diff) = self.verifier.verify(
-      max_bit_length.expect("Failed to retrieve max_bit_length"),
-      witness,
-      query_count,
-      combined_codeword,
-      q,
-    );
+    let (result, time_diff) =
+      self
+        .verifier
+        .verify(max_bit_length, witness, query_count, combined_codeword, q);
 
     verification_time += time_diff;
     verification_time += self.verifier.v_time;
@@ -540,7 +533,7 @@ impl LinearPC {
         .try_into()
         .expect("Failed to convert to u128"),
     );
-
+    //Todo: Refactor parallel for loop
     r0.push(FieldElement::real_one());
     for j in 1..COLUMN_SIZE {
       r0.push(r0[j - 1] * x_n);

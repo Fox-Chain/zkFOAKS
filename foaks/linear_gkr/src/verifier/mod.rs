@@ -106,7 +106,7 @@ impl ZkVerifier {
   pub fn verify(
     &mut self,
     bit_length: usize,
-    inputs: &[FieldElement],
+    inputs: Vec<FieldElement>,
     query_count: usize,
     combined_codeword: Vec<FieldElement>,
     q: Vec<usize>,
@@ -115,7 +115,6 @@ impl ZkVerifier {
     zk_prover.init_array(bit_length, self.a_c.clone());
     zk_prover.get_witness(inputs);
 
-    self.proof_size = 0;
     //there is a way to compress binlinear pairing element
     let mut verification_time: f64 = 0.0;
     let mut predicates_calc_time: f64 = 0.0;
@@ -137,36 +136,33 @@ impl ZkVerifier {
     let mut r_0 = generate_randomness(capacity);
     let mut r_1 = generate_randomness(capacity);
 
-    let mut one_minus_r_0 = Vec::with_capacity(capacity);
-    let mut one_minus_r_1 = Vec::with_capacity(capacity);
+    //todo: Refactor parallel
+    let mut one_minus_r_0 = r_0
+      .iter()
+      .map(|x| FieldElement::real_one() - *x)
+      .collect::<Vec<_>>();
+    let mut one_minus_r_1 = r_1
+      .iter()
+      .map(|x| FieldElement::real_one() - *x)
+      .collect::<Vec<_>>();
 
-    for i in 0..capacity {
-      one_minus_r_0.push(FieldElement::real_one() - r_0[i]);
-      one_minus_r_1.push(FieldElement::real_one() - r_1[i]);
-    }
     let t_a = Instant::now();
 
     println!("Calc V_output(r)");
     assert_eq!(result.len(), 1 << capacity);
-    let mut a_0 = zk_prover.v_res(&one_minus_r_0, &r_0, result);
+    let mut alpha_beta_sum = zk_prover.v_res(&one_minus_r_0, &r_0, result);
 
     let time_span = t_a.elapsed();
     println!("    Time:: {}", time_span.as_secs_f64());
 
-    a_0 = alpha * a_0;
-    let mut alpha_beta_sum = a_0;
     let mut direct_relay_value: FieldElement;
 
     for i in (1..=(self.a_c.total_depth - 1)).rev() {
-      // never used
-      //let rho = FieldElement::new_random();
-
       let previous_bit_length = self.a_c.circuit[i - 1].bit_length;
 
       zk_prover.sumcheck_init(
         i,
         self.a_c.circuit[i].bit_length,
-        previous_bit_length,
         previous_bit_length,
         alpha,
         beta,

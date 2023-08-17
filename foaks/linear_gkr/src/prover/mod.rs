@@ -222,9 +222,9 @@ impl ZkProver {
     self.circuit_value[self.a_c.total_depth - 1].clone()
   }
 
-  pub fn get_witness(&mut self, inputs: &[FieldElement]) {
-    self.circuit_value[0] = Vec::with_capacity(self.a_c.circuit[0].gates.len());
-    self.circuit_value[0].extend_from_slice(inputs);
+  pub fn get_witness(&mut self, inputs: Vec<FieldElement>) {
+    //assert_eq!(inputs.len(), self.a_c.circuit[0].gates.len()); // since assert is true, we can refactor this function
+    self.circuit_value[0] = inputs;
   }
 
   pub fn sumcheck_init(
@@ -232,7 +232,6 @@ impl ZkProver {
     sumcheck_layer_id: usize,
     length_g: usize,
     length_u: usize,
-    length_v: usize,
     alpha: FieldElement,
     beta: FieldElement,
     r_0: Vec<FieldElement>,
@@ -247,7 +246,7 @@ impl ZkProver {
     self.sumcheck_layer_id = sumcheck_layer_id;
     self.length_g = length_g;
     self.length_u = length_u;
-    self.length_v = length_v;
+    self.length_v = length_u; // length_v is equal to length_u
     self.one_minus_r_0 = one_minus_r_0;
     self.one_minus_r_1 = one_minus_r_1;
   }
