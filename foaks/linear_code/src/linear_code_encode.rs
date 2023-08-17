@@ -155,8 +155,7 @@ impl LinearCodeEncodeContext {
   }
 }
 
-pub fn generate_random_expander(l: usize, r: usize, d: usize) -> Graph {
-  let degree = d;
+pub fn generate_random_expander(l: usize, r: usize, degree: usize) -> Graph {
   let mut neighbor = Vec::with_capacity(l);
   let mut weight = Vec::with_capacity(l);
 
@@ -164,9 +163,9 @@ pub fn generate_random_expander(l: usize, r: usize, d: usize) -> Graph {
   let mut r_weight = vec![vec![]; r];
 
   for i in 0..l {
-    neighbor.push(Vec::with_capacity(d));
-    weight.push(Vec::with_capacity(d));
-    for _ in 0..d {
+    neighbor.push(Vec::with_capacity(degree));
+    weight.push(Vec::with_capacity(degree));
+    for _ in 0..degree {
       let target = rand::random::<usize>() % r;
       let tmp_weight = FieldElement::new_random();
       neighbor[i].push(target);

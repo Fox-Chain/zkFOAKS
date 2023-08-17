@@ -36,15 +36,15 @@ impl LinearPC {
     lce_ctx.expander_init(n / COLUMN_SIZE, None);
     Self {
       lce_ctx,
+      codeword_size: Vec::with_capacity(COLUMN_SIZE),
+      encoded_codeword: Vec::with_capacity(COLUMN_SIZE),
+      coef: Vec::with_capacity(COLUMN_SIZE),
       ..Default::default()
     }
   }
   pub fn commit(&mut self, src: &[FieldElement]) -> Vec<HashDigest> {
     //Todo: Refactor, delete self.codeword_size field
     let n: usize = src.len();
-    self.codeword_size = Vec::with_capacity(COLUMN_SIZE);
-    self.encoded_codeword = Vec::with_capacity(COLUMN_SIZE);
-    self.coef = Vec::with_capacity(COLUMN_SIZE);
 
     assert_eq!(n % COLUMN_SIZE, 0);
 
