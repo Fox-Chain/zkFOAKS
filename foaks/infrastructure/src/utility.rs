@@ -4,10 +4,9 @@ pub enum Log2Error {
 }
 
 pub fn my_log(x: usize) -> Result<usize, Log2Error> {
-  for i in 0..64 {
-    if 1usize << i == x {
-      return Ok(i);
-    }
+  if x != 0 && (x & (x - 1)) == 0 {
+    let exponent = x.trailing_zeros() as usize;
+    return Ok(exponent);
   }
   Err(Log2Error::NotPowerOfTwo)
 }

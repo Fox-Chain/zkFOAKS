@@ -585,9 +585,11 @@ impl ZkProver {
       //todo
       //#pragma omp parallel for
       for j in 0..(tot >> iter) {
-        self.ctx.rets_cur[j] = self.ctx.rets_prev[j * 2] + self.ctx.rets_prev[j * 2 + 1];
+        let rets_prev_idx = j << 1;
+        self.ctx.rets_cur[j] =
+          self.ctx.rets_prev[rets_prev_idx] + self.ctx.rets_prev[rets_prev_idx + 1];
       }
-      swap(&mut self.ctx.rets_prev, &mut self.ctx.rets_cur);
+      std::mem::swap(&mut self.ctx.rets_prev, &mut self.ctx.rets_cur);
       iter += 1;
     }
     let ret = self.ctx.rets_prev[0];
