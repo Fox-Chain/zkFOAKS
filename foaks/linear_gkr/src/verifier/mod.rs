@@ -1247,11 +1247,15 @@ impl ZkVerifier {
       }
       ret[10] = ret[10] * zero_v;
     }
-    for i in 0..gate_type_count {
-      if self.a_c.circuit[depth].is_parallel {
-        assert_eq!(ret[i], ret_para[i]);
-      }
-    }
+    ret
+      .iter()
+      .zip(ret_para.iter())
+      .for_each(|(ret_val, ret_para_val)| {
+        if self.a_c.circuit[depth].is_parallel {
+          assert_eq!(ret_val, ret_para_val);
+        }
+      });
+
     ret
   }
 

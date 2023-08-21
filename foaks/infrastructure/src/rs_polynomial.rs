@@ -178,12 +178,12 @@ pub fn inverse_fast_fourier_transform(
   }
 
   let mut log_coefficient: Option<usize> = None;
-  for i in 0..MAX_ORDER_FFT {
-    if (1usize << i) == coefficient_len {
+
+  (0..MAX_ORDER_FFT).for_each(|i| {
+    if (1usize << i) == coefficient_len && log_coefficient.is_none() {
       log_coefficient = Some(i);
-      break;
     }
-  }
+  });
 
   assert!(log_order.is_some() && log_coefficient.is_some());
   let log_order = log_order.expect("log_order expected to have a value");
