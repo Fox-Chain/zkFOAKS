@@ -829,15 +829,10 @@ impl ZkVerifier {
 
     let mut ret_para = vec![zero; gate_type_count];
     let mut ret = vec![zero; gate_type_count];
-
-    for i in 0..gate_type_count {
-      ret[i] = FieldElement::zero();
-      ret_para[i] = FieldElement::zero();
-    }
-
-    if depth == 1 {
-      return ret;
-    }
+    ret.iter_mut().for_each(|val| *val = FieldElement::zero());
+    ret_para
+      .iter_mut()
+      .for_each(|val| *val = FieldElement::zero());
 
     let debug_mode = false;
     if self.a_c.circuit[depth].is_parallel {
@@ -1114,16 +1109,22 @@ impl ZkVerifier {
           }
         }
 
-        for j in 0..gate_type_count {
-          if j == 6 || j == 10 || j == 5 || j == 12 {
-            ret_para[j] = ret_para[j]
-              + prefix_alpha_v0 * one_block_alpha[j]
-              + prefix_beta_v0 * one_block_beta[j];
+        (0..gate_type_count).for_each(|j| {
+          let update_alpha = if j == 6 || j == 10 || j == 5 || j == 12 {
+            prefix_alpha_v0
           } else {
-            ret_para[j] =
-              ret_para[j] + prefix_alpha * one_block_alpha[j] + prefix_beta * one_block_beta[j];
-          }
-        }
+            prefix_alpha
+          };
+
+          let update_beta = if j == 6 || j == 10 || j == 5 || j == 12 {
+            prefix_beta_v0
+          } else {
+            prefix_beta
+          };
+
+          ret_para[j] =
+            ret_para[j] + update_alpha * one_block_alpha[j] + update_beta * one_block_beta[j];
+        });
       }
       if !debug_mode {
         ret = ret_para.clone();
