@@ -122,12 +122,11 @@ impl ZkProver {
     r_0: &[FieldElement],
     mut output: Vec<FieldElement>,
   ) -> FieldElement {
-    let r_0_size = r_0.len();
     let mut output_size = output.len();
     let t0 = time::Instant::now();
-    for i in 0..r_0_size {
+    for (i, elem) in r_0.iter().enumerate() {
       for j in 0..(output_size >> 1) {
-        output[j] = output[j << 1] * one_minus_r_0[i] + output[j << 1 | 1] * r_0[i];
+        output[j] = output[j << 1] * one_minus_r_0[i] + output[j << 1 | 1] * *elem;
       }
       output_size >>= 1;
     }
