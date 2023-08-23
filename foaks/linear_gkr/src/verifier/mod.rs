@@ -829,10 +829,10 @@ impl ZkVerifier {
 
     let mut ret_para = vec![zero; gate_type_count];
     let mut ret = vec![zero; gate_type_count];
-    ret.iter_mut().for_each(|val| *val = FieldElement::zero());
-    ret_para
-      .iter_mut()
-      .for_each(|val| *val = FieldElement::zero());
+
+    if depth == 1 {
+      return ret;
+    }
 
     let debug_mode = false;
     if self.a_c.circuit[depth].is_parallel {
@@ -841,11 +841,6 @@ impl ZkVerifier {
 
       let mut one_block_alpha = vec![FieldElement::zero(); gate_type_count];
       let mut one_block_beta = vec![FieldElement::zero(); gate_type_count];
-
-      for _i in 0..gate_type_count {
-        one_block_alpha.push(FieldElement::zero());
-        one_block_beta.push(FieldElement::zero());
-      }
 
       assert_eq!(
         (1 << self.a_c.circuit[depth].log_block_size),
