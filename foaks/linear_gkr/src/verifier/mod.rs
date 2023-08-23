@@ -175,39 +175,28 @@ impl ZkVerifier {
       zk_prover.sumcheck_phase1_init();
 
       let mut previous_random = FieldElement::from_real(0);
-      let mut r_v;
 
       //next level random
       let r_u = generate_randomness(previous_bit_length);
-      r_v = generate_randomness(previous_bit_length);
+      let mut r_v = generate_randomness(previous_bit_length);
 
       direct_relay_value =
         alpha * self.direct_relay(i, &r_0, &r_u) + beta * self.direct_relay(i, &r_1, &r_u);
 
       if i == 1 {
-        for r_v_item in r_v.iter_mut().take(previous_bit_length) {
-          *r_v_item = FieldElement::zero();
-        }
+        r_v.fill(FieldElement::zero());
       }
 
-      //V should test the maskR for two points, V does random linear combination of
-      // these points first
-      // never used
-      //let random_combine = generate_randomness(1)[0];
+      //V should test the maskR for two points, V does random linear combination of these points first
+      //let random_combine = generate_randomness(1)[0];       // never used
 
-      //Every time all one test to V, V needs to do a linear combination for
-      // security.
-      //let linear_combine = generate_randomness(1)[0]; // mem leak
+      //Every time all one test to V, V needs to do a linear combination for security.
+      //let linear_combine = generate_randomness(1)[0]; // mem leak // never used
 
-      let mut one_minus_r_u = vec![FieldElement::zero(); previous_bit_length];
-      let mut one_minus_r_v = vec![FieldElement::zero(); previous_bit_length];
-
-      for j in 0..(previous_bit_length) {
-        one_minus_r_u[j] = FieldElement::from_real(1) - r_u[j];
-        one_minus_r_v[j] = FieldElement::from_real(1) - r_v[j];
-        //one_minus_r_u.push(FieldElement::from_real(1) - r_u[j]);
-        //one_minus_r_v.push(FieldElement::from_real(1) - r_v[j]);
-      }
+      let one_minus_r_u: Vec<FieldElement> =
+        r_u.iter().map(|x| FieldElement::real_one() - *x).collect();
+      let one_minus_r_v: Vec<FieldElement> =
+        r_v.iter().map(|x| FieldElement::real_one() - *x).collect();
 
       for (j, elem) in r_u.iter().enumerate() {
         let poly = zk_prover.sumcheck_phase1_update(previous_random, j);
@@ -464,7 +453,6 @@ impl ZkVerifier {
     self.ctx.q_eval_verifier = vec![FieldElement::zero(); 1 << (log_length - LOG_SLICE_NUMBER)];
     self.ctx.q_ratio = vec![FieldElement::zero(); 1 << LOG_SLICE_NUMBER];
 
-    // TODO check
     Self::dfs_ratio(
       self,
       0,
