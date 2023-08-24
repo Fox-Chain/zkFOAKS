@@ -5,6 +5,8 @@ use prime_field::FieldElement;
 use crate::parameter::DISTANCE_THRESHOLD;
 use crate::parameter::*;
 
+use infrastructure::constants::REAL_ZERO;
+
 #[derive(Default, Clone)]
 pub struct Graph {
   pub degree: usize,
@@ -58,7 +60,7 @@ impl LinearCodeEncodeContext {
     self.scratch[0][dep][..n].copy_from_slice(src);
     let mut r: usize = (ALPHA * (n as f64)) as usize;
 
-    self.scratch[1][dep].fill(FieldElement::zero());
+    self.scratch[1][dep].fill(REAL_ZERO);
 
     //expander mult
     for (i, elem) in src.iter().enumerate() {
@@ -98,7 +100,7 @@ impl LinearCodeEncodeContext {
     self.scratch[0][dep][..n].copy_from_slice(&slc);
 
     let mut r = (ALPHA * (n as f64)) as usize;
-    self.scratch[1][dep].fill(FieldElement::zero());
+    self.scratch[1][dep].fill(REAL_ZERO);
 
     //expander mult
     for (i, val) in self.scratch[1][dep - 1]

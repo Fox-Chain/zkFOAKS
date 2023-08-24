@@ -1,6 +1,9 @@
 use prime_field::FieldElement;
 
-use crate::{constants::MAX_ORDER_FFT, utility::my_log};
+use crate::{
+  constants::{MAX_ORDER_FFT, REAL_ONE},
+  utility::my_log,
+};
 
 #[derive(Default, Debug, Clone)]
 pub struct ScratchPad {
@@ -28,8 +31,8 @@ impl ScratchPad {
 
     let inv_rou = rou.inverse();
 
-    twiddle_factor.push(FieldElement::real_one());
-    inv_twiddle_factor.push(FieldElement::real_one());
+    twiddle_factor.push(REAL_ONE);
+    inv_twiddle_factor.push(REAL_ONE);
 
     let twiddle_factor = std::iter::successors(Some(twiddle_factor[0]), |&prev| Some(rou * prev))
       .take(order)
@@ -161,14 +164,14 @@ pub fn inverse_fast_fourier_transform(
     evaluations.to_vec()
   };
 
-  let mut new_rou = FieldElement::real_one();
+  let mut new_rou = REAL_ONE;
   (0..(order / coefficient_len)).for_each(|_| {
     new_rou = new_rou * root_of_unity;
   });
 
   order = coefficient_len;
 
-  let mut inv_rou = FieldElement::real_one();
+  let mut inv_rou = REAL_ONE;
   let mut tmp = new_rou;
 
   let mut log_order: Option<usize> = None;
@@ -192,7 +195,7 @@ pub fn inverse_fast_fourier_transform(
     inv_rou = inv_rou * tmp;
     tmp = tmp * tmp;
   }
-  assert_eq!(inv_rou * new_rou, FieldElement::real_one());
+  assert_eq!(inv_rou * new_rou, REAL_ONE);
   fast_fourier_transform(
     &sub_eval,
     order,

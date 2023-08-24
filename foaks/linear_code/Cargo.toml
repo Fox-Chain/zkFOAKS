@@ -8,5 +8,6 @@ edition = "2021"
 [dependencies]
 prime_field = { path = "../prime_field" }
 linear_gkr = { path = "../linear_gkr" }
+infrastructure = { path = "../infrastructure" }
 rand = "0.8.5"
 lazy_static = "1.4.0"

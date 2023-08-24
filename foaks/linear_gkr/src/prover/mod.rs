@@ -3,7 +3,7 @@ use std::{
   time::{self, SystemTime},
 };
 
-use infrastructure::constants::SIZE;
+use infrastructure::constants::{REAL_ONE, REAL_ZERO, SIZE};
 use poly_commitment::PolyCommitProver;
 use prime_field::FieldElement;
 
@@ -95,12 +95,12 @@ impl ZkProver {
     self.ctx.rets_prev = vec![QuadraticPoly::zero(); 1 << max_bit_length];
     self.ctx.rets_cur = vec![QuadraticPoly::zero(); 1 << max_bit_length];
 
-    self.beta_g_r0_fhalf = vec![FieldElement::zero(); 1 << half_length];
-    self.beta_g_r0_shalf = vec![FieldElement::zero(); 1 << half_length];
-    self.beta_g_r1_fhalf = vec![FieldElement::zero(); 1 << half_length];
-    self.beta_g_r1_shalf = vec![FieldElement::zero(); 1 << half_length];
-    self.beta_u_fhalf = vec![FieldElement::zero(); 1 << half_length];
-    self.beta_u_shalf = vec![FieldElement::zero(); 1 << half_length];
+    self.beta_g_r0_fhalf = vec![REAL_ZERO; 1 << half_length];
+    self.beta_g_r0_shalf = vec![REAL_ZERO; 1 << half_length];
+    self.beta_g_r1_fhalf = vec![REAL_ZERO; 1 << half_length];
+    self.beta_g_r1_shalf = vec![REAL_ZERO; 1 << half_length];
+    self.beta_u_fhalf = vec![REAL_ZERO; 1 << half_length];
+    self.beta_u_shalf = vec![REAL_ZERO; 1 << half_length];
     self.add_mult_sum = vec![LinearPoly::zero(); 1 << max_bit_length];
     self.v_mult_add = vec![LinearPoly::zero(); 1 << max_bit_length];
     self.add_v_array = vec![LinearPoly::zero(); 1 << max_bit_length];
@@ -267,8 +267,8 @@ impl ZkProver {
 
     self.beta_g_r0_fhalf[0] = self.alpha;
     self.beta_g_r1_fhalf[0] = self.beta;
-    self.beta_g_r0_shalf[0] = FieldElement::real_one();
-    self.beta_g_r1_shalf[0] = FieldElement::real_one();
+    self.beta_g_r0_shalf[0] = REAL_ONE;
+    self.beta_g_r1_shalf[0] = REAL_ONE;
 
     let first_half = self.length_g >> 1;
     let _second_half = self.length_g - first_half;
@@ -613,8 +613,8 @@ impl ZkProver {
     let first_half = self.length_u >> 1;
     let second_half = self.length_u - first_half;
 
-    self.beta_u_fhalf[0] = FieldElement::real_one();
-    self.beta_u_shalf[0] = FieldElement::real_one();
+    self.beta_u_fhalf[0] = REAL_ONE;
+    self.beta_u_shalf[0] = REAL_ONE;
 
     for i in 0..first_half {
       for j in 0..(1 << i) {
