@@ -5,6 +5,7 @@ mod parameters;
 use crate::parameters::*;
 
 use infrastructure::{
+  constants::{REAL_ONE, REAL_ZERO},
   merkle_tree::{self, create_tree},
   my_hash::HashDigest,
   utility::my_log,
@@ -58,7 +59,7 @@ impl LinearPC {
       let mut dst = self.lce_ctx.encode(src_slice);
       let size = dst.len();
       self.codeword_size.push(size);
-      dst.resize(2 * segment, FieldElement::zero());
+      dst.resize(2 * segment, REAL_ZERO);
       self.encoded_codeword.push(dst);
     }
 
@@ -141,7 +142,7 @@ impl LinearPC {
 
     self.verifier.a_c.circuit[2].src_expander_c_mempool = vec![0; CN * self.lce_ctx.c[0].l];
     self.verifier.a_c.circuit[2].weight_expander_c_mempool =
-      vec![FieldElement::zero(); CN * self.lce_ctx.c[0].l];
+      vec![REAL_ZERO; CN * self.lce_ctx.c[0].l];
     let mut c_mempool_ptr = 0;
     let mut d_mempool_ptr = 0;
     for i in 0..self.lce_ctx.c[0].r {
@@ -181,7 +182,7 @@ impl LinearPC {
     self.verifier.a_c.circuit[final_output_depth].src_expander_d_mempool =
       vec![0; DN * self.lce_ctx.d[0].l];
     self.verifier.a_c.circuit[final_output_depth].weight_expander_d_mempool =
-      vec![FieldElement::zero(); DN * self.lce_ctx.d[0].l];
+      vec![REAL_ZERO; DN * self.lce_ctx.d[0].l];
 
     for i in 0..self.lce_ctx.d[0].r {
       self.verifier.a_c.circuit[final_output_depth].gates[output_so_far + i].ty =
@@ -239,7 +240,7 @@ impl LinearPC {
     //prover construct the combined codeword
 
     let codeword_size_0 = self.codeword_size[0];
-    let mut combined_codeword = vec![FieldElement::zero(); codeword_size_0];
+    let mut combined_codeword = vec![REAL_ZERO; codeword_size_0];
     let mut combined_codeword_hash = Vec::with_capacity(segment * 2);
     let mut combined_codeword_mt = vec![HashDigest::default(); segment * 4];
     for (i, elem_r0) in r0.iter().enumerate().take(COLUMN_SIZE) {
@@ -251,7 +252,7 @@ impl LinearPC {
     for elem in combined_codeword.iter() {
       combined_codeword_hash.push(merkle_tree::hash_single_field_element(*elem));
     }
-    let hash_zero_field_element = merkle_tree::hash_single_field_element(FieldElement::zero());
+    let hash_zero_field_element = merkle_tree::hash_single_field_element(REAL_ZERO);
     let hash_zeros = vec![hash_zero_field_element; segment * 2 - codeword_size_0];
     combined_codeword_hash.extend_from_slice(&hash_zeros);
 
@@ -259,7 +260,7 @@ impl LinearPC {
     create_tree(&mut combined_codeword_mt, &combined_codeword_hash, false);
 
     //prover construct the combined original message
-    let mut combined_message = vec![FieldElement::zero(); n];
+    let mut combined_message = vec![REAL_ZERO; n];
 
     for (i, coef_i) in self.coef.iter().enumerate().take(COLUMN_SIZE) {
       for (j, &coef_ij) in coef_i.iter().enumerate().take(codeword_size_0) {
@@ -281,7 +282,7 @@ impl LinearPC {
 
     for _ in 0..query_count {
       let q = rand::random::<usize>() % codeword_size_0;
-      let mut sum = FieldElement::zero();
+      let mut sum = REAL_ZERO;
       for (j, elem) in r0.iter().enumerate().take(COLUMN_SIZE) {
         sum = sum + *elem * self.encoded_codeword[j][q];
       }
@@ -323,7 +324,7 @@ impl LinearPC {
     let mut verification_time = time_span.as_secs_f64();
 
     // setup code-switching
-    let mut answer = FieldElement::zero();
+    let mut answer = REAL_ZERO;
     for i in 0..(segment) {
       answer = answer + r1[i] * combined_message[i];
     }
@@ -441,7 +442,7 @@ impl LinearPC {
     self.verifier.a_c.circuit[input_depth + 1].src_expander_c_mempool =
       vec![0; CN * self.lce_ctx.c[recursion_depth].l];
     self.verifier.a_c.circuit[input_depth + 1].weight_expander_c_mempool =
-      vec![FieldElement::zero(); CN * self.lce_ctx.c[recursion_depth].l];
+      vec![REAL_ZERO; CN * self.lce_ctx.c[recursion_depth].l];
     let mut mempool_ptr = 0;
 
     for i in 0..self.lce_ctx.c[recursion_depth].r {
@@ -489,7 +490,7 @@ impl LinearPC {
     self.verifier.a_c.circuit[final_output_depth].src_expander_d_mempool =
       vec![0; DN * self.lce_ctx.d[recursion_depth].l];
     self.verifier.a_c.circuit[final_output_depth].weight_expander_d_mempool =
-      vec![FieldElement::zero(); DN * self.lce_ctx.d[recursion_depth].l];
+      vec![REAL_ZERO; DN * self.lce_ctx.d[recursion_depth].l];
 
     for i in 0..self.lce_ctx.d[recursion_depth].r {
       let neighbor_size = self.lce_ctx.d[recursion_depth].r_neighbor[i].len();
@@ -555,8 +556,8 @@ impl LinearPC {
     println!("open_and_verify_multi");
     assert_eq!(n % COLUMN_SIZE, 0);
     //tensor product of r0 otimes r1
-    let mut r0: [FieldElement; 128] = [FieldElement::zero(); COLUMN_SIZE];
-    let mut r1 = vec![FieldElement::zero(); n / COLUMN_SIZE];
+    let mut r0: [FieldElement; 128] = [REAL_ZERO; COLUMN_SIZE];
+    let mut r1 = vec![REAL_ZERO; n / COLUMN_SIZE];
 
     let mut log_column_size = 0;
 

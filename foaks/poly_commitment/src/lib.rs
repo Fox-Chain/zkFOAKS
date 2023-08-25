@@ -89,7 +89,7 @@ impl PolyCommitProver {
     let l_eval_len = slice_count * slice_size;
     self.ctx.l_eval_len = l_eval_len;
 
-    self.ctx.l_eval = vec![FieldElement::zero(); l_eval_len];
+    self.ctx.l_eval = vec![REAL_ZERO; l_eval_len];
 
     let mut tmp = vec![FieldElement::default(); slice_real_ele_cnt];
 
@@ -100,7 +100,7 @@ impl PolyCommitProver {
 
     for i in 0..slice_count {
       let mut all_zero = true;
-      let zero = FieldElement::zero();
+      let zero = REAL_ZERO;
 
       for j in 0..slice_real_ele_cnt {
         if private_array[i * slice_real_ele_cnt + j] == zero {
@@ -211,7 +211,7 @@ impl PolyCommitProver {
     }
     ftt_time += ftt_t0.elapsed().as_secs_f64();
 
-    let mut sum = FieldElement::zero();
+    let mut sum = REAL_ZERO;
     assert_eq!(
       self.ctx.slice_count * self.ctx.slice_real_ele_cnt,
       1 << r_0_len
@@ -236,7 +236,7 @@ impl PolyCommitProver {
     for (i, all_sum_item) in all_sum.iter_mut().enumerate().take(self.ctx.slice_count) {
       assert!(2 * self.ctx.slice_real_ele_cnt <= self.ctx.slice_size);
       let mut all_zero = true;
-      let zero = FieldElement::zero();
+      let zero = REAL_ZERO;
 
       for j in 0..2 * self.ctx.slice_real_ele_cnt {
         self.ctx.lq_eval[j] = self.ctx.l_eval
@@ -300,7 +300,7 @@ impl PolyCommitProver {
       let inv_twiddle_gap = self.scratch_pad.twiddle_factor_size / self.ctx.slice_size;
 
       let remap_t0 = time::Instant::now();
-      let const_sum = FieldElement::zero() - (self.ctx.lq_coef[0] + self.ctx.h_coef[0]);
+      let const_sum = REAL_ZERO - (self.ctx.lq_coef[0] + self.ctx.h_coef[0]);
 
       for j in 0..self.ctx.slice_size {
         let p = self.ctx.l_eval[i * self.ctx.slice_size + j];

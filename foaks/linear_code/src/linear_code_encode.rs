@@ -119,7 +119,7 @@ impl LinearCodeEncodeContext {
     assert_eq!(self.d[dep].l, l);
     // R consumed
     r = self.d[dep].r;
-    let zeros = vec![FieldElement::from_real(0); r];
+    let zeros = vec![REAL_ZERO; r];
     self.scratch[0][dep][n + l..n + l + r].copy_from_slice(&zeros);
 
     for (i, val) in self.scratch[0][dep][n..n + l].to_owned().iter().enumerate() {

@@ -146,7 +146,7 @@ impl ZkProver {
     assert!(self.a_c.total_depth < 1000000);
 
     for i in 1..(self.a_c.total_depth) {
-      self.circuit_value[i] = vec![FieldElement::zero(); self.a_c.circuit[i].gates.len()];
+      self.circuit_value[i] = vec![REAL_ZERO; self.a_c.circuit[i].gates.len()];
 
       for (g, gate) in self.a_c.circuit[i].gates.iter().enumerate() {
         let ty = gate.ty;
@@ -255,14 +255,14 @@ impl ZkProver {
   pub fn sumcheck_phase1_init(&mut self) {
     let t0 = time::Instant::now();
     self.total_uv = self.a_c.circuit[self.sumcheck_layer_id - 1].gates.len();
-    let zero = FieldElement::zero();
+
     for i in 0..self.total_uv {
       self.v_mult_add[i] =
         LinearPoly::new_single_input(self.circuit_value[self.sumcheck_layer_id - 1][i]);
-      self.add_v_array[i].a = zero;
-      self.add_v_array[i].b = zero;
-      self.add_mult_sum[i].a = zero;
-      self.add_mult_sum[i].b = zero;
+      self.add_v_array[i].a = REAL_ZERO;
+      self.add_v_array[i].b = REAL_ZERO;
+      self.add_mult_sum[i].a = REAL_ZERO;
+      self.add_mult_sum[i].b = REAL_ZERO;
     }
 
     self.beta_g_r0_fhalf[0] = self.alpha;
@@ -293,8 +293,8 @@ impl ZkProver {
 
     let mask_fhalf = (1 << first_half) - 1;
 
-    let mut intermediates0 = vec![FieldElement::zero(); 1 << self.length_g];
-    let mut intermediates1 = vec![FieldElement::zero(); 1 << self.length_g];
+    let mut intermediates0 = vec![REAL_ZERO; 1 << self.length_g];
+    let mut intermediates1 = vec![REAL_ZERO; 1 << self.length_g];
 
     //todo
     //	#pragma omp parallel for
@@ -636,20 +636,19 @@ impl ZkProver {
 
     self.total_uv = self.a_c.circuit[self.sumcheck_layer_id - 1].gates.len();
     let total_g = self.a_c.circuit[self.sumcheck_layer_id].gates.len();
-    let zero = FieldElement::zero();
 
     for i in 0..self.total_uv {
-      self.add_mult_sum[i].a = zero;
-      self.add_mult_sum[i].b = zero;
-      self.add_v_array[i].a = zero;
-      self.add_v_array[i].b = zero;
+      self.add_mult_sum[i].a = REAL_ZERO;
+      self.add_mult_sum[i].b = REAL_ZERO;
+      self.add_v_array[i].a = REAL_ZERO;
+      self.add_v_array[i].b = REAL_ZERO;
 
       self.v_mult_add[i] =
         LinearPoly::new_single_input(self.circuit_value[self.sumcheck_layer_id - 1][i]);
     }
 
-    let mut intermediates0 = vec![FieldElement::zero(); total_g];
-    let mut intermediates1 = vec![FieldElement::zero(); total_g];
+    let mut intermediates0 = vec![REAL_ZERO; total_g];
+    let mut intermediates1 = vec![REAL_ZERO; total_g];
     //let mut intermediates2 = vec![FieldElement::zero(); total_g]; //never used
 
     //todo
