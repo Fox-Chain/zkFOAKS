@@ -13,7 +13,7 @@ use crate::{
 };
 
 pub fn from_string(s: &str) -> FieldElement {
-  let mut ret = FieldElement::from_real(0);
+  let mut ret = REAL_ZERO;
 
   for byte in s.bytes() {
     let digit = byte - b'0';
@@ -160,18 +160,18 @@ impl ZkProver {
           assert!(v < (self.a_c.circuit[i - 1].gates.len()));
           self.circuit_value[i][g] = self.circuit_value[i - 1][u] * self.circuit_value[i - 1][v];
         } else if ty == 2 {
-          self.circuit_value[i][g] = FieldElement::from_real(0);
+          self.circuit_value[i][g] = REAL_ZERO;
         } else if ty == 3 {
           self.circuit_value[i][g] = FieldElement::from_real(u as u64);
         } else if ty == 4 {
           self.circuit_value[i][g] = self.circuit_value[i - 1][u];
         } else if ty == 5 {
-          self.circuit_value[i][g] = FieldElement::from_real(0);
+          self.circuit_value[i][g] = REAL_ZERO;
           for k in u..v {
             self.circuit_value[i][g] = self.circuit_value[i][g] + self.circuit_value[i - 1][k];
           }
         } else if ty == 6 {
-          self.circuit_value[i][g] = FieldElement::from_real(1) - self.circuit_value[i - 1][u];
+          self.circuit_value[i][g] = REAL_ONE - self.circuit_value[i - 1][u];
         } else if ty == 7 {
           self.circuit_value[i][g] = self.circuit_value[i - 1][u] - self.circuit_value[i - 1][v];
         } else if ty == 8 {
@@ -187,7 +187,7 @@ impl ZkProver {
         } else if ty == 10 {
           self.circuit_value[i][g] = self.circuit_value[i - 1][u];
         } else if ty == 12 {
-          self.circuit_value[i][g] = FieldElement::from_real(0);
+          self.circuit_value[i][g] = REAL_ZERO;
           assert!(v - u < 60);
           for k in u..=v {
             self.circuit_value[i][g] = self.circuit_value[i][g]
@@ -196,10 +196,10 @@ impl ZkProver {
         } else if ty == 13 {
           assert_eq!(u, v);
           assert!(u < (self.a_c.circuit[i - 1].gates.len()),);
-          self.circuit_value[i][g] = self.circuit_value[i - 1][u]
-            * (FieldElement::from_real(1) - self.circuit_value[i - 1][v]);
+          self.circuit_value[i][g] =
+            self.circuit_value[i - 1][u] * (REAL_ONE - self.circuit_value[i - 1][v]);
         } else if ty == 14 {
-          self.circuit_value[i][g] = FieldElement::from_real(0);
+          self.circuit_value[i][g] = REAL_ZERO;
           for k in 0..self.a_c.circuit[i].gates[g].parameter_length {
             let weight = self.a_c.circuit[i].gates[g].weight[k];
             let idx = self.a_c.circuit[i].gates[g].src[k];

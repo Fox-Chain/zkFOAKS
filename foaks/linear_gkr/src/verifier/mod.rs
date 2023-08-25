@@ -137,14 +137,8 @@ impl ZkVerifier {
     let mut r_1 = generate_randomness(capacity);
 
     //todo: Refactor parallel
-    let mut one_minus_r_0 = r_0
-      .iter()
-      .map(|x| FieldElement::real_one() - *x)
-      .collect::<Vec<_>>();
-    let mut one_minus_r_1 = r_1
-      .iter()
-      .map(|x| FieldElement::real_one() - *x)
-      .collect::<Vec<_>>();
+    let mut one_minus_r_0 = r_0.iter().map(|x| REAL_ONE - *x).collect::<Vec<_>>();
+    let mut one_minus_r_1 = r_1.iter().map(|x| REAL_ONE - *x).collect::<Vec<_>>();
 
     let t_a = Instant::now();
 
@@ -174,7 +168,7 @@ impl ZkVerifier {
 
       zk_prover.sumcheck_phase1_init();
 
-      let mut previous_random = FieldElement::from_real(0);
+      let mut previous_random = REAL_ZERO;
 
       //next level random
       let r_u = generate_randomness(previous_bit_length);
@@ -193,10 +187,8 @@ impl ZkVerifier {
       //Every time all one test to V, V needs to do a linear combination for security.
       //let linear_combine = generate_randomness(1)[0]; // mem leak // never used
 
-      let one_minus_r_u: Vec<FieldElement> =
-        r_u.iter().map(|x| FieldElement::real_one() - *x).collect();
-      let one_minus_r_v: Vec<FieldElement> =
-        r_v.iter().map(|x| FieldElement::real_one() - *x).collect();
+      let one_minus_r_u: Vec<FieldElement> = r_u.iter().map(|x| REAL_ONE - *x).collect();
+      let one_minus_r_v: Vec<FieldElement> = r_v.iter().map(|x| REAL_ONE - *x).collect();
 
       for (j, elem) in r_u.iter().enumerate() {
         let poly = zk_prover.sumcheck_phase1_update(previous_random, j);
@@ -299,7 +291,7 @@ impl ZkVerifier {
       if alpha_beta_sum
         != (add_value * (v_u + v_v)
           + mult_value * v_u * v_v
-          + not_value * (FieldElement::real_one() - v_u)
+          + not_value * (REAL_ONE - v_u)
           + minus_value * (v_u - v_v)
           + xor_value * (v_u + v_v - FieldElement::from_real(2) * v_u * v_v)
           + naab_value * (v_v - v_u * v_v)
@@ -307,7 +299,7 @@ impl ZkVerifier {
           + custom_comb_value * v_u
           + relay_value * v_u
           + exp_sum_value * v_u
-          + bit_test_value * (FieldElement::real_one() - v_v) * v_u)
+          + bit_test_value * (REAL_ONE - v_v) * v_u)
           + direct_relay_value * v_u
       {
         //Todo: impove error handling
@@ -462,7 +454,7 @@ impl ZkVerifier {
     Self::dfs_coef(
       self,
       0,
-      FieldElement::real_one(),
+      REAL_ONE,
       r,
       one_minus_r,
       0,
@@ -597,15 +589,15 @@ impl ZkVerifier {
     r_u: &[FieldElement],
   ) -> FieldElement {
     if depth != 1 {
-      FieldElement::from_real(0)
+      REAL_ZERO
     } else {
-      let ret = FieldElement::from_real(1);
+      let ret = REAL_ONE;
       let result = ret
         * r_g
           .iter()
           .zip(r_u.iter())
-          .map(|(&g, &u)| FieldElement::from_real(1) - g - u + FieldElement::from_real(2) * g * u)
-          .fold(FieldElement::from_real(1), |acc, val| acc * val);
+          .map(|(&g, &u)| REAL_ONE - g - u + FieldElement::from_real(2) * g * u)
+          .fold(REAL_ONE, |acc, val| acc * val);
       result
     }
   }
@@ -630,8 +622,8 @@ impl ZkVerifier {
     if !self.a_c.circuit[depth].is_parallel || debug_mode {
       self.beta_g_r0_first_half[0] = alpha;
       self.beta_g_r1_first_half[0] = beta;
-      self.beta_g_r0_second_half[0] = FieldElement::from_real(1);
-      self.beta_g_r1_second_half[0] = FieldElement::from_real(1);
+      self.beta_g_r0_second_half[0] = REAL_ONE;
+      self.beta_g_r1_second_half[0] = REAL_ONE;
 
       let first_half_len = self.a_c.circuit[depth].bit_length / 2;
       let second_half_len = self.a_c.circuit[depth].bit_length - first_half_len;
@@ -670,10 +662,10 @@ impl ZkVerifier {
         }
       }
 
-      self.beta_u_first_half[0] = FieldElement::real_one();
-      self.beta_v_first_half[0] = FieldElement::real_one();
-      self.beta_u_second_half[0] = FieldElement::real_one();
-      self.beta_v_second_half[0] = FieldElement::real_one();
+      self.beta_u_first_half[0] = REAL_ONE;
+      self.beta_v_first_half[0] = REAL_ONE;
+      self.beta_u_second_half[0] = REAL_ONE;
+      self.beta_v_second_half[0] = REAL_ONE;
       let first_half_len = self.a_c.circuit[depth - 1].bit_length / 2;
       let second_half_len = self.a_c.circuit[depth - 1].bit_length - first_half_len;
 
@@ -715,8 +707,8 @@ impl ZkVerifier {
     if self.a_c.circuit[depth].is_parallel {
       self.beta_g_r0_block_first_half[0] = alpha;
       self.beta_g_r1_block_first_half[0] = beta;
-      self.beta_g_r0_block_second_half[0] = FieldElement::from_real(1);
-      self.beta_g_r1_block_second_half[0] = FieldElement::from_real(1);
+      self.beta_g_r0_block_second_half[0] = REAL_ONE;
+      self.beta_g_r1_block_second_half[0] = REAL_ONE;
 
       let first_half_len = self.a_c.circuit[depth - 1].log_block_size / 2;
       let second_half_len = self.a_c.circuit[depth - 1].log_block_size - first_half_len;
@@ -755,10 +747,10 @@ impl ZkVerifier {
         }
       }
 
-      self.beta_u_block_first_half[0] = FieldElement::real_one();
-      self.beta_v_block_first_half[0] = FieldElement::real_one();
-      self.beta_u_block_second_half[0] = FieldElement::real_one();
-      self.beta_v_block_second_half[0] = FieldElement::real_one();
+      self.beta_u_block_first_half[0] = REAL_ONE;
+      self.beta_v_block_first_half[0] = REAL_ONE;
+      self.beta_u_block_second_half[0] = REAL_ONE;
+      self.beta_v_block_second_half[0] = REAL_ONE;
       let first_half_len = self.a_c.circuit[depth - 1].bit_length / 2;
       let second_half_len = self.a_c.circuit[depth - 1].bit_length - first_half_len;
 
@@ -1058,7 +1050,7 @@ impl ZkVerifier {
           _ => {}
         }
       }
-      let one = FieldElement::real_one();
+      let one = REAL_ONE;
       for i in 0..self.a_c.circuit[depth].repeat_num {
         let mut prefix_alpha = one;
         let mut prefix_beta = one;

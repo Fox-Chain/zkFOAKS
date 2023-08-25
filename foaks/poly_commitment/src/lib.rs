@@ -307,7 +307,7 @@ impl PolyCommitProver {
         let q = self.ctx.q_eval[i * self.ctx.slice_size + j];
         let aabb = self.scratch_pad.twiddle_factor
           [twiddle_gap * j % self.scratch_pad.twiddle_factor_size]
-          - FieldElement::real_one();
+          - REAL_ONE;
         let h = self.ctx.h_eval[j];
         let g = p * q - aabb * h;
 
@@ -613,10 +613,10 @@ impl PolyCommitVerifier {
           let mut x1;
 
           for j in 0..slice_count {
-            tst0 = FieldElement::from_real(0);
-            tst1 = FieldElement::from_real(0);
-            x0 = FieldElement::from_real(1);
-            x1 = FieldElement::from_real(1);
+            tst0 = REAL_ZERO;
+            tst1 = REAL_ZERO;
+            x0 = REAL_ONE;
+            x1 = REAL_ONE;
 
             for k in 0..(1 << (log_length - LOG_SLICE_NUMBER)) {
               tst0 = tst0 + x0 * public_array[k + j * coef_slice_size];
@@ -625,7 +625,7 @@ impl PolyCommitVerifier {
               x1 = x1 * x[1];
             }
 
-            let one = FieldElement::from_real(1);
+            let one = REAL_ONE;
             {
               alpha.0[j].0 = alpha_l.0[j].0 * tst0 - (rou[0] - one) * alpha_h.0[j].0;
               alpha.0[j].0 = (alpha.0[j].0

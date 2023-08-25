@@ -1,7 +1,7 @@
 use std::{mem::size_of, time, usize, vec};
 
 use infrastructure::{
-  constants::{LOG_SLICE_NUMBER, MAX_BIT_LENGTH, MAX_FRI_DEPTH, RS_CODE_RATE, SLICE_NUMBER},
+  constants::{LOG_SLICE_NUMBER, MAX_BIT_LENGTH, MAX_FRI_DEPTH, RS_CODE_RATE, SLICE_NUMBER, REAL_ONE, REAL_ZERO},
   merkle_tree,
   my_hash::{my_hash, HashDigest},
 };

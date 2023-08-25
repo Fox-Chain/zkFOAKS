@@ -535,11 +535,11 @@ impl LinearPC {
         .expect("Failed to convert to u128"),
     );
     //Todo: Refactor parallel for loop
-    r0.push(FieldElement::real_one());
+    r0.push(REAL_ONE);
     for j in 1..COLUMN_SIZE {
       r0.push(r0[j - 1] * x_n);
     }
-    r1.push(FieldElement::real_one());
+    r1.push(REAL_ONE);
     for j in 1..(n / COLUMN_SIZE) {
       r1.push(r1[j - 1] * x);
     }
@@ -568,8 +568,8 @@ impl LinearPC {
       log_column_size += 1;
     }
 
-    dfs(&mut r0, r, 0, FieldElement::real_one());
-    dfs(&mut r1, &r[log_column_size..], 0, FieldElement::real_one());
+    dfs(&mut r0, r, 0, REAL_ONE);
+    dfs(&mut r1, &r[log_column_size..], 0, REAL_ONE);
 
     self.tensor_product_protocol(&r0, &r1, n, com_mt)
   }
@@ -588,7 +588,7 @@ fn dfs(dst: &mut [FieldElement], r: &[FieldElement], depth: usize, val: FieldEle
     dst[0] = val;
   } else {
     let (left, right) = dst.split_at_mut(dst.len() / 2);
-    let one_minus_r = FieldElement::real_one() - r[depth];
+    let one_minus_r = REAL_ONE - r[depth];
     dfs(left, r, depth + 1, val * one_minus_r);
     dfs(right, r, depth, val * r[depth]);
   }

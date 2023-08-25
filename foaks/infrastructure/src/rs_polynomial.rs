@@ -87,7 +87,7 @@ pub fn fast_fourier_transform(
   assert!(log_coefficient.is_some());
 
   let log_order = log_order.expect("Expected log_order to have a value");
-  assert_eq!(rot_mul[log_order], FieldElement::real_one());
+  assert_eq!(rot_mul[log_order], REAL_ONE);
 
   let log_coefficient = log_coefficient.expect("Expected log_coefficient to have a value");
   assert!(log_coefficient <= log_order);
@@ -207,10 +207,7 @@ pub fn inverse_fast_fourier_transform(
   );
 
   let inv_n = FieldElement::inverse(FieldElement::from_real(order as u64));
-  assert_eq!(
-    inv_n * FieldElement::from_real(order as u64),
-    FieldElement::from_real(1)
-  );
+  assert_eq!(inv_n * FieldElement::from_real(order as u64), REAL_ONE);
 
   (0..coefficient_len).for_each(|i| {
     dst[i] = dst[i] * inv_n;
