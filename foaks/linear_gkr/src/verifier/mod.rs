@@ -107,7 +107,7 @@ impl ZkVerifier {
   pub fn verify(
     &mut self,
     bit_length: usize,
-    inputs: &[FieldElement],
+    inputs: Vec<FieldElement>,
     query_count: usize,
     combined_codeword: Vec<FieldElement>,
     q: Vec<usize>,
@@ -116,7 +116,6 @@ impl ZkVerifier {
     zk_prover.init_array(bit_length, self.a_c.clone());
     zk_prover.get_witness(inputs);
 
-    self.proof_size = 0;
     //there is a way to compress binlinear pairing element
     let mut verification_time: f64 = 0.0;
     let mut predicates_calc_time: f64 = 0.0;
@@ -138,30 +137,28 @@ impl ZkVerifier {
     let mut r_0 = generate_randomness(capacity);
     let mut r_1 = generate_randomness(capacity);
 
-    let mut one_minus_r_0 = Vec::with_capacity(capacity);
-    let mut one_minus_r_1 = Vec::with_capacity(capacity);
+    //todo: Refactor parallel
+    let mut one_minus_r_0 = r_0
+      .iter()
+      .map(|x| FieldElement::real_one() - *x)
+      .collect::<Vec<_>>();
+    let mut one_minus_r_1 = r_1
+      .iter()
+      .map(|x| FieldElement::real_one() - *x)
+      .collect::<Vec<_>>();
 
-    for i in 0..capacity {
-      one_minus_r_0.push(FieldElement::real_one() - r_0[i]);
-      one_minus_r_1.push(FieldElement::real_one() - r_1[i]);
-    }
     let t_a = Instant::now();
 
     println!("Calc V_output(r)");
     assert_eq!(result.len(), 1 << capacity);
-    let mut a_0 = zk_prover.v_res(&one_minus_r_0, &r_0, result);
+    let mut alpha_beta_sum = zk_prover.v_res(&one_minus_r_0, &r_0, result);
 
     let time_span = t_a.elapsed();
     println!("    Time:: {}", time_span.as_secs_f64());
 
-    a_0 = alpha * a_0;
-    let mut alpha_beta_sum = a_0;
     let mut direct_relay_value: FieldElement;
 
     for i in (1..=(self.a_c.total_depth - 1)).rev() {
-      // never used
-      //let rho = FieldElement::new_random();
-
       let previous_bit_length = self.a_c.circuit[i - 1].bit_length;
 
       zk_prover.sumcheck_init(
@@ -182,39 +179,28 @@ impl ZkVerifier {
       zk_prover.sumcheck_phase1_init();
 
       let mut previous_random = FieldElement::from_real(0);
-      let mut r_v;
 
       //next level random
       let r_u = generate_randomness(previous_bit_length);
-      r_v = generate_randomness(previous_bit_length);
+      let mut r_v = generate_randomness(previous_bit_length);
 
       direct_relay_value =
         alpha * self.direct_relay(i, &r_0, &r_u) + beta * self.direct_relay(i, &r_1, &r_u);
 
       if i == 1 {
-        for r_v_item in r_v.iter_mut().take(previous_bit_length) {
-          *r_v_item = FieldElement::zero();
-        }
+        r_v.fill(FieldElement::zero());
       }
 
-      //V should test the maskR for two points, V does random linear combination of
-      // these points first
-      // never used
-      //let random_combine = generate_randomness(1)[0];
+      //V should test the maskR for two points, V does random linear combination of these points first
+      //let random_combine = generate_randomness(1)[0];       // never used
 
-      //Every time all one test to V, V needs to do a linear combination for
-      // security.
-      //let linear_combine = generate_randomness(1)[0]; // mem leak
+      //Every time all one test to V, V needs to do a linear combination for security.
+      //let linear_combine = generate_randomness(1)[0]; // mem leak // never used
 
-      let mut one_minus_r_u = vec![FieldElement::zero(); previous_bit_length];
-      let mut one_minus_r_v = vec![FieldElement::zero(); previous_bit_length];
-
-      for j in 0..(previous_bit_length) {
-        one_minus_r_u[j] = FieldElement::from_real(1) - r_u[j];
-        one_minus_r_v[j] = FieldElement::from_real(1) - r_v[j];
-        //one_minus_r_u.push(FieldElement::from_real(1) - r_u[j]);
-        //one_minus_r_v.push(FieldElement::from_real(1) - r_v[j]);
-      }
+      let one_minus_r_u: Vec<FieldElement> =
+        r_u.iter().map(|x| FieldElement::real_one() - *x).collect();
+      let one_minus_r_v: Vec<FieldElement> =
+        r_v.iter().map(|x| FieldElement::real_one() - *x).collect();
 
       for (j, elem) in r_u.iter().enumerate() {
         let poly = zk_prover.sumcheck_phase1_update(previous_random, j);
@@ -471,7 +457,6 @@ impl ZkVerifier {
     self.ctx.q_eval_verifier = vec![FieldElement::zero(); 1 << (log_length - LOG_SLICE_NUMBER)];
     self.ctx.q_ratio = vec![FieldElement::zero(); 1 << LOG_SLICE_NUMBER];
 
-    // TODO check
     Self::dfs_ratio(
       self,
       0,
@@ -837,11 +822,6 @@ impl ZkVerifier {
     let mut ret_para = vec![zero; gate_type_count];
     let mut ret = vec![zero; gate_type_count];
 
-    for i in 0..gate_type_count {
-      ret[i] = FieldElement::zero();
-      ret_para[i] = FieldElement::zero();
-    }
-
     if depth == 1 {
       return ret;
     }
@@ -853,11 +833,6 @@ impl ZkVerifier {
 
       let mut one_block_alpha = vec![FieldElement::zero(); gate_type_count];
       let mut one_block_beta = vec![FieldElement::zero(); gate_type_count];
-
-      for _i in 0..gate_type_count {
-        one_block_alpha.push(FieldElement::zero());
-        one_block_beta.push(FieldElement::zero());
-      }
 
       assert_eq!(
         (1 << self.a_c.circuit[depth].log_block_size),
@@ -1121,16 +1096,22 @@ impl ZkVerifier {
           }
         }
 
-        for j in 0..gate_type_count {
-          if j == 6 || j == 10 || j == 5 || j == 12 {
-            ret_para[j] = ret_para[j]
-              + prefix_alpha_v0 * one_block_alpha[j]
-              + prefix_beta_v0 * one_block_beta[j];
+        (0..gate_type_count).for_each(|j| {
+          let update_alpha = if j == 6 || j == 10 || j == 5 || j == 12 {
+            prefix_alpha_v0
           } else {
-            ret_para[j] =
-              ret_para[j] + prefix_alpha * one_block_alpha[j] + prefix_beta * one_block_beta[j];
-          }
-        }
+            prefix_alpha
+          };
+
+          let update_beta = if j == 6 || j == 10 || j == 5 || j == 12 {
+            prefix_beta_v0
+          } else {
+            prefix_beta
+          };
+
+          ret_para[j] =
+            ret_para[j] + update_alpha * one_block_alpha[j] + update_beta * one_block_beta[j];
+        });
       }
       if !debug_mode {
         ret = ret_para.clone();
@@ -1254,11 +1235,15 @@ impl ZkVerifier {
       }
       ret[10] = ret[10] * zero_v;
     }
-    for i in 0..gate_type_count {
-      if self.a_c.circuit[depth].is_parallel {
-        assert_eq!(ret[i], ret_para[i]);
-      }
-    }
+    ret
+      .iter()
+      .zip(ret_para.iter())
+      .for_each(|(ret_val, ret_para_val)| {
+        if self.a_c.circuit[depth].is_parallel {
+          assert_eq!(ret_val, ret_para_val);
+        }
+      });
+
     ret
   }
 

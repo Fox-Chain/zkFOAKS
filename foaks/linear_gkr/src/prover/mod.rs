@@ -3,7 +3,7 @@ use std::{
   time::{self, SystemTime},
 };
 
-use infrastructure::constants::SIZE;
+use infrastructure::constants::{REAL_ONE, REAL_ZERO, SIZE};
 use poly_commitment::PolyCommitProver;
 use prime_field::FieldElement;
 
@@ -51,22 +51,22 @@ pub struct ZkProver {
 
   /** @name Randomness
    * Some randomness or values during the proof phase. */
-  pub alpha: FieldElement,
-  pub beta: FieldElement,
+  alpha: FieldElement,
+  beta: FieldElement,
 
-  pub r_0: Vec<FieldElement>,
-  pub r_1: Vec<FieldElement>,
-  pub one_minus_r_0: Vec<FieldElement>,
-  pub one_minus_r_1: Vec<FieldElement>,
+  r_0: Vec<FieldElement>,
+  r_1: Vec<FieldElement>,
+  one_minus_r_0: Vec<FieldElement>,
+  one_minus_r_1: Vec<FieldElement>,
 
   pub add_v_array: Vec<LinearPoly>,
   pub v_mult_add: Vec<LinearPoly>,
   pub beta_g_r0_fhalf: Vec<FieldElement>,
-  pub beta_g_r0_shalf: Vec<FieldElement>,
-  pub beta_g_r1_fhalf: Vec<FieldElement>,
-  pub beta_g_r1_shalf: Vec<FieldElement>,
-  pub beta_u_fhalf: Vec<FieldElement>,
-  pub beta_u_shalf: Vec<FieldElement>,
+  beta_g_r0_shalf: Vec<FieldElement>,
+  beta_g_r1_fhalf: Vec<FieldElement>,
+  beta_g_r1_shalf: Vec<FieldElement>,
+  beta_u_fhalf: Vec<FieldElement>,
+  beta_u_shalf: Vec<FieldElement>,
   /*beta_u: Vec<FieldElement>,
   beta_v: Vec<FieldElement>,
   beta_g: Vec<FieldElement>,*/ //Variables never used
@@ -108,12 +108,12 @@ impl ZkProver {
     self.ctx.rets_prev = vec![QuadraticPoly::zero(); 1 << max_bit_length];
     self.ctx.rets_cur = vec![QuadraticPoly::zero(); 1 << max_bit_length];
 
-    self.beta_g_r0_fhalf = vec![FieldElement::zero(); 1 << half_length];
-    self.beta_g_r0_shalf = vec![FieldElement::zero(); 1 << half_length];
-    self.beta_g_r1_fhalf = vec![FieldElement::zero(); 1 << half_length];
-    self.beta_g_r1_shalf = vec![FieldElement::zero(); 1 << half_length];
-    self.beta_u_fhalf = vec![FieldElement::zero(); 1 << half_length];
-    self.beta_u_shalf = vec![FieldElement::zero(); 1 << half_length];
+    self.beta_g_r0_fhalf = vec![REAL_ZERO; 1 << half_length];
+    self.beta_g_r0_shalf = vec![REAL_ZERO; 1 << half_length];
+    self.beta_g_r1_fhalf = vec![REAL_ZERO; 1 << half_length];
+    self.beta_g_r1_shalf = vec![REAL_ZERO; 1 << half_length];
+    self.beta_u_fhalf = vec![REAL_ZERO; 1 << half_length];
+    self.beta_u_shalf = vec![REAL_ZERO; 1 << half_length];
     self.add_mult_sum = vec![LinearPoly::zero(); 1 << max_bit_length];
     self.v_mult_add = vec![LinearPoly::zero(); 1 << max_bit_length];
     self.add_v_array = vec![LinearPoly::zero(); 1 << max_bit_length];
@@ -135,12 +135,11 @@ impl ZkProver {
     r_0: &[FieldElement],
     mut output: Vec<FieldElement>,
   ) -> FieldElement {
-    let r_0_size = r_0.len();
     let mut output_size = output.len();
     let t0 = time::Instant::now();
-    for i in 0..r_0_size {
+    for (i, elem) in r_0.iter().enumerate() {
       for j in 0..(output_size >> 1) {
-        output[j] = output[j << 1] * one_minus_r_0[i] + output[j << 1 | 1] * r_0[i];
+        output[j] = output[j << 1] * one_minus_r_0[i] + output[j << 1 | 1] * *elem;
       }
       output_size >>= 1;
     }
@@ -235,9 +234,9 @@ impl ZkProver {
     self.circuit_value[self.a_c.total_depth - 1].clone()
   }
 
-  pub fn get_witness(&mut self, inputs: &[FieldElement]) {
-    self.circuit_value[0] = Vec::with_capacity(self.a_c.circuit[0].gates.len());
-    self.circuit_value[0].extend_from_slice(inputs);
+  pub fn get_witness(&mut self, inputs: Vec<FieldElement>) {
+    //assert_eq!(inputs.len(), self.a_c.circuit[0].gates.len()); // since assert is true, we can refactor this function
+    self.circuit_value[0] = inputs;
   }
 
   pub fn sumcheck_init(
@@ -273,8 +272,8 @@ impl ZkProver {
 
     self.beta_g_r0_fhalf[0] = self.alpha;
     self.beta_g_r1_fhalf[0] = self.beta;
-    self.beta_g_r0_shalf[0] = FieldElement::real_one();
-    self.beta_g_r1_shalf[0] = FieldElement::real_one();
+    self.beta_g_r0_shalf[0] = REAL_ONE;
+    self.beta_g_r1_shalf[0] = REAL_ONE;
 
     let first_half = self.length_g >> 1;
     let _second_half = self.length_g - first_half;
@@ -590,9 +589,11 @@ impl ZkProver {
       //todo
       //#pragma omp parallel for
       for j in 0..(tot >> iter) {
-        self.ctx.rets_cur[j] = self.ctx.rets_prev[j * 2] + self.ctx.rets_prev[j * 2 + 1];
+        let rets_prev_idx = j << 1;
+        self.ctx.rets_cur[j] =
+          self.ctx.rets_prev[rets_prev_idx] + self.ctx.rets_prev[rets_prev_idx + 1];
       }
-      swap(&mut self.ctx.rets_prev, &mut self.ctx.rets_cur);
+      std::mem::swap(&mut self.ctx.rets_prev, &mut self.ctx.rets_cur);
       iter += 1;
     }
     let ret = self.ctx.rets_prev[0];
@@ -617,8 +618,8 @@ impl ZkProver {
     let first_half = self.length_u >> 1;
     let second_half = self.length_u - first_half;
 
-    self.beta_u_fhalf[0] = FieldElement::real_one();
-    self.beta_u_shalf[0] = FieldElement::real_one();
+    self.beta_u_fhalf[0] = REAL_ONE;
+    self.beta_u_shalf[0] = REAL_ONE;
 
     for i in 0..first_half {
       for j in 0..(1 << i) {
