@@ -3,22 +3,9 @@ use linear_pc::LinearPC;
 use prime_field::FieldElement;
 use std::{env, time::Instant};
 
-const REQUIRED_THRESHOLD: usize = 14;
-
-#[derive(Debug)]
-enum MainError {
-  BelowThreshold,
-  ParseParamsError,
-  NoNumberProvided,
-}
-
-fn parse_number(input: &str) -> Result<usize, MainError> {
-  match input.parse::<usize>() {
-    Ok(n) if n >= REQUIRED_THRESHOLD => Ok(n),
-    Ok(_) => Err(MainError::BelowThreshold),
-    Err(_) => Err(MainError::ParseParamsError),
-  }
-}
+pub mod utils;
+use utils::parse_number;
+use utils::MainError;
 
 fn main() -> Result<(), MainError> {
   let args: Vec<String> = env::args().collect();

@@ -5,6 +5,8 @@ use prime_field::FieldElement;
 use crate::parameter::DISTANCE_THRESHOLD;
 use crate::parameter::*;
 
+use infrastructure::constants::REAL_ZERO;
+
 #[derive(Default, Clone)]
 pub struct Graph {
   pub degree: usize,
@@ -58,7 +60,7 @@ impl LinearCodeEncodeContext {
     self.scratch[0][dep][..n].copy_from_slice(src);
     let mut r: usize = (ALPHA * (n as f64)) as usize;
 
-    self.scratch[1][dep].fill(FieldElement::zero());
+    self.scratch[1][dep].fill(REAL_ZERO);
 
     //expander mult
     for (i, elem) in src.iter().enumerate() {
@@ -73,7 +75,7 @@ impl LinearCodeEncodeContext {
     assert_eq!(self.d[dep].l, l);
     // R consumed
     r = self.d[dep].r;
-    let zeros = vec![FieldElement::from_real(0); r];
+    let zeros = vec![REAL_ZERO; r];
     self.scratch[0][dep][n + l..n + l + r].copy_from_slice(&zeros);
 
     for (i, val) in self.scratch[0][dep][n..n + l].to_owned().iter().enumerate() {
@@ -98,7 +100,7 @@ impl LinearCodeEncodeContext {
     self.scratch[0][dep][..n].copy_from_slice(&slc);
 
     let mut r = (ALPHA * (n as f64)) as usize;
-    self.scratch[1][dep].fill(FieldElement::zero());
+    self.scratch[1][dep].fill(REAL_ZERO);
 
     //expander mult
     for (i, val) in self.scratch[1][dep - 1]
@@ -117,7 +119,7 @@ impl LinearCodeEncodeContext {
     assert_eq!(self.d[dep].l, l);
     // R consumed
     r = self.d[dep].r;
-    let zeros = vec![FieldElement::from_real(0); r];
+    let zeros = vec![REAL_ZERO; r];
     self.scratch[0][dep][n + l..n + l + r].copy_from_slice(&zeros);
 
     for (i, val) in self.scratch[0][dep][n..n + l].to_owned().iter().enumerate() {
@@ -155,8 +157,7 @@ impl LinearCodeEncodeContext {
   }
 }
 
-pub fn generate_random_expander(l: usize, r: usize, d: usize) -> Graph {
-  let degree = d;
+pub fn generate_random_expander(l: usize, r: usize, degree: usize) -> Graph {
   let mut neighbor = Vec::with_capacity(l);
   let mut weight = Vec::with_capacity(l);
 
@@ -164,9 +165,9 @@ pub fn generate_random_expander(l: usize, r: usize, d: usize) -> Graph {
   let mut r_weight = vec![vec![]; r];
 
   for i in 0..l {
-    neighbor.push(Vec::with_capacity(d));
-    weight.push(Vec::with_capacity(d));
-    for _ in 0..d {
+    neighbor.push(Vec::with_capacity(degree));
+    weight.push(Vec::with_capacity(degree));
+    for _ in 0..degree {
       let target = rand::random::<usize>() % r;
       let tmp_weight = FieldElement::new_random();
       neighbor[i].push(target);

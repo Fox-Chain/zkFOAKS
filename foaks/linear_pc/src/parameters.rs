@@ -3,11 +3,11 @@
 // pub const DUMMY: usize = 2;
 // pub const SUM: usize = 5;
 // pub const EXPSUM: usize = 12;
-pub const DIRECTRELAY: usize = 4;
+pub const DIRECT_RELAY: usize = 4;
 // pub const NOTGATE: usize = 6;
 // pub const MINUS: usize = 7;
 // pub const XORGATE: usize = 8;
 // pub const BITTEST: usize = 13;
 pub const RELAY: usize = 10;
-pub const CUSTOMLINEARCOMB: usize = 14;
+pub const CUSTOM_LINEAR_COMB: usize = 14;
 pub const INPUT: usize = 3;
