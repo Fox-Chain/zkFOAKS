@@ -1,3 +1,4 @@
+use infrastructure::constants::REAL_ZERO;
 use prime_field::FieldElement;
 #[derive(Debug, Clone)]
 
@@ -10,15 +11,15 @@ impl LinearPoly {
   //maps from FieldElement to LinearPoly //Check Original repo
   pub fn new_single_input(arg: FieldElement) -> Self {
     Self {
-      a: FieldElement::zero(),
+      a: REAL_ZERO,
       b: arg,
     }
   }
 
   pub fn zero() -> Self {
     Self {
-      a: FieldElement::zero(),
-      b: FieldElement::zero(),
+      a: REAL_ZERO,
+      b: REAL_ZERO,
     }
   }
 
@@ -64,9 +65,9 @@ pub struct QuadraticPoly {
 impl QuadraticPoly {
   pub fn zero() -> Self {
     Self {
-      a: FieldElement::zero(),
-      b: FieldElement::zero(),
-      c: FieldElement::zero(),
+      a: REAL_ZERO,
+      b: REAL_ZERO,
+      c: REAL_ZERO,
     }
   }
 

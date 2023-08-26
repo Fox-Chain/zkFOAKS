@@ -5,7 +5,7 @@ use std::{
 
 use prime_field::FieldElement;
 
-use crate::my_hash::{my_hash, HashDigest};
+use crate::my_hash::{HashDigest, my_hash};
 
 pub fn hash_single_field_element(x: FieldElement) -> HashDigest {
   let mut data = [HashDigest::default(); 2];
@@ -28,35 +28,34 @@ pub fn hash_double_field_element_merkle_damgard(
 
 pub fn create_tree(dst: &mut Vec<HashDigest>, src_data: &[HashDigest], alloc_required: bool) {
   let element_num = src_data.len();
-  let mut size_after_padding = 1;
-  while size_after_padding < element_num {
-    size_after_padding *= 2;
-  }
+  let size_after_padding = 1 << (element_num as f64).log2().ceil() as usize;
+
   if alloc_required {
-    *dst = vec![HashDigest::default(); size_after_padding * 2];
+    dst.clear();
+    dst.reserve(size_after_padding * 2);
+    dst.extend_from_slice(&vec![HashDigest::default(); size_after_padding * 2]);
   }
   let mut start_idx = size_after_padding;
   let mut current_lvl_size = size_after_padding;
 
-  // TODO: parallel
-  for i in (0..current_lvl_size).rev() {
-    if i < element_num {
-      dst[i + start_idx] = src_data[i];
-    } else {
-      dst[i + start_idx] = my_hash([HashDigest::default(); 2]);
-    }
-  }
+  // Refactored secction
+  assert_eq!(current_lvl_size, element_num);
+  // @dev If assert_eq! fails,then check original code(C/C++)
+
+  // @dev original code(C/C++) uses reversed bucle
+  dst[start_idx..start_idx + current_lvl_size].copy_from_slice(src_data);
+
   current_lvl_size /= 2;
   start_idx -= current_lvl_size;
   while current_lvl_size >= 1 {
-    // TODO: parallel
+    let chunk_start = start_idx + current_lvl_size;
+
     for i in 0..current_lvl_size {
-      let mut data = [HashDigest::default(); 2];
-      data[0] = dst[start_idx + current_lvl_size + i * 2];
-      data[1] = dst[start_idx + current_lvl_size + i * 2 + 1];
+      let data = [dst[chunk_start + i * 2], dst[chunk_start + i * 2 + 1]];
       dst[start_idx + i] = my_hash(data);
     }
-    current_lvl_size /= 2;
+
+    current_lvl_size >>= 1;
     start_idx -= current_lvl_size;
   }
 }
