@@ -803,10 +803,9 @@ impl ZkVerifier {
     }: PredicateArgs,
   ) -> Vec<FieldElement> {
     let gate_type_count = 15;
-    let zero = REAL_ZERO;
 
-    let mut ret_para = vec![zero; gate_type_count];
-    let mut ret = vec![zero; gate_type_count];
+    let mut ret_para = vec![REAL_ZERO; gate_type_count];
+    let mut ret = vec![REAL_ZERO; gate_type_count];
 
     if depth == 1 {
       return ret;
@@ -1050,12 +1049,11 @@ impl ZkVerifier {
           _ => {}
         }
       }
-      let one = REAL_ONE;
       for i in 0..self.a_c.circuit[depth].repeat_num {
-        let mut prefix_alpha = one;
-        let mut prefix_beta = one;
-        let mut prefix_alpha_v0 = one;
-        let mut prefix_beta_v0 = one;
+        let mut prefix_alpha = REAL_ONE;
+        let mut prefix_beta = REAL_ONE;
+        let mut prefix_alpha_v0 = REAL_ONE;
+        let mut prefix_beta_v0 = REAL_ONE;
 
         for j in 0..self.a_c.circuit[depth].log_repeat_num {
           if (i >> j) > 0 {
@@ -1066,19 +1064,20 @@ impl ZkVerifier {
             prefix_beta = prefix_beta * r_1[j + self.a_c.circuit[depth].log_block_size] * uv_value;
 
             let uv_value_v0 = r_u[j + self.a_c.circuit[depth - 1].log_block_size]
-              * (one - r_v[j + self.a_c.circuit[depth - 1].log_block_size]);
+              * (REAL_ONE - r_v[j + self.a_c.circuit[depth - 1].log_block_size]);
 
             prefix_alpha_v0 =
               prefix_alpha_v0 * r_0[j + self.a_c.circuit[depth].log_block_size] * uv_value_v0;
             prefix_beta_v0 =
               prefix_beta_v0 * r_1[j + self.a_c.circuit[depth].log_block_size] * uv_value_v0;
           } else {
-            let uv_value = (one - r_u[j + self.a_c.circuit[depth - 1].log_block_size])
-              * (one - r_v[j + self.a_c.circuit[depth - 1].log_block_size]);
-            prefix_alpha =
-              prefix_alpha * (one - r_0[j + self.a_c.circuit[depth].log_block_size]) * uv_value;
+            let uv_value = (REAL_ONE - r_u[j + self.a_c.circuit[depth - 1].log_block_size])
+              * (REAL_ONE - r_v[j + self.a_c.circuit[depth - 1].log_block_size]);
+            prefix_alpha = prefix_alpha
+              * (REAL_ONE - r_0[j + self.a_c.circuit[depth].log_block_size])
+              * uv_value;
             prefix_beta =
-              prefix_beta * (one - r_1[j + self.a_c.circuit[depth].log_block_size]) * uv_value;
+              prefix_beta * (REAL_ONE - r_1[j + self.a_c.circuit[depth].log_block_size]) * uv_value;
           }
         }
 

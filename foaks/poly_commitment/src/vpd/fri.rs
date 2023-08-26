@@ -1,7 +1,10 @@
 use std::{mem::size_of, time, usize, vec};
 
 use infrastructure::{
-  constants::{LOG_SLICE_NUMBER, MAX_BIT_LENGTH, MAX_FRI_DEPTH, RS_CODE_RATE, SLICE_NUMBER, REAL_ONE, REAL_ZERO},
+  constants::{
+    LOG_SLICE_NUMBER, MAX_BIT_LENGTH, MAX_FRI_DEPTH, REAL_ONE, REAL_ZERO, RS_CODE_RATE,
+    SLICE_NUMBER,
+  },
   merkle_tree,
   my_hash::{my_hash, HashDigest},
 };
@@ -159,7 +162,6 @@ pub fn request_init_commit(
 
     witness_rs_mapping[oracle_indicator].push(vec![0; 1 << *log_current_witness_size_per_slice]);
 
-    // let a = FieldElement::zero(); No usages
     for j in 0..(1 << (*log_current_witness_size_per_slice - 1)) {
       assert!((j << log_leaf_size | (i << 1) | 1) < (1 << (bit_len + RS_CODE_RATE)));
       assert!((j << log_leaf_size | (i << 1) | 1) < slice_size * slice_count);

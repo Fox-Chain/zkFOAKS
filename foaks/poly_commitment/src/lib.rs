@@ -100,10 +100,9 @@ impl PolyCommitProver {
 
     for i in 0..slice_count {
       let mut all_zero = true;
-      let zero = REAL_ZERO;
 
       for j in 0..slice_real_ele_cnt {
-        if private_array[i * slice_real_ele_cnt + j] == zero {
+        if private_array[i * slice_real_ele_cnt + j] == REAL_ZERO {
           continue;
         }
         all_zero = false;
@@ -112,7 +111,7 @@ impl PolyCommitProver {
 
       if all_zero {
         for j in 0..slice_size {
-          self.ctx.l_eval[i * slice_size + j] = zero;
+          self.ctx.l_eval[i * slice_size + j] = REAL_ZERO;
         }
       } else {
         inverse_fast_fourier_transform(
@@ -236,7 +235,6 @@ impl PolyCommitProver {
     for (i, all_sum_item) in all_sum.iter_mut().enumerate().take(self.ctx.slice_count) {
       assert!(2 * self.ctx.slice_real_ele_cnt <= self.ctx.slice_size);
       let mut all_zero = true;
-      let zero = REAL_ZERO;
 
       for j in 0..2 * self.ctx.slice_real_ele_cnt {
         self.ctx.lq_eval[j] = self.ctx.l_eval
@@ -244,22 +242,22 @@ impl PolyCommitProver {
           * self.ctx.q_eval[i * self.ctx.slice_size
             + j * (self.ctx.slice_size / (2 * self.ctx.slice_real_ele_cnt))];
 
-        if self.ctx.lq_eval[j] != zero {
+        if self.ctx.lq_eval[j] != REAL_ZERO {
           all_zero = false;
         }
       }
 
       if all_zero {
         for j in 0..2 * self.ctx.slice_real_ele_cnt {
-          self.ctx.lq_coef[j] = zero;
+          self.ctx.lq_coef[j] = REAL_ZERO;
         }
 
         for j in 0..self.ctx.slice_real_ele_cnt {
-          self.ctx.h_coef[j] = zero;
+          self.ctx.h_coef[j] = REAL_ZERO;
         }
 
         for j in 0..self.ctx.slice_size {
-          self.ctx.h_eval[j] = zero;
+          self.ctx.h_eval[j] = REAL_ZERO;
         }
       } else {
         ftt_t0 = time::Instant::now();
@@ -625,14 +623,13 @@ impl PolyCommitVerifier {
               x1 = x1 * x[1];
             }
 
-            let one = REAL_ONE;
             {
-              alpha.0[j].0 = alpha_l.0[j].0 * tst0 - (rou[0] - one) * alpha_h.0[j].0;
+              alpha.0[j].0 = alpha_l.0[j].0 * tst0 - (rou[0] - REAL_ONE) * alpha_h.0[j].0;
               alpha.0[j].0 = (alpha.0[j].0
                 * FieldElement::from_real((slice_size >> RS_CODE_RATE) as u64)
                 - all_sum[j])
                 * inv_x[0];
-              alpha.0[j].1 = alpha_l.0[j].1 * tst1 - (rou[1] - one) * alpha_h.0[j].1;
+              alpha.0[j].1 = alpha_l.0[j].1 * tst1 - (rou[1] - REAL_ONE) * alpha_h.0[j].1;
               alpha.0[j].1 = (alpha.0[j].1
                 * FieldElement::from_real((slice_size >> RS_CODE_RATE) as u64)
                 - all_sum[j])
