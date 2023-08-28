@@ -260,7 +260,7 @@ impl ZkProver {
     self.beta_g_r1_shalf[0] = FE_REAL_ONE;
 
     let first_half = self.length_g >> 1;
-    let _second_half = self.length_g - first_half;
+    let second_half = self.length_g - first_half;
 
     for i in 0..first_half {
       for j in 0..1 << i {
@@ -271,7 +271,7 @@ impl ZkProver {
       }
     }
 
-    for i in 0.._second_half {
+    for i in 0..second_half {
       for j in 0..1 << i {
         self.beta_g_r0_shalf[j | (1 << i)] = self.beta_g_r0_shalf[j] * self.r_0[i + first_half];
         self.beta_g_r0_shalf[j] = self.beta_g_r0_shalf[j] * self.one_minus_r_0[i + first_half];
@@ -343,7 +343,6 @@ impl ZkProver {
           let tmp = self.beta_g_r0_fhalf[i & mask_fhalf] * self.beta_g_r0_shalf[i >> first_half]
             + self.beta_g_r1_fhalf[i & mask_fhalf] * self.beta_g_r1_shalf[i >> first_half];
           let tmp_v = tmp * self.circuit_value[self.sumcheck_layer_id - 1][v];
-          //let _tmp_2_v = tmp_v + tmp_v; // Never used
           intermediates0[i] = tmp_v;
           intermediates1[i] = tmp;
         }

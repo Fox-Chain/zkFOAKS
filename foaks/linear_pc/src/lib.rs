@@ -12,7 +12,7 @@ use linear_code::{
 };
 use linear_gkr::{
   circuit_fast_track::{Gate, Layer},
-  verifier::ZkVerifier,
+  verifier::{generate_randomness, ZkVerifier},
 };
 use prime_field::FieldElement;
 

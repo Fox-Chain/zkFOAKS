@@ -60,8 +60,6 @@ pub struct PredicateArgs<'a> {
   r_1: &'a Vec<FieldElement>,
   r_u: &'a Vec<FieldElement>,
   r_v: &'a Vec<FieldElement>,
-  _alpha: FieldElement,
-  _beta: FieldElement,
 }
 
 pub struct BetaInitArgs<'a> {
@@ -264,8 +262,6 @@ impl ZkVerifier {
         r_1: &r_1,
         r_u: &r_u,
         r_v: &r_v,
-        _alpha: alpha,
-        _beta: beta,
       });
 
       let predicates_calc_span = predicates_calc.elapsed();
@@ -801,8 +797,6 @@ impl ZkVerifier {
       r_1,
       r_u,
       r_v,
-      _alpha,
-      _beta,
     }: PredicateArgs,
   ) -> Vec<FieldElement> {
     let gate_type_count = 15;
