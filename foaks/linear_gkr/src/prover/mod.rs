@@ -69,7 +69,6 @@ pub struct ZkProver {
 pub struct SumcheckInitArgs {
   pub sumcheck_layer_id: usize,
   pub length_g: usize,
-  pub length_u: usize,
   pub length_v: usize,
   pub alpha: FieldElement,
   pub beta: FieldElement,
@@ -116,7 +115,6 @@ impl ZkProver {
 
   pub fn get_circuit(&mut self, from_verifier: LayeredCircuit) {
     self.a_c = from_verifier;
-
     self.ctx.inv_2 = FieldElement::from_real(2);
   }
 
@@ -237,13 +235,11 @@ impl ZkProver {
     self.beta = zkprover.beta;
     self.sumcheck_layer_id = zkprover.sumcheck_layer_id;
     self.length_g = zkprover.length_g;
-    self.length_u = zkprover.length_u;
+    self.length_u = zkprover.length_v; // Since they are equal, we can refactor this function
     self.length_v = zkprover.length_v;
     self.one_minus_r_0 = zkprover.one_minus_r_0;
     self.one_minus_r_1 = zkprover.one_minus_r_1;
   }
-
-  pub fn total_time(&mut self, val: f64) { self.total_time = val; }
 
   pub fn sumcheck_phase1_init(&mut self) {
     let t0 = time::Instant::now();
@@ -594,14 +590,9 @@ impl ZkProver {
     ret
   }
 
-  pub fn sumcheck_phase2_init(
-    &mut self,
-    previous_random: FieldElement,
-    r_u: Vec<FieldElement>,
-    one_minus_r_u: Vec<FieldElement>,
-  ) {
+  pub fn sumcheck_phase2_init(&mut self, r_u: &[FieldElement], one_minus_r_u: &[FieldElement]) {
     let _t0 = SystemTime::now();
-    self.v_u = self.v_mult_add[0].eval(previous_random);
+    //self.v_u = self.v_mult_add[0].eval(previous_random);
 
     let first_half = self.length_u >> 1;
     let second_half = self.length_u - first_half;

@@ -158,7 +158,6 @@ impl ZkVerifier {
       zk_prover.sumcheck_init(SumcheckInitArgs {
         sumcheck_layer_id: i,
         length_g: self.a_c.circuit[i].bit_length,
-        length_u: previous_bit_length,
         length_v: previous_bit_length,
         alpha,
         beta,
@@ -210,8 +209,8 @@ impl ZkVerifier {
 
         alpha_beta_sum = poly.eval(elem);
       }
-
-      zk_prover.sumcheck_phase2_init(previous_random, r_u.clone(), one_minus_r_u.clone());
+      zk_prover.v_u = zk_prover.v_mult_add[0].eval(previous_random);
+      zk_prover.sumcheck_phase2_init(&r_u, &one_minus_r_u);
       let mut previous_random = FE_ZERO;
       for (j, elem) in r_v.iter_mut().enumerate() {
         if i == 1 {
