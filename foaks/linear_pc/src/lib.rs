@@ -1,9 +1,5 @@
 use std::{collections::HashMap, time::Instant};
 
-mod parameters;
-
-use crate::parameters::*;
-
 use infrastructure::{
   constants::{REAL_ONE, REAL_ZERO},
   merkle_tree::{self, create_tree},
@@ -19,6 +15,10 @@ use linear_gkr::{
   verifier::ZkVerifier,
 };
 use prime_field::FieldElement;
+
+use crate::parameters::*;
+
+mod parameters;
 
 #[derive(Default)]
 pub struct LinearPC {
@@ -387,37 +387,33 @@ impl LinearPC {
       .or_insert(query_count);
   }
 
-  fn prepare_enc_count(
-    &mut self,
-    input_size: usize,
-    output_size_so_far: usize,
-    depth: usize,
-  ) -> (usize, usize) {
-    if input_size <= DISTANCE_THRESHOLD {
-      return (depth, output_size_so_far);
+  fn prepare_enc_count(&mut self, input_size: usize, output_size_so_far: usize, depth: usize) -> (usize, usize) {
+    let mut depth = depth;
+    let mut input_size = input_size;
+    let mut output_size_so_far = output_size_so_far;
+
+    while input_size > DISTANCE_THRESHOLD {
+      // Calculate output size for the current depth
+      let output_size = output_size_so_far + input_size + self.lce_ctx.c[depth].r;
+      self.gates_count.insert(depth + 1, output_size);
+
+      // Prepare for the next depth
+      output_size_so_far = output_size;
+      input_size = self.lce_ctx.c[depth].r;
+
+      depth += 1;
     }
-    // output
-    self.gates_count.insert(
-      depth + 1,
-      output_size_so_far + input_size + self.lce_ctx.c[depth].r,
-    );
-    let output_depth_output_size = self.prepare_enc_count(
-      self.lce_ctx.c[depth].r,
-      output_size_so_far + input_size,
-      depth + 1,
-    );
-    self.gates_count.insert(
-      output_depth_output_size.0 + 1,
-      output_depth_output_size.1 + self.lce_ctx.d[depth].r,
-    );
+
+    let output_depth = depth;
+    let output_size = output_size_so_far + self.lce_ctx.d[output_depth].r;
+    self.gates_count.insert(output_depth + 1, output_size);
+
     (
-      output_depth_output_size.0 + 1,
-      *self
-        .gates_count
-        .get(&(output_depth_output_size.0 + 1))
-        .expect("Failed to retrieve gates_count value"),
+      output_depth + 1,
+      *self.gates_count.get(&(output_depth + 1)).expect("Failed to retrieve gates_count value"),
     )
   }
+
 
   fn generate_enc_circuit(
     &mut self,

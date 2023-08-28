@@ -77,6 +77,19 @@ pub struct ZkProver {
   pub ctx: ProverContext,
 }
 
+pub struct SumcheckInitArgs {
+  pub sumcheck_layer_id: usize,
+  pub length_g: usize,
+  pub length_u: usize,
+  pub length_v: usize,
+  pub alpha: FieldElement,
+  pub beta: FieldElement,
+  pub r_0: Vec<FieldElement>,
+  pub r_1: Vec<FieldElement>,
+  pub one_minus_r_0: Vec<FieldElement>,
+  pub one_minus_r_1: Vec<FieldElement>,
+}
+
 impl ZkProver {
   pub fn new() -> Self {
     Self {
@@ -153,62 +166,62 @@ impl ZkProver {
         let u = gate.u;
         let v = gate.v;
 
-        if ty == 0 {
-          self.circuit_value[i][g] = self.circuit_value[i - 1][u] + self.circuit_value[i - 1][v];
-        } else if ty == 1 {
-          assert!(u < (self.a_c.circuit[i - 1].gates.len()));
-          assert!(v < (self.a_c.circuit[i - 1].gates.len()));
-          self.circuit_value[i][g] = self.circuit_value[i - 1][u] * self.circuit_value[i - 1][v];
-        } else if ty == 2 {
-          self.circuit_value[i][g] = REAL_ZERO;
-        } else if ty == 3 {
-          self.circuit_value[i][g] = FieldElement::from_real(u as u64);
-        } else if ty == 4 {
-          self.circuit_value[i][g] = self.circuit_value[i - 1][u];
-        } else if ty == 5 {
-          self.circuit_value[i][g] = REAL_ZERO;
-          for k in u..v {
-            self.circuit_value[i][g] = self.circuit_value[i][g] + self.circuit_value[i - 1][k];
+        let value_u = self.circuit_value[i - 1][u];
+        let value_v = self.circuit_value[i - 1][v];
+
+        self.circuit_value[i][g] = match ty {
+          0 => value_u + value_v,
+          1 => {
+            assert!(u < (self.a_c.circuit[i - 1].gates.len()));
+            assert!(v < (self.a_c.circuit[i - 1].gates.len()));
+            value_u * value_v
           }
-        } else if ty == 6 {
-          self.circuit_value[i][g] = REAL_ONE - self.circuit_value[i - 1][u];
-        } else if ty == 7 {
-          self.circuit_value[i][g] = self.circuit_value[i - 1][u] - self.circuit_value[i - 1][v];
-        } else if ty == 8 {
-          let x = self.circuit_value[i - 1][u];
-          let y = self.circuit_value[i - 1][v];
-          self.circuit_value[i][g] = x + y - FieldElement::from_real(2) * x * y;
-        } else if ty == 9 {
-          assert!(u < (self.a_c.circuit[i - 1].gates.len()));
-          assert!(v < (self.a_c.circuit[i - 1].gates.len()));
-          let x = self.circuit_value[i - 1][u];
-          let y = self.circuit_value[i - 1][v];
-          self.circuit_value[i][g] = y - x * y;
-        } else if ty == 10 {
-          self.circuit_value[i][g] = self.circuit_value[i - 1][u];
-        } else if ty == 12 {
-          self.circuit_value[i][g] = REAL_ZERO;
-          assert!(v - u < 60);
-          for k in u..=v {
-            self.circuit_value[i][g] = self.circuit_value[i][g]
-              + self.circuit_value[i - 1][k] * FieldElement::from_real(1u64 << (k - u));
+          2 => FieldElement::from_real(0),
+          3 => FieldElement::from_real(u as u64),
+          4 | 10 => value_u,
+          5 => {
+            let mut value = FieldElement::from_real(0);
+            for k in u..v {
+              value = self.circuit_value[i][g] + self.circuit_value[i - 1][k];
+            }
+
+            value
           }
-        } else if ty == 13 {
-          assert_eq!(u, v);
-          assert!(u < (self.a_c.circuit[i - 1].gates.len()),);
-          self.circuit_value[i][g] =
-            self.circuit_value[i - 1][u] * (REAL_ONE - self.circuit_value[i - 1][v]);
-        } else if ty == 14 {
-          self.circuit_value[i][g] = REAL_ZERO;
-          for k in 0..self.a_c.circuit[i].gates[g].parameter_length {
-            let weight = self.a_c.circuit[i].gates[g].weight[k];
-            let idx = self.a_c.circuit[i].gates[g].src[k];
-            self.circuit_value[i][g] =
-              self.circuit_value[i][g] + self.circuit_value[i - 1][idx] * weight;
+          6 => FieldElement::from_real(1) - value_u,
+          7 => value_u - value_v,
+          8 => value_u + value_v - FieldElement::from_real(2) * value_u * value_v,
+          9 => {
+            assert!(u < (self.a_c.circuit[i - 1].gates.len()));
+            assert!(v < (self.a_c.circuit[i - 1].gates.len()));
+            value_v - value_u * value_v
           }
-        } else {
-          panic!("gate type not supported");
-        }
+          12 => {
+            let mut value = FieldElement::from_real(0);
+            assert!(v - u < 60);
+            for k in u..=v {
+              value = self.circuit_value[i][g]
+                + self.circuit_value[i - 1][k] * FieldElement::from_real(1u64 << (k - u));
+            }
+
+            value
+          }
+          13 => {
+            assert_eq!(u, v);
+            assert!(u < (self.a_c.circuit[i - 1].gates.len()),);
+            value_u * (FieldElement::from_real(1) - value_v)
+          }
+          14 => {
+            let mut value = FieldElement::from_real(0);
+            for k in 0..self.a_c.circuit[i].gates[g].parameter_length {
+              let weight = self.a_c.circuit[i].gates[g].weight[k];
+              let idx = self.a_c.circuit[i].gates[g].src[k];
+              value = value + self.circuit_value[i - 1][idx] * weight;
+            }
+
+            value
+          }
+          _ => panic!("gate type not supported"),
+        };
       }
     }
 
@@ -226,28 +239,17 @@ impl ZkProver {
     self.circuit_value[0] = inputs;
   }
 
-  pub fn sumcheck_init(
-    &mut self,
-    sumcheck_layer_id: usize,
-    length_g: usize,
-    length_u: usize,
-    alpha: FieldElement,
-    beta: FieldElement,
-    r_0: Vec<FieldElement>,
-    r_1: Vec<FieldElement>,
-    one_minus_r_0: Vec<FieldElement>,
-    one_minus_r_1: Vec<FieldElement>,
-  ) {
-    self.r_0 = r_0;
-    self.r_1 = r_1;
-    self.alpha = alpha;
-    self.beta = beta;
-    self.sumcheck_layer_id = sumcheck_layer_id;
-    self.length_g = length_g;
-    self.length_u = length_u;
-    self.length_v = length_u; // length_v is equal to length_u
-    self.one_minus_r_0 = one_minus_r_0;
-    self.one_minus_r_1 = one_minus_r_1;
+  pub fn sumcheck_init(&mut self, zkprover: SumcheckInitArgs) {
+    self.r_0 = zkprover.r_0;
+    self.r_1 = zkprover.r_1;
+    self.alpha = zkprover.alpha;
+    self.beta = zkprover.beta;
+    self.sumcheck_layer_id = zkprover.sumcheck_layer_id;
+    self.length_g = zkprover.length_g;
+    self.length_u = zkprover.length_u;
+    self.length_v = zkprover.length_v;
+    self.one_minus_r_0 = zkprover.one_minus_r_0;
+    self.one_minus_r_1 = zkprover.one_minus_r_1;
   }
 
   pub fn total_time(&mut self, val: f64) { self.total_time = val; }

@@ -5,7 +5,7 @@ use std::{
 
 use prime_field::FieldElement;
 
-use crate::my_hash::{my_hash, HashDigest};
+use crate::my_hash::{HashDigest, my_hash};
 
 pub fn hash_single_field_element(x: FieldElement) -> HashDigest {
   let mut data = [HashDigest::default(); 2];
@@ -28,12 +28,12 @@ pub fn hash_double_field_element_merkle_damgard(
 
 pub fn create_tree(dst: &mut Vec<HashDigest>, src_data: &[HashDigest], alloc_required: bool) {
   let element_num = src_data.len();
-  let mut size_after_padding = 1;
-  while size_after_padding < element_num {
-    size_after_padding *= 2;
-  }
+  let size_after_padding = 1 << (element_num as f64).log2().ceil() as usize;
+
   if alloc_required {
-    *dst = vec![HashDigest::default(); size_after_padding * 2];
+    dst.clear();
+    dst.reserve(size_after_padding * 2);
+    dst.extend_from_slice(&vec![HashDigest::default(); size_after_padding * 2]);
   }
   let mut start_idx = size_after_padding;
   let mut current_lvl_size = size_after_padding;
