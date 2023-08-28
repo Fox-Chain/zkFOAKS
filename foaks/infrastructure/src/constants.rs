@@ -12,5 +12,5 @@ pub const SIZE: usize = 1000000;
 pub const MAX_ORDER_FFT: usize = 28;
 
 use prime_field::FieldElement;
-pub const REAL_ZERO: FieldElement = FieldElement::zero();
-pub const REAL_ONE: FieldElement = FieldElement::from_real(1);
+pub const FE_ZERO: FieldElement = FieldElement::zero();
+pub const FE_REAL_ONE: FieldElement = FieldElement::real_one();

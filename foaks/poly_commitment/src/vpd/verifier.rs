@@ -1,7 +1,7 @@
 use std::mem;
 use std::time::Instant;
 
-use infrastructure::constants::REAL_ZERO;
+use infrastructure::constants::FE_ZERO;
 use infrastructure::merkle_tree::create_tree;
 use infrastructure::my_hash::my_hash;
 use infrastructure::{
@@ -59,7 +59,7 @@ impl FRIContext {
   pub fn commit_phase_step(&mut self, r: FieldElement, slice_count: usize) -> HashDigest {
     let nxt_witness_size = (1 << self.log_current_witness_size_per_slice) / 2;
     if self.cpd.rs_codeword[self.current_step_no].is_empty() {
-      self.cpd.rs_codeword[self.current_step_no] = vec![REAL_ZERO; nxt_witness_size * slice_count];
+      self.cpd.rs_codeword[self.current_step_no] = vec![FE_ZERO; nxt_witness_size * slice_count];
     }
 
     let (previous_witness, previous_witness_mapping) = match self.current_step_no {

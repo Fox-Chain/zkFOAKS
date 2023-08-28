@@ -1,4 +1,4 @@
-use infrastructure::constants::REAL_ZERO;
+use infrastructure::constants::FE_ZERO;
 use prime_field::FieldElement;
 #[derive(Debug, Clone)]
 
@@ -9,29 +9,16 @@ pub struct LinearPoly {
 
 impl LinearPoly {
   //maps from FieldElement to LinearPoly //Check Original repo
-  pub fn new_single_input(arg: FieldElement) -> Self {
-    Self {
-      a: REAL_ZERO,
-      b: arg,
-    }
-  }
+  pub fn new_single_input(arg: FieldElement) -> Self { Self { a: FE_ZERO, b: arg } }
 
   pub fn zero() -> Self {
     Self {
-      a: REAL_ZERO,
-      b: REAL_ZERO,
+      a: FE_ZERO,
+      b: FE_ZERO,
     }
   }
 
   pub fn new(a: FieldElement, b: FieldElement) -> Self { Self { a, b } }
-
-  // Create a monomial with no variables // Never used
-  // pub fn new_constant_monomial(b: FieldElement) -> Self {
-  //   Self {
-  //     a: FieldElement::from_real(0),
-  //     b,
-  //   }
-  // }
 
   pub fn eval(&self, x: FieldElement) -> FieldElement { self.a * x + self.b }
 }
@@ -65,24 +52,15 @@ pub struct QuadraticPoly {
 impl QuadraticPoly {
   pub fn zero() -> Self {
     Self {
-      a: REAL_ZERO,
-      b: REAL_ZERO,
-      c: REAL_ZERO,
+      a: FE_ZERO,
+      b: FE_ZERO,
+      c: FE_ZERO,
     }
   }
 
   pub fn new(a: FieldElement, b: FieldElement, c: FieldElement) -> Self { Self { a, b, c } }
 
   pub fn eval(&self, x: &FieldElement) -> FieldElement { self.a * *x * *x + self.b * *x + self.c }
-
-  // Never used
-  // pub fn multi(self, x: LinearPoly) -> CubicPoly {
-  //   let a = self.a * x.a;
-  //   let b = self.a * x.b + self.b * x.a;
-  //   let c = self.b * x.b + self.c * x.a;
-  //   let d = self.c * x.b;
-  //   CubicPoly::new(a, b, c, d)
-  // }
 }
 
 impl core::ops::Add for QuadraticPoly {
