@@ -83,25 +83,27 @@ impl ZkVerifier {
 
   pub fn init_array(&mut self, max_bit_length: usize) {
     let first_half_len = max_bit_length / 2;
+    let first_half_size = 1 << (max_bit_length / 2);
     let second_half_len = max_bit_length - first_half_len;
+    let second_half_size = 1 << second_half_len;
 
-    self.beta_g_r0_first_half = vec![FE_ZERO; 1 << first_half_len];
-    self.beta_g_r0_second_half = vec![FE_ZERO; 1 << second_half_len];
-    self.beta_g_r1_first_half = vec![FE_ZERO; 1 << first_half_len];
-    self.beta_g_r1_second_half = vec![FE_ZERO; 1 << second_half_len];
-    self.beta_v_first_half = vec![FE_ZERO; 1 << first_half_len];
-    self.beta_v_second_half = vec![FE_ZERO; 1 << second_half_len];
-    self.beta_u_first_half = vec![FE_ZERO; 1 << first_half_len];
-    self.beta_u_second_half = vec![FE_ZERO; 1 << second_half_len];
+    self.beta_g_r0_first_half = vec![FE_ZERO; first_half_size];
+    self.beta_g_r0_second_half = vec![FE_ZERO; second_half_size];
+    self.beta_g_r1_first_half = vec![FE_ZERO; first_half_size];
+    self.beta_g_r1_second_half = vec![FE_ZERO; second_half_size];
+    self.beta_v_first_half = vec![FE_ZERO; first_half_size];
+    self.beta_v_second_half = vec![FE_ZERO; second_half_size];
+    self.beta_u_first_half = vec![FE_ZERO; first_half_size];
+    self.beta_u_second_half = vec![FE_ZERO; second_half_size];
 
-    self.beta_g_r0_block_first_half = vec![FE_ZERO; 1 << first_half_len];
-    self.beta_g_r0_block_second_half = vec![FE_ZERO; 1 << second_half_len];
-    self.beta_g_r1_block_first_half = vec![FE_ZERO; 1 << first_half_len];
-    self.beta_g_r1_block_second_half = vec![FE_ZERO; 1 << second_half_len];
-    self.beta_v_block_first_half = vec![FE_ZERO; 1 << first_half_len];
-    self.beta_v_block_second_half = vec![FE_ZERO; 1 << second_half_len];
-    self.beta_u_block_first_half = vec![FE_ZERO; 1 << first_half_len];
-    self.beta_u_block_second_half = vec![FE_ZERO; 1 << second_half_len];
+    self.beta_g_r0_block_first_half = vec![FE_ZERO; first_half_size];
+    self.beta_g_r0_block_second_half = vec![FE_ZERO; second_half_size];
+    self.beta_g_r1_block_first_half = vec![FE_ZERO; first_half_size];
+    self.beta_g_r1_block_second_half = vec![FE_ZERO; second_half_size];
+    self.beta_v_block_first_half = vec![FE_ZERO; first_half_size];
+    self.beta_v_block_second_half = vec![FE_ZERO; second_half_size];
+    self.beta_u_block_first_half = vec![FE_ZERO; first_half_size];
+    self.beta_u_block_second_half = vec![FE_ZERO; second_half_size];
   }
 
   pub fn verify(

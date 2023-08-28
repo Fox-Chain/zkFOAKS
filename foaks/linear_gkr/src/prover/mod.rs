@@ -1,6 +1,6 @@
 use std::{
   mem::swap,
-  time::{self, SystemTime},
+  time::{self},
 };
 
 use infrastructure::constants::{FE_REAL_ONE, FE_ZERO, SIZE};
@@ -591,8 +591,7 @@ impl ZkProver {
   }
 
   pub fn sumcheck_phase2_init(&mut self, r_u: &[FieldElement], one_minus_r_u: &[FieldElement]) {
-    let _t0 = SystemTime::now();
-    //self.v_u = self.v_mult_add[0].eval(previous_random);
+    let t0 = time::Instant::now();
 
     let first_half = self.length_u >> 1;
     let second_half = self.length_u - first_half;
@@ -633,14 +632,12 @@ impl ZkProver {
 
     let mut intermediates0 = vec![FE_ZERO; total_g];
     let mut intermediates1 = vec![FE_ZERO; total_g];
-    //let mut intermediates2 = vec![FieldElement::zero(); total_g]; //never used
 
     //todo
     //#pragma omp parallel for
     for i in 0..total_g {
       let ty = self.a_c.circuit[self.sumcheck_layer_id].gates[i].ty;
       let u = self.a_c.circuit[self.sumcheck_layer_id].gates[i].u;
-      let _v = self.a_c.circuit[self.sumcheck_layer_id].gates[i].v;
       match ty {
         1 =>
         //mult gate
@@ -849,6 +846,8 @@ impl ZkProver {
         }
       }
     }
+    let time_span = t0.elapsed();
+    self.total_time += time_span.as_secs_f64();
   }
 
   pub fn sumcheck_phase2_update(
