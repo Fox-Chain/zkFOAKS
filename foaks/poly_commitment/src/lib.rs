@@ -91,7 +91,7 @@ impl PolyCommitProver {
 
     self.ctx.l_eval = vec![REAL_ZERO; l_eval_len];
 
-    let mut tmp = vec![FieldElement::default(); slice_real_ele_cnt];
+    let mut tmp = vec![REAL_ZERO; slice_real_ele_cnt];
 
     let now = time::Instant::now();
 
@@ -171,14 +171,13 @@ impl PolyCommitProver {
     let mut default_fri_ctx = FRIContext::new();
     let fri_ctx = self.fri_ctx.as_mut().unwrap_or(&mut default_fri_ctx);
 
-    fri_ctx.virtual_oracle_witness =
-      vec![FieldElement::default(); self.ctx.slice_size * self.ctx.slice_count];
+    fri_ctx.virtual_oracle_witness = vec![REAL_ZERO; self.ctx.slice_size * self.ctx.slice_count];
     fri_ctx.virtual_oracle_witness_mapping = vec![0; self.ctx.slice_size * self.ctx.slice_count];
 
     self.ctx.q_eval_len = self.ctx.l_eval_len;
-    self.ctx.q_eval = vec![FieldElement::default(); self.ctx.q_eval_len];
+    self.ctx.q_eval = vec![REAL_ZERO; self.ctx.q_eval_len];
 
-    let mut tmp = vec![FieldElement::default(); self.ctx.slice_size];
+    let mut tmp = vec![REAL_ZERO; self.ctx.slice_size];
     let mut ftt_time = 0.0;
     let mut re_mapping_time = 0.0;
 
@@ -223,12 +222,12 @@ impl PolyCommitProver {
 
     assert_eq!(sum, target_sum);
 
-    self.ctx.lq_eval = vec![FieldElement::default(); 2 * self.ctx.slice_real_ele_cnt];
-    self.ctx.h_coef = vec![FieldElement::default(); self.ctx.slice_real_ele_cnt];
-    self.ctx.lq_coef = vec![FieldElement::default(); 2 * self.ctx.slice_real_ele_cnt];
+    self.ctx.lq_eval = vec![REAL_ZERO; 2 * self.ctx.slice_real_ele_cnt];
+    self.ctx.h_coef = vec![REAL_ZERO; self.ctx.slice_real_ele_cnt];
+    self.ctx.lq_coef = vec![REAL_ZERO; 2 * self.ctx.slice_real_ele_cnt];
     let max = std::cmp::max(self.ctx.slice_size, self.ctx.slice_real_ele_cnt);
-    self.ctx.h_eval = vec![FieldElement::default(); max];
-    self.ctx.h_eval_arr = vec![FieldElement::default(); self.ctx.slice_count * self.ctx.slice_size];
+    self.ctx.h_eval = vec![REAL_ZERO; max];
+    self.ctx.h_eval_arr = vec![REAL_ZERO; self.ctx.slice_count * self.ctx.slice_size];
 
     let log_leaf_size = LOG_SLICE_NUMBER + 1;
 
@@ -446,9 +445,9 @@ impl PolyCommitVerifier {
 
       let mut s0;
       let mut s1;
-      let mut pre_y = FieldElement::default();
-      let mut root_of_unity = FieldElement::default();
-      let mut y = FieldElement::default();
+      let mut pre_y = REAL_ZERO;
+      let mut root_of_unity = REAL_ZERO;
+      let mut y = REAL_ZERO;
       // let mut equ_beta: bool; not used in C++
       assert!(log_length - LOG_SLICE_NUMBER > 0);
       let mut pow = 0_u128;
@@ -579,9 +578,9 @@ impl PolyCommitVerifier {
           alpha.0.clear();
           alpha.1.clear();
 
-          let mut rou = [FieldElement::default(); 2];
-          let mut x = [FieldElement::default(); 2];
-          let mut inv_x = [FieldElement::default(); 2];
+          let mut rou = [REAL_ZERO; 2];
+          let mut x = [REAL_ZERO; 2];
+          let mut inv_x = [REAL_ZERO; 2];
 
           x[0] = FieldElement::get_root_of_unity(
             my_log(slice_size).expect("Failed to compute logarithm"),
@@ -600,10 +599,7 @@ impl PolyCommitVerifier {
 
           inv_x[0] = x[0].inverse();
           inv_x[1] = x[1].inverse();
-          alpha.0.resize(
-            slice_count,
-            (FieldElement::default(), FieldElement::default()),
-          );
+          alpha.0.resize(slice_count, (REAL_ZERO, REAL_ZERO));
 
           let mut tst0;
           let mut tst1;

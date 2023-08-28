@@ -176,18 +176,18 @@ impl ZkProver {
             assert!(v < (self.a_c.circuit[i - 1].gates.len()));
             value_u * value_v
           }
-          2 => FieldElement::from_real(0),
+          2 => REAL_ZERO,
           3 => FieldElement::from_real(u as u64),
           4 | 10 => value_u,
           5 => {
-            let mut value = FieldElement::from_real(0);
+            let mut value = REAL_ZERO;
             for k in u..v {
               value = self.circuit_value[i][g] + self.circuit_value[i - 1][k];
             }
 
             value
           }
-          6 => FieldElement::from_real(1) - value_u,
+          6 => REAL_ONE - value_u,
           7 => value_u - value_v,
           8 => value_u + value_v - FieldElement::from_real(2) * value_u * value_v,
           9 => {
@@ -196,7 +196,7 @@ impl ZkProver {
             value_v - value_u * value_v
           }
           12 => {
-            let mut value = FieldElement::from_real(0);
+            let mut value = REAL_ZERO;
             assert!(v - u < 60);
             for k in u..=v {
               value = self.circuit_value[i][g]
@@ -208,10 +208,10 @@ impl ZkProver {
           13 => {
             assert_eq!(u, v);
             assert!(u < (self.a_c.circuit[i - 1].gates.len()),);
-            value_u * (FieldElement::from_real(1) - value_v)
+            value_u * (REAL_ONE - value_v)
           }
           14 => {
-            let mut value = FieldElement::from_real(0);
+            let mut value = REAL_ZERO;
             for k in 0..self.a_c.circuit[i].gates[g].parameter_length {
               let weight = self.a_c.circuit[i].gates[g].weight[k];
               let idx = self.a_c.circuit[i].gates[g].src[k];

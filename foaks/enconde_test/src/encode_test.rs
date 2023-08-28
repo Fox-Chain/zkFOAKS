@@ -22,11 +22,11 @@ fn encode_test() {
   //Vector declaration and assignment
   let mut arr: Vec<prime_field::field_element::FieldElement> = vec![prime_field::random(); N];
   let mut dst: Vec<prime_field::field_element::FieldElement> =
-    vec![prime_field::field_element::FieldElement::default(); 2 * N];
+    vec![prime_field::field_element::REAL_ZERO; 2 * N];
   let mut rscoef: Vec<prime_field::field_element::FieldElement> =
-    vec![prime_field::field_element::FieldElement::default(); N];
+    vec![prime_field::field_element::REAL_ZERO; N];
   let mut rsdst: Vec<prime_field::field_element::FieldElement> =
-    vec![prime_field::field_element::FieldElement::default(); rs_rate * N];
+    vec![prime_field::field_element::REAL_ZERO; rs_rate * N];
 
   //Random data generation
   for i in 0..N {

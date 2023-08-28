@@ -1,7 +1,7 @@
 use prime_field::FieldElement;
 
 use crate::{
-  constants::{MAX_ORDER_FFT, REAL_ONE},
+  constants::{MAX_ORDER_FFT, REAL_ONE, REAL_ZERO},
   utility::my_log,
 };
 
@@ -16,9 +16,9 @@ pub struct ScratchPad {
 impl ScratchPad {
   pub fn from_order(order: usize) -> Self {
     let dst = [
-      vec![FieldElement::default(); order],
-      vec![FieldElement::default(); order],
-      vec![FieldElement::default(); order],
+      vec![REAL_ZERO; order],
+      vec![REAL_ZERO; order],
+      vec![REAL_ZERO; order],
     ];
 
     let mut twiddle_factor = Vec::with_capacity(order);

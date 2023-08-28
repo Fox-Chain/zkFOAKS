@@ -51,8 +51,8 @@ impl LinearCodeEncodeContext {
       let mut i = 0;
       while (n >> i) > 1 {
         let size = (2 * n) >> i;
-        self.scratch[0][i] = vec![FieldElement::default(); size];
-        self.scratch[1][i] = vec![FieldElement::default(); size];
+        self.scratch[0][i] = vec![REAL_ZERO; size];
+        self.scratch[1][i] = vec![REAL_ZERO; size];
         i += 1
       }
     }

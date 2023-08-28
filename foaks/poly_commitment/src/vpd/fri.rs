@@ -125,19 +125,19 @@ pub fn request_init_commit(
     .expect("Failed to retrieve root of unity");
 
   if oracle_indicator == 0 {
-    l_group.push(FieldElement::from_real(1));
+    l_group.push(REAL_ONE);
 
     for i in 1..(1 << *log_current_witness_size_per_slice) {
       l_group.push(l_group[i - 1] * root_of_unity);
     }
     assert_eq!(
       l_group[(1 << *log_current_witness_size_per_slice) - 1] * root_of_unity,
-      FieldElement::from_real(1)
+      REAL_ONE
     );
   }
 
   witness_rs_codeword_interleaved[oracle_indicator] =
-    vec![FieldElement::default(); 1 << (bit_len + RS_CODE_RATE)];
+    vec![REAL_ZERO; 1 << (bit_len + RS_CODE_RATE)];
 
   let log_leaf_size = LOG_SLICE_NUMBER + 1;
   for i in 0..SLICE_NUMBER {
