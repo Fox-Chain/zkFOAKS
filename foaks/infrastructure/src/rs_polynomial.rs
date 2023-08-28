@@ -61,8 +61,7 @@ pub fn fast_fourier_transform(
   scratch_pad: &mut ScratchPad,
   twiddle_fac: Option<Vec<FieldElement>>,
 ) {
-  // assert_eq!(coefficient_len, coefficients.len());
-  // println!("pass");
+  //assert_eq!(coefficient_len, coefficients.len());
   let twiddle_fac = twiddle_fac.unwrap_or_else(|| scratch_pad.twiddle_factor.clone());
   let mut rot_mul = Vec::with_capacity(MAX_ORDER_FFT);
 

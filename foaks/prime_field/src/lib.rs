@@ -167,9 +167,8 @@ impl FieldElement {
 
     let mut rou = FieldElement::new(2147483648, 1033321771269002680);
 
-    for _ in 0..(MAX_ORDER - log_order) {
-      rou = rou * rou;
-    }
+    let dif = MAX_ORDER - log_order;
+    rou = (0..dif).fold(rou, |acc, _| acc * acc);
 
     Ok(rou)
   }
