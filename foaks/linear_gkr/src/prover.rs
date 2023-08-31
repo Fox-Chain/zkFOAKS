@@ -140,73 +140,59 @@ impl ZkProver {
 
   pub fn evaluate(&mut self) -> Vec<FieldElement> {
     let t0 = time::Instant::now();
+
     for gate in &self.a_c.circuit[0].gates {
-      let ty = gate.ty;
-      assert!(ty == 3 || ty == 2);
+      assert!(gate.ty == 3 || gate.ty == 2);
     }
 
     assert!(self.a_c.total_depth < 1000000);
 
-    for i in 1..(self.a_c.total_depth) {
+    for i in 1..self.a_c.total_depth {
       self.circuit_value[i] = vec![FE_ZERO; self.a_c.circuit[i].gates.len()];
 
       for (g, gate) in self.a_c.circuit[i].gates.iter().enumerate() {
-        let ty = gate.ty;
-        let u = gate.u;
-        let v = gate.v;
-
-        let value_u = self.circuit_value[i - 1][u];
-        let value_v = self.circuit_value[i - 1][v];
+        let (ty, u, v) = (gate.ty, gate.u, gate.v);
+        let (value_u, value_v) = (self.circuit_value[i - 1][u], self.circuit_value[i - 1][v]);
 
         self.circuit_value[i][g] = match ty {
           0 => value_u + value_v,
           1 => {
-            assert!(u < (self.a_c.circuit[i - 1].gates.len()));
-            assert!(v < (self.a_c.circuit[i - 1].gates.len()));
+            let (u_len, v_len) = (
+              self.a_c.circuit[i - 1].gates.len(),
+              self.a_c.circuit[i - 1].gates.len(),
+            );
+            assert!(u < u_len && v < v_len);
             value_u * value_v
           }
           2 => FE_ZERO,
           3 => FieldElement::from_real(u as u64),
           4 | 10 => value_u,
-          5 => {
-            let mut value = FE_ZERO;
-            for k in u..v {
-              value = self.circuit_value[i][g] + self.circuit_value[i - 1][k];
-            }
-
-            value
-          }
+          5 => (u..v)
+            .map(|k| self.circuit_value[i - 1][k])
+            .fold(FE_ZERO, |acc, val| acc + val),
           6 => FE_REAL_ONE - value_u,
           7 => value_u - value_v,
           8 => value_u + value_v - FieldElement::from_real(2) * value_u * value_v,
           9 => {
-            assert!(u < (self.a_c.circuit[i - 1].gates.len()));
-            assert!(v < (self.a_c.circuit[i - 1].gates.len()));
+            let (u_len, v_len) = (
+              self.a_c.circuit[i - 1].gates.len(),
+              self.a_c.circuit[i - 1].gates.len(),
+            );
+            assert!(u < u_len && v < v_len);
             value_v - value_u * value_v
           }
-          12 => {
-            let mut value = FE_ZERO;
-            assert!(v - u < 60);
-            for k in u..=v {
-              value = self.circuit_value[i][g]
-                + self.circuit_value[i - 1][k] * FieldElement::from_real(1u64 << (k - u));
-            }
-
-            value
-          }
+          12 => (u..=v)
+            .map(|k| self.circuit_value[i - 1][k] * FieldElement::from_real(1u64 << (k - u)))
+            .fold(FE_ZERO, |acc, val| acc + val),
           13 => {
             assert_eq!(u, v);
-            assert!(u < (self.a_c.circuit[i - 1].gates.len()),);
+            assert!(u < self.a_c.circuit[i - 1].gates.len());
             value_u * (FE_REAL_ONE - value_v)
           }
           14 => {
-            let mut value = FE_ZERO;
-            for k in 0..self.a_c.circuit[i].gates[g].parameter_length {
-              let weight = self.a_c.circuit[i].gates[g].weight[k];
-              let idx = self.a_c.circuit[i].gates[g].src[k];
-              value = value + self.circuit_value[i - 1][idx] * weight;
-            }
-
+            let value = (0..gate.parameter_length)
+              .map(|k| self.circuit_value[i - 1][gate.src[k]] * gate.weight[k])
+              .fold(FE_ZERO, |acc, val| acc + val);
             value
           }
           _ => panic!("gate type not supported"),
@@ -217,7 +203,7 @@ impl ZkProver {
     let time_span = t0.elapsed();
 
     println!(
-      "total evaluation time: {:?} seconds",
+      "total evaluation time: {:.6} seconds",
       time_span.as_secs_f64()
     );
     self.circuit_value[self.a_c.total_depth - 1].clone()
@@ -637,121 +623,49 @@ impl ZkProver {
     for i in 0..total_g {
       let ty = self.a_c.circuit[self.sumcheck_layer_id].gates[i].ty;
       let u = self.a_c.circuit[self.sumcheck_layer_id].gates[i].u;
+
+      let tmp_u = self.beta_u_fhalf[u & mask_fhalf] * self.beta_u_shalf[u >> first_half];
+      let tmp_g = self.beta_g_r0_fhalf[i & mask_g_fhalf] * self.beta_g_r0_shalf[i >> first_g_half]
+        + self.beta_g_r1_fhalf[i & mask_g_fhalf] * self.beta_g_r1_shalf[i >> first_g_half];
+
       match ty {
-        1 =>
-        //mult gate
-        {
-          let tmp_u = self.beta_u_fhalf[u & mask_fhalf] * self.beta_u_shalf[u >> first_half];
-          let tmp_g = self.beta_g_r0_fhalf[i & mask_g_fhalf]
-            * self.beta_g_r0_shalf[i >> first_g_half]
-            + self.beta_g_r1_fhalf[i & mask_g_fhalf] * self.beta_g_r1_shalf[i >> first_g_half];
+        0 => {
+          // add gate
+          intermediates0[i] = tmp_g * tmp_u;
+          intermediates1[i] = intermediates0[i] * self.v_u;
+        }
+        1 => {
+          // mult gate
           intermediates0[i] = tmp_g * tmp_u * self.v_u;
         }
-        0 =>
-        //add gate
-        {
-          let tmp_u = self.beta_u_fhalf[u & mask_fhalf] * self.beta_u_shalf[u >> first_half];
-          let tmp_g = self.beta_g_r0_fhalf[i & mask_g_fhalf]
-            * self.beta_g_r0_shalf[i >> first_g_half]
-            + self.beta_g_r1_fhalf[i & mask_g_fhalf] * self.beta_g_r1_shalf[i >> first_g_half];
-          let tmp_g_u = tmp_g * tmp_u;
-          intermediates0[i] = tmp_g_u;
-          intermediates1[i] = tmp_g_u * self.v_u;
+        5 | 12 | 14 => {
+          // sum gate, exp sum gate, custom comb gate
+          intermediates0[i] = tmp_g * self.v_u;
         }
-        2 => {}
-        4 => {}
-        5 =>
-        //sum gate
-        {
-          let tmp_g = self.beta_g_r0_fhalf[i & mask_g_fhalf]
-            * self.beta_g_r0_shalf[i >> first_g_half]
-            + self.beta_g_r1_fhalf[i & mask_g_fhalf] * self.beta_g_r1_shalf[i >> first_g_half];
-          let tmp_g_vu = tmp_g * self.v_u;
-          intermediates0[i] = tmp_g_vu;
+        6 => {
+          // not gate
+          intermediates0[i] = tmp_g * tmp_u - tmp_g * tmp_u * self.v_u;
         }
-        12 =>
-        //exp sum gate
-        {
-          let tmp_g = self.beta_g_r0_fhalf[i & mask_g_fhalf]
-            * self.beta_g_r0_shalf[i >> first_g_half]
-            + self.beta_g_r1_fhalf[i & mask_g_fhalf] * self.beta_g_r1_shalf[i >> first_g_half];
-          let tmp_g_vu = tmp_g * self.v_u;
-          intermediates0[i] = tmp_g_vu;
+        7 => {
+          // minus gate
+          intermediates0[i] = tmp_g * tmp_u;
+          intermediates1[i] = intermediates0[i] * self.v_u;
         }
-        14 =>
-        //custom comb gate
-        {
-          let tmp_g = self.beta_g_r0_fhalf[i & mask_g_fhalf]
-            * self.beta_g_r0_shalf[i >> first_g_half]
-            + self.beta_g_r1_fhalf[i & mask_g_fhalf] * self.beta_g_r1_shalf[i >> first_g_half];
-          let tmp_g_vu = tmp_g * self.v_u;
-          intermediates0[i] = tmp_g_vu;
-        }
-
-        6 =>
-        //not gate
-        {
-          let tmp_u = self.beta_u_fhalf[u & mask_fhalf] * self.beta_u_shalf[u >> first_half];
-          let tmp_g = self.beta_g_r0_fhalf[i & mask_g_fhalf]
-            * self.beta_g_r0_shalf[i >> first_g_half]
-            + self.beta_g_r1_fhalf[i & mask_g_fhalf] * self.beta_g_r1_shalf[i >> first_g_half];
-          let tmp_g_u = tmp_g * tmp_u;
-          intermediates0[i] = tmp_g_u - tmp_g_u * self.v_u;
-        }
-        7 =>
-        //minus gate
-        {
-          let tmp_u = self.beta_u_fhalf[u & mask_fhalf] * self.beta_u_shalf[u >> first_half];
-          let tmp_g = self.beta_g_r0_fhalf[i & mask_g_fhalf]
-            * self.beta_g_r0_shalf[i >> first_g_half]
-            + self.beta_g_r1_fhalf[i & mask_g_fhalf] * self.beta_g_r1_shalf[i >> first_g_half];
-          let tmp = tmp_g * tmp_u;
-          intermediates0[i] = tmp;
-          intermediates1[i] = tmp * self.v_u;
-        }
-        8 =>
-        //xor gate
-        {
-          let tmp_u = self.beta_u_fhalf[u & mask_fhalf] * self.beta_u_shalf[u >> first_half];
-          let tmp_g = self.beta_g_r0_fhalf[i & mask_g_fhalf]
-            * self.beta_g_r0_shalf[i >> first_g_half]
-            + self.beta_g_r1_fhalf[i & mask_g_fhalf] * self.beta_g_r1_shalf[i >> first_g_half];
-          let tmp = tmp_g * tmp_u;
-          let tmp_v_u = tmp * self.v_u;
-          intermediates0[i] = tmp - tmp_v_u - tmp_v_u;
+        8 => {
+          // xor gate
+          let tmp_v_u = tmp_g * tmp_u * self.v_u;
+          intermediates0[i] = tmp_g * tmp_u - tmp_v_u - tmp_v_u;
           intermediates1[i] = tmp_v_u;
         }
-        13 =>
-        //bit-test gate
-        {
-          let tmp_u = self.beta_u_fhalf[u & mask_fhalf] * self.beta_u_shalf[u >> first_half];
-          let tmp_g = self.beta_g_r0_fhalf[i & mask_g_fhalf]
-            * self.beta_g_r0_shalf[i >> first_g_half]
-            + self.beta_g_r1_fhalf[i & mask_g_fhalf] * self.beta_g_r1_shalf[i >> first_g_half];
-          let tmp = tmp_g * tmp_u;
-          let tmp_v_u = tmp * self.v_u;
-          intermediates0[i] = tmp_v_u;
+        9 => {
+          // NAAB gate
+          intermediates0[i] = tmp_g * tmp_u - self.v_u * tmp_u;
         }
-        9 =>
-        //NAAB gate
-        {
-          let tmp_u = self.beta_u_fhalf[u & mask_fhalf] * self.beta_u_shalf[u >> first_half];
-          let tmp_g = self.beta_g_r0_fhalf[i & mask_g_fhalf]
-            * self.beta_g_r0_shalf[i >> first_g_half]
-            + self.beta_g_r1_fhalf[i & mask_g_fhalf] * self.beta_g_r1_shalf[i >> first_g_half];
-          let tmp = tmp_g * tmp_u;
-          intermediates0[i] = tmp - self.v_u * tmp;
+        10 => {
+          // relay gate
+          intermediates0[i] = tmp_g * tmp_u * self.v_u;
         }
-        10 =>
-        //relay gate
-        {
-          let tmp_u = self.beta_u_fhalf[u & mask_fhalf] * self.beta_u_shalf[u >> first_half];
-          let tmp_g = self.beta_g_r0_fhalf[i & mask_g_fhalf]
-            * self.beta_g_r0_shalf[i >> first_g_half]
-            + self.beta_g_r1_fhalf[i & mask_g_fhalf] * self.beta_g_r1_shalf[i >> first_g_half];
-          let tmp = tmp_g * tmp_u;
-          intermediates0[i] = tmp * self.v_u;
-        }
+        2 | 4 => { /* No operation required */ }
         _ => {
           println!("Warning Unknown gate {}", ty);
         }

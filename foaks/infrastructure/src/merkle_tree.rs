@@ -5,7 +5,7 @@ use std::{
 
 use prime_field::FieldElement;
 
-use crate::my_hash::{HashDigest, my_hash};
+use crate::my_hash::{my_hash, HashDigest};
 
 pub fn hash_single_field_element(x: FieldElement) -> HashDigest {
   let mut data = [HashDigest::default(); 2];

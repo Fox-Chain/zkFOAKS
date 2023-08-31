@@ -15,3 +15,4 @@ rust-crypto = "0.2"
 sha3 = "0.10.2"
 byteorder = "1"
 ring = "0.16.20"  #Temp library
+rayon = "1.5"
