@@ -112,14 +112,14 @@ impl ZkVerifier {
     combined_codeword: Vec<FieldElement>,
     q: Vec<usize>,
   ) -> (bool, f64) {
+    // ZkProver initialization
     let mut zk_prover = ZkProver::new();
     zk_prover.init_array(bit_length, self.a_c.clone());
     zk_prover.get_witness(inputs);
 
-    //there is a way to compress binlinear pairing element
-    let mut verification_time: f64 = 0.0;
-    let mut predicates_calc_time: f64 = 0.0;
-    let mut verification_rdl_time: f64 = 0.0;
+    // Times
+    let (mut verification_time, mut predicates_calc_time, mut verification_rdl_time) =
+      (0.0, 0.0, 0.0);
 
     //Below function is not implemented neither in virgo repo nor orion repo
     //prime_field::init_random();
