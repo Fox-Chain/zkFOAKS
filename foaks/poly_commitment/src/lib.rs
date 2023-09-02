@@ -99,30 +99,29 @@ impl PolyCommitProver {
     self.scratch_pad = ScratchPad::from_order(slice_size * slice_count);
 
     for i in 0..slice_count {
-      let mut all_zero = true;
-
-      for j in 0..slice_real_ele_cnt {
-        if private_array[i * slice_real_ele_cnt + j] == FE_ZERO {
-          continue;
-        }
-        all_zero = false;
-        break;
-      }
-
-      if all_zero {
-        for j in 0..slice_size {
-          self.ctx.l_eval[i * slice_size + j] = FE_ZERO;
-        }
+      if private_array[i * slice_real_ele_cnt..]
+        .iter()
+        .all(|&x| x == FE_ZERO)
+      {
+        self.ctx.l_eval[i * slice_size..][..slice_size]
+          .iter_mut()
+          .for_each(|x| *x = FE_ZERO);
       } else {
+        let root_of_unity_slice = FieldElement::get_root_of_unity(
+          my_log(slice_real_ele_cnt).expect("Failed to compute logarithm"),
+        )
+        .expect("Failed to retrieve root of unity");
+
+        let root_of_unity_slice_size =
+          FieldElement::get_root_of_unity(my_log(slice_size).expect("Failed to compute logarithm"))
+            .expect("Failed to retrieve root of unity");
+
         inverse_fast_fourier_transform(
           &mut self.scratch_pad,
           &private_array[i * slice_real_ele_cnt..],
           slice_real_ele_cnt,
           slice_real_ele_cnt,
-          FieldElement::get_root_of_unity(
-            my_log(slice_real_ele_cnt).expect("Failed to compute logarithm"),
-          )
-          .expect("Failed to retrieve root of unity"),
+          root_of_unity_slice,
           &mut tmp[..],
         );
 
@@ -130,12 +129,11 @@ impl PolyCommitProver {
           &tmp[..],
           slice_real_ele_cnt,
           slice_size,
-          FieldElement::get_root_of_unity(my_log(slice_size).expect("Failed to compute logarithm"))
-            .expect("Failed to retrieve root of unity"),
+          root_of_unity_slice_size,
           &mut self.ctx.l_eval[i * slice_size..],
           &mut self.scratch_pad,
           None,
-        )
+        );
       }
     }
 
@@ -183,15 +181,17 @@ impl PolyCommitProver {
 
     let mut ftt_t0 = time::Instant::now();
     for i in 0..self.ctx.slice_count {
+      let root_of_unity_real_ele_cnt = FieldElement::get_root_of_unity(
+        my_log(self.ctx.slice_real_ele_cnt).expect("Failed to compute logarithm"),
+      )
+      .expect("Failed to retrieve root of unity");
+
       inverse_fast_fourier_transform(
         &mut self.scratch_pad,
         &public_array[i * self.ctx.slice_real_ele_cnt..],
         self.ctx.slice_real_ele_cnt,
         self.ctx.slice_real_ele_cnt,
-        FieldElement::get_root_of_unity(
-          my_log(self.ctx.slice_real_ele_cnt).expect("Failed to compute logarithm"),
-        )
-        .expect("Failed to retrieve root of unity"),
+        root_of_unity_real_ele_cnt,
         &mut tmp,
       );
       fast_fourier_transform(
@@ -207,6 +207,7 @@ impl PolyCommitProver {
         None,
       );
     }
+
     ftt_time += ftt_t0.elapsed().as_secs_f64();
 
     let mut sum = FE_ZERO;
@@ -701,24 +702,24 @@ impl PolyCommitVerifier {
           }
         }
       }
-
       let fri_ctx = self
         .pc_prover
         .fri_ctx
-        .as_mut()
+        .as_ref()
         .expect("Failed to retrieve fri_ctx");
 
-      for i in 0..slice_count {
+      let check_failed = (0..slice_count).any(|i| {
         let template =
           fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(0 << (LOG_SLICE_NUMBER + 1)) | (i << 1)];
-        for j in 0..(1 << (RS_CODE_RATE - 1)) {
-          if fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(j << (LOG_SLICE_NUMBER + 1)) | (i << 1)]
-            != template
-          {
-            eprintln!("Fri rs code check fail {} {}", i, j);
-            return (v_time, proof_size, p_time, false);
-          }
-        }
+        !(0..(1 << (RS_CODE_RATE - 1))).all(|j| {
+          fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(j << (LOG_SLICE_NUMBER + 1)) | (i << 1)]
+            == template
+        })
+      });
+
+      if check_failed {
+        eprintln!("Fri rs code check failed");
+        return (v_time, proof_size, p_time, false);
       }
     }
     (v_time, proof_size, p_time, true)
