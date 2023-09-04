@@ -1,4 +1,5 @@
 use super::{my_mod, my_mult, verify_lt_mod_many, verify_lt_mod_once, FieldElement, MOD};
+use rayon::prelude::*;
 
 impl core::ops::Add for FieldElement {
   type Output = Self;
@@ -34,7 +35,24 @@ impl core::ops::Mul for FieldElement {
     let ac = my_mult(self.real, rhs.real);
     let mut bd = my_mult(self.img, rhs.img); // at most 1.x * mod
     let mut nac = ac;
+    let (t_real, t_img) = rayon::join(
+      || {
+        let bd = verify_lt_mod_once(bd);
+        let nac = verify_lt_mod_once(nac);
 
+        let nac = nac ^ MOD;
+        let bd = bd ^ MOD;
+
+        let mut t_img = my_mod(my_mod(all_prod + nac) + bd);
+        t_img = verify_lt_mod_once(t_img);
+
+        t_img
+      },
+      || {
+        let t_real = verify_lt_mod_many(ac + bd);
+        t_real
+      },
+    );
     bd = verify_lt_mod_once(bd);
     nac = verify_lt_mod_once(nac);
 
