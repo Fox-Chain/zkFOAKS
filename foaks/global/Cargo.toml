@@ -1,16 +1,13 @@
 [package]
-name = "infrastructure"
+name = "global"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 ethnum = "1.2.2"
 hmac-sha256 = "1.1.4"
 serde = { version = "1.0.143", features = ["serde_derive"] }
 prime_field = { path = "../prime_field" }
-global = { path = "../global" }
 bincode = "1.3.3"
 rust-crypto = "0.2"
 sha3 = "0.10.2"

@@ -188,6 +188,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "global"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "byteorder",
+ "ethnum",
+ "hmac-sha256",
+ "prime_field",
+ "rayon",
+ "ring",
+ "rust-crypto",
+ "serde",
+ "sha3",
+]
+
+[[package]]
 name = "hermit-abi"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -212,6 +228,7 @@ dependencies = [
  "bincode",
  "byteorder",
  "ethnum",
+ "global",
  "hmac-sha256",
  "prime_field",
  "rayon",
@@ -262,6 +279,7 @@ checksum = "fc86cde3ff845662b8f4ef6cb50ea0e20c524eb3d29ae048287e06a1b3fa6a81"
 name = "linear_code"
 version = "0.1.0"
 dependencies = [
+ "global",
  "infrastructure",
  "lazy_static",
  "linear_gkr",
@@ -275,6 +293,7 @@ version = "0.1.0"
 dependencies = [
  "bincode",
  "ethnum",
+ "global",
  "infrastructure",
  "poly_commitment",
  "prime_field",
@@ -286,6 +305,7 @@ name = "linear_pc"
 version = "0.1.0"
 dependencies = [
  "fast-math",
+ "global",
  "infrastructure",
  "linear_code",
  "linear_gkr",
@@ -328,6 +348,7 @@ checksum = "dd8b5dd2ae5ed71462c540258bedcb51965123ad7e7ccf4b9a8cafaa4a63576d"
 name = "poly_commitment"
 version = "0.1.0"
 dependencies = [
+ "global",
  "infrastructure",
  "prime_field",
  "rand 0.8.5",

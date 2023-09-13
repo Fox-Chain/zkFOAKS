@@ -4,7 +4,7 @@ use std::{
 };
 
 use prime_field::FieldElement;
-
+use global::constants::*;
 use crate::my_hash::{my_hash, HashDigest};
 
 pub fn hash_single_field_element(x: FieldElement) -> HashDigest {

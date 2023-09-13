@@ -2,8 +2,8 @@ use std::{
   env, ffi::OsStr, fs::File, io::Read, os::unix::prelude::OsStrExt, process::Command, time,
 };
 
+use global::constants::*;
 use infrastructure::{
-  constants::*,
   my_hash::HashDigest,
   rs_polynomial::{fast_fourier_transform, inverse_fast_fourier_transform, ScratchPad},
   utility::my_log,

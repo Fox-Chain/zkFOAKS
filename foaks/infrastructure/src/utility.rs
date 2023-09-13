@@ -1,4 +1,6 @@
+use global::constants::*;
 #[derive(Debug)]
+
 pub enum Log2Error {
   NotPowerOfTwo,
 }

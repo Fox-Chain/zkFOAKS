@@ -1,13 +1,11 @@
 use std::mem;
 use std::time::Instant;
 
-use infrastructure::constants::FE_ZERO;
+use global::constants::FE_ZERO;
 use infrastructure::merkle_tree::create_tree;
 use infrastructure::my_hash::my_hash;
-use infrastructure::{
-  constants::{LOG_SLICE_NUMBER, RS_CODE_RATE, SLICE_NUMBER},
-  my_hash::{self, HashDigest},
-};
+use infrastructure::my_hash::{self, HashDigest};
+use global::constants::*;
 use prime_field::FieldElement;
 
 use crate::vpd::fri::FRIContext;

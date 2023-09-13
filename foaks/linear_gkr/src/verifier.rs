@@ -5,11 +5,9 @@ use std::{
   mem,
 };
 
+use global::constants::{FE_REAL_ONE, FE_ZERO, LOG_SLICE_NUMBER, SLICE_NUMBER};
 use infrastructure::my_hash::HashDigest;
-use infrastructure::{
-  constants::{FE_REAL_ONE, FE_ZERO, LOG_SLICE_NUMBER, SLICE_NUMBER},
-  rs_polynomial::{inverse_fast_fourier_transform, ScratchPad},
-};
+use infrastructure::rs_polynomial::{inverse_fast_fourier_transform, ScratchPad};
 use poly_commitment::PolyCommitVerifier;
 use prime_field::FieldElement;
 

@@ -1,4 +1,4 @@
-use infrastructure::constants::FE_ZERO;
+use global::constants::FE_ZERO;
 use prime_field::FieldElement;
 #[derive(Debug, Clone)]
 

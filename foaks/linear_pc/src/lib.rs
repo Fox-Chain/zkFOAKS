@@ -1,11 +1,11 @@
 use std::{collections::HashMap, time::Instant};
 
 use infrastructure::{
-  constants::{FE_REAL_ONE, FE_ZERO},
   merkle_tree::{self, create_tree},
   my_hash::HashDigest,
   utility::my_log,
 };
+use global::constants::*;
 use linear_code::{
   linear_code_encode::LinearCodeEncodeContext,
   parameter::{CN, COLUMN_SIZE, DISTANCE_THRESHOLD, DN, TARGET_DISTANCE},

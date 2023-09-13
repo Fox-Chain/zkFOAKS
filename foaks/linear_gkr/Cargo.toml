@@ -12,3 +12,4 @@ infrastructure = { path = "../infrastructure" }
 prime_field = { path = "../prime_field" }
 poly_commitment = { path = "../poly_commitment" }
 rayon = "1"
+global = { path = "../global" }

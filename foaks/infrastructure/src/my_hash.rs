@@ -1,5 +1,5 @@
 use ring::digest::{Context, SHA256};
-
+use global::constants::*;
 use prime_field::FieldElement;
 
 /// TODO: https://doc.rust-lang.org/beta/core/arch/x86_64/struct.__m128i.html

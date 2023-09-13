@@ -1,10 +1,7 @@
 use std::{mem::size_of, time, usize, vec};
 
+use global::constants::*;
 use infrastructure::{
-  constants::{
-    FE_REAL_ONE, FE_ZERO, LOG_SLICE_NUMBER, MAX_BIT_LENGTH, MAX_FRI_DEPTH, RS_CODE_RATE,
-    SLICE_NUMBER,
-  },
   merkle_tree,
   my_hash::{my_hash, HashDigest},
 };

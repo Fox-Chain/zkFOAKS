@@ -1,11 +1,11 @@
+use global::constants::{FE_REAL_ONE, FE_ZERO, SIZE};
+use poly_commitment::PolyCommitProver;
+use prime_field::FieldElement;
+use rayon::prelude::*;
 use std::{
   mem::swap,
   time::{self},
 };
-
-use infrastructure::constants::{FE_REAL_ONE, FE_ZERO, SIZE};
-use poly_commitment::PolyCommitProver;
-use prime_field::FieldElement;
 
 use crate::{
   circuit_fast_track::LayeredCircuit,

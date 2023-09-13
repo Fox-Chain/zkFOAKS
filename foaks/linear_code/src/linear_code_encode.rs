@@ -5,7 +5,7 @@ use prime_field::FieldElement;
 use crate::parameter::DISTANCE_THRESHOLD;
 use crate::parameter::*;
 
-use infrastructure::constants::FE_ZERO;
+use global::constants::*;
 
 #[derive(Default, Clone)]
 pub struct Graph {
