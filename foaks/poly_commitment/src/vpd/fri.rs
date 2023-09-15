@@ -1,4 +1,6 @@
 use std::{mem::size_of, time, usize, vec};
+extern crate rayon;
+use rayon::prelude::*;
 
 use global::constants::*;
 use infrastructure::{

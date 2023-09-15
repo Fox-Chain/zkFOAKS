@@ -10,3 +10,4 @@ rand = "0.8.5"
 infrastructure = { path = "../infrastructure" }
 prime_field = { path = "../prime_field" }
 global = { path = "../global" }
+rayon = "1.6"
