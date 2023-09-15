@@ -294,12 +294,15 @@ pub fn request_init_value_with_merkle(
 pub fn request_step_commit(lvl: usize, pow: usize, fri_ctx: &mut FRIContext) -> (TripleVec, usize) {
   let mut new_size = 0;
 
-  let mut pow_0: usize;
   let mut value_vec: Vec<(FieldElement, FieldElement)> = Vec::with_capacity(SLICE_NUMBER);
   let mut visited_element = false;
-  for i in 0..SLICE_NUMBER {
-    let pow_0 = fri_ctx.cpd.rs_codeword_mapping[lvl][pow << LOG_SLICE_NUMBER | i] / 2;
 
+  let pow_0_values: Vec<usize> = (0..SLICE_NUMBER)
+    .into_par_iter()
+    .map(|i| fri_ctx.cpd.rs_codeword_mapping[lvl][pow << LOG_SLICE_NUMBER | i] / 2)
+    .collect();
+
+  for &pow_0 in &pow_0_values {
     if !fri_ctx.visited[lvl][pow_0 * 2] {
       fri_ctx.visited[lvl][pow_0 * 2] = true;
     }
@@ -317,18 +320,22 @@ pub fn request_step_commit(lvl: usize, pow: usize, fri_ctx: &mut FRIContext) -> 
   }
 
   let mut com_hhash: Vec<HashDigest> = vec![];
-  pow_0 = (fri_ctx.cpd.rs_codeword_mapping[lvl][pow << LOG_SLICE_NUMBER] >> (LOG_SLICE_NUMBER + 1))
+  let mut pow_0 = (fri_ctx.cpd.rs_codeword_mapping[lvl][pow << LOG_SLICE_NUMBER]
+    >> (LOG_SLICE_NUMBER + 1))
     + fri_ctx.cpd.merkle_size[lvl];
 
   let val_hhash = fri_ctx.cpd.merkle[lvl][pow_0];
 
   while pow_0 != 1 {
     let pow1 = pow_0 ^ 1;
+
+    // Paralelizar esta sección
     if !fri_ctx.visited[lvl][pow1] {
       new_size += size_of::<HashDigest>();
       fri_ctx.visited[lvl][pow1] = true;
       fri_ctx.visited[lvl][pow_0] = true;
     }
+
     com_hhash.push(fri_ctx.cpd.merkle[lvl][pow1]);
     pow_0 /= 2;
   }
