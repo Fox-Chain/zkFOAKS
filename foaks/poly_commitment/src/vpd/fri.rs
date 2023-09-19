@@ -329,7 +329,6 @@ pub fn request_step_commit(lvl: usize, pow: usize, fri_ctx: &mut FRIContext) -> 
   while pow_0 != 1 {
     let pow1 = pow_0 ^ 1;
 
-    // Paralelizar esta sección
     if !fri_ctx.visited[lvl][pow1] {
       new_size += size_of::<HashDigest>();
       fri_ctx.visited[lvl][pow1] = true;

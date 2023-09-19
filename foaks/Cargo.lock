@@ -191,16 +191,10 @@ dependencies = [
 name = "global"
 version = "0.1.0"
 dependencies = [
- "bincode",
- "byteorder",
  "ethnum",
  "hmac-sha256",
  "prime_field",
- "rayon",
- "ring",
- "rust-crypto",
  "serde",
- "sha3",
 ]
 
 [[package]]
@@ -231,7 +225,6 @@ dependencies = [
  "global",
  "hmac-sha256",
  "prime_field",
- "rayon",
  "ring",
  "rust-crypto",
  "serde",
@@ -297,7 +290,6 @@ dependencies = [
  "infrastructure",
  "poly_commitment",
  "prime_field",
- "rayon",
 ]
 
 [[package]]
