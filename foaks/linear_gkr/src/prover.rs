@@ -189,12 +189,9 @@ impl ZkProver {
             assert!(u < self.a_c.circuit[i - 1].gates.len());
             value_u * (FE_REAL_ONE - value_v)
           }
-          14 => {
-            let value = (0..gate.parameter_length)
-              .map(|k| self.circuit_value[i - 1][gate.src[k]] * gate.weight[k])
-              .fold(FE_ZERO, |acc, val| acc + val);
-            value
-          }
+          14 => (0..gate.parameter_length)
+            .map(|k| self.circuit_value[i - 1][gate.src[k]] * gate.weight[k])
+            .fold(FE_ZERO, |acc, val| acc + val),
           _ => panic!("gate type not supported"),
         };
       }
