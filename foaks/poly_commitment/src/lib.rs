@@ -2,8 +2,8 @@ use std::{
   env, ffi::OsStr, fs::File, io::Read, os::unix::prelude::OsStrExt, process::Command, time,
 };
 
+use global::constants::*;
 use infrastructure::{
-  constants::*,
   my_hash::HashDigest,
   rs_polynomial::{fast_fourier_transform, inverse_fast_fourier_transform, ScratchPad},
   utility::my_log,
@@ -89,9 +89,9 @@ impl PolyCommitProver {
     let l_eval_len = slice_count * slice_size;
     self.ctx.l_eval_len = l_eval_len;
 
-    self.ctx.l_eval = vec![REAL_ZERO; l_eval_len];
+    self.ctx.l_eval = vec![FE_ZERO; l_eval_len];
 
-    let mut tmp = vec![FieldElement::default(); slice_real_ele_cnt];
+    let mut tmp = vec![FE_ZERO; slice_real_ele_cnt];
 
     let now = time::Instant::now();
 
@@ -99,30 +99,29 @@ impl PolyCommitProver {
     self.scratch_pad = ScratchPad::from_order(slice_size * slice_count);
 
     for i in 0..slice_count {
-      let mut all_zero = true;
-
-      for j in 0..slice_real_ele_cnt {
-        if private_array[i * slice_real_ele_cnt + j] == REAL_ZERO {
-          continue;
-        }
-        all_zero = false;
-        break;
-      }
-
-      if all_zero {
-        for j in 0..slice_size {
-          self.ctx.l_eval[i * slice_size + j] = REAL_ZERO;
-        }
+      if private_array[i * slice_real_ele_cnt..]
+        .iter()
+        .all(|&x| x == FE_ZERO)
+      {
+        self.ctx.l_eval[i * slice_size..][..slice_size]
+          .iter_mut()
+          .for_each(|x| *x = FE_ZERO);
       } else {
+        let root_of_unity_slice = FieldElement::get_root_of_unity(
+          my_log(slice_real_ele_cnt).expect("Failed to compute logarithm"),
+        )
+        .expect("Failed to retrieve root of unity");
+
+        let root_of_unity_slice_size =
+          FieldElement::get_root_of_unity(my_log(slice_size).expect("Failed to compute logarithm"))
+            .expect("Failed to retrieve root of unity");
+
         inverse_fast_fourier_transform(
           &mut self.scratch_pad,
           &private_array[i * slice_real_ele_cnt..],
           slice_real_ele_cnt,
           slice_real_ele_cnt,
-          FieldElement::get_root_of_unity(
-            my_log(slice_real_ele_cnt).expect("Failed to compute logarithm"),
-          )
-          .expect("Failed to retrieve root of unity"),
+          root_of_unity_slice,
           &mut tmp[..],
         );
 
@@ -130,12 +129,11 @@ impl PolyCommitProver {
           &tmp[..],
           slice_real_ele_cnt,
           slice_size,
-          FieldElement::get_root_of_unity(my_log(slice_size).expect("Failed to compute logarithm"))
-            .expect("Failed to retrieve root of unity"),
+          root_of_unity_slice_size,
           &mut self.ctx.l_eval[i * slice_size..],
           &mut self.scratch_pad,
           None,
-        )
+        );
       }
     }
 
@@ -171,28 +169,29 @@ impl PolyCommitProver {
     let mut default_fri_ctx = FRIContext::new();
     let fri_ctx = self.fri_ctx.as_mut().unwrap_or(&mut default_fri_ctx);
 
-    fri_ctx.virtual_oracle_witness =
-      vec![FieldElement::default(); self.ctx.slice_size * self.ctx.slice_count];
+    fri_ctx.virtual_oracle_witness = vec![FE_ZERO; self.ctx.slice_size * self.ctx.slice_count];
     fri_ctx.virtual_oracle_witness_mapping = vec![0; self.ctx.slice_size * self.ctx.slice_count];
 
     self.ctx.q_eval_len = self.ctx.l_eval_len;
-    self.ctx.q_eval = vec![FieldElement::default(); self.ctx.q_eval_len];
+    self.ctx.q_eval = vec![FE_ZERO; self.ctx.q_eval_len];
 
-    let mut tmp = vec![FieldElement::default(); self.ctx.slice_size];
+    let mut tmp = vec![FE_ZERO; self.ctx.slice_size];
     let mut ftt_time = 0.0;
     let mut re_mapping_time = 0.0;
 
     let mut ftt_t0 = time::Instant::now();
     for i in 0..self.ctx.slice_count {
+      let root_of_unity_real_ele_cnt = FieldElement::get_root_of_unity(
+        my_log(self.ctx.slice_real_ele_cnt).expect("Failed to compute logarithm"),
+      )
+      .expect("Failed to retrieve root of unity");
+
       inverse_fast_fourier_transform(
         &mut self.scratch_pad,
         &public_array[i * self.ctx.slice_real_ele_cnt..],
         self.ctx.slice_real_ele_cnt,
         self.ctx.slice_real_ele_cnt,
-        FieldElement::get_root_of_unity(
-          my_log(self.ctx.slice_real_ele_cnt).expect("Failed to compute logarithm"),
-        )
-        .expect("Failed to retrieve root of unity"),
+        root_of_unity_real_ele_cnt,
         &mut tmp,
       );
       fast_fourier_transform(
@@ -208,9 +207,10 @@ impl PolyCommitProver {
         None,
       );
     }
+
     ftt_time += ftt_t0.elapsed().as_secs_f64();
 
-    let mut sum = REAL_ZERO;
+    let mut sum = FE_ZERO;
     assert_eq!(
       self.ctx.slice_count * self.ctx.slice_real_ele_cnt,
       1 << r_0_len
@@ -223,12 +223,12 @@ impl PolyCommitProver {
 
     assert_eq!(sum, target_sum);
 
-    self.ctx.lq_eval = vec![FieldElement::default(); 2 * self.ctx.slice_real_ele_cnt];
-    self.ctx.h_coef = vec![FieldElement::default(); self.ctx.slice_real_ele_cnt];
-    self.ctx.lq_coef = vec![FieldElement::default(); 2 * self.ctx.slice_real_ele_cnt];
+    self.ctx.lq_eval = vec![FE_ZERO; 2 * self.ctx.slice_real_ele_cnt];
+    self.ctx.h_coef = vec![FE_ZERO; self.ctx.slice_real_ele_cnt];
+    self.ctx.lq_coef = vec![FE_ZERO; 2 * self.ctx.slice_real_ele_cnt];
     let max = std::cmp::max(self.ctx.slice_size, self.ctx.slice_real_ele_cnt);
-    self.ctx.h_eval = vec![FieldElement::default(); max];
-    self.ctx.h_eval_arr = vec![FieldElement::default(); self.ctx.slice_count * self.ctx.slice_size];
+    self.ctx.h_eval = vec![FE_ZERO; max];
+    self.ctx.h_eval_arr = vec![FE_ZERO; self.ctx.slice_count * self.ctx.slice_size];
 
     let log_leaf_size = LOG_SLICE_NUMBER + 1;
 
@@ -242,22 +242,22 @@ impl PolyCommitProver {
           * self.ctx.q_eval[i * self.ctx.slice_size
             + j * (self.ctx.slice_size / (2 * self.ctx.slice_real_ele_cnt))];
 
-        if self.ctx.lq_eval[j] != REAL_ZERO {
+        if self.ctx.lq_eval[j] != FE_ZERO {
           all_zero = false;
         }
       }
 
       if all_zero {
         for j in 0..2 * self.ctx.slice_real_ele_cnt {
-          self.ctx.lq_coef[j] = REAL_ZERO;
+          self.ctx.lq_coef[j] = FE_ZERO;
         }
 
         for j in 0..self.ctx.slice_real_ele_cnt {
-          self.ctx.h_coef[j] = REAL_ZERO;
+          self.ctx.h_coef[j] = FE_ZERO;
         }
 
         for j in 0..self.ctx.slice_size {
-          self.ctx.h_eval[j] = REAL_ZERO;
+          self.ctx.h_eval[j] = FE_ZERO;
         }
       } else {
         ftt_t0 = time::Instant::now();
@@ -298,14 +298,14 @@ impl PolyCommitProver {
       let inv_twiddle_gap = self.scratch_pad.twiddle_factor_size / self.ctx.slice_size;
 
       let remap_t0 = time::Instant::now();
-      let const_sum = REAL_ZERO - (self.ctx.lq_coef[0] + self.ctx.h_coef[0]);
+      let const_sum = FE_ZERO - (self.ctx.lq_coef[0] + self.ctx.h_coef[0]);
 
       for j in 0..self.ctx.slice_size {
         let p = self.ctx.l_eval[i * self.ctx.slice_size + j];
         let q = self.ctx.q_eval[i * self.ctx.slice_size + j];
         let aabb = self.scratch_pad.twiddle_factor
           [twiddle_gap * j % self.scratch_pad.twiddle_factor_size]
-          - REAL_ONE;
+          - FE_REAL_ONE;
         let h = self.ctx.h_eval[j];
         let g = p * q - aabb * h;
 
@@ -446,9 +446,9 @@ impl PolyCommitVerifier {
 
       let mut s0;
       let mut s1;
-      let mut pre_y = FieldElement::default();
-      let mut root_of_unity = FieldElement::default();
-      let mut y = FieldElement::default();
+      let mut pre_y = FE_ZERO;
+      let mut root_of_unity = FE_ZERO;
+      let mut y = FE_ZERO;
       // let mut equ_beta: bool; not used in C++
       assert!(log_length - LOG_SLICE_NUMBER > 0);
       let mut pow = 0_u128;
@@ -579,9 +579,9 @@ impl PolyCommitVerifier {
           alpha.0.clear();
           alpha.1.clear();
 
-          let mut rou = [FieldElement::default(); 2];
-          let mut x = [FieldElement::default(); 2];
-          let mut inv_x = [FieldElement::default(); 2];
+          let mut rou = [FE_ZERO; 2];
+          let mut x = [FE_ZERO; 2];
+          let mut inv_x = [FE_ZERO; 2];
 
           x[0] = FieldElement::get_root_of_unity(
             my_log(slice_size).expect("Failed to compute logarithm"),
@@ -600,10 +600,7 @@ impl PolyCommitVerifier {
 
           inv_x[0] = x[0].inverse();
           inv_x[1] = x[1].inverse();
-          alpha.0.resize(
-            slice_count,
-            (FieldElement::default(), FieldElement::default()),
-          );
+          alpha.0.resize(slice_count, (FE_ZERO, FE_ZERO));
 
           let mut tst0;
           let mut tst1;
@@ -611,10 +608,10 @@ impl PolyCommitVerifier {
           let mut x1;
 
           for j in 0..slice_count {
-            tst0 = REAL_ZERO;
-            tst1 = REAL_ZERO;
-            x0 = REAL_ONE;
-            x1 = REAL_ONE;
+            tst0 = FE_ZERO;
+            tst1 = FE_ZERO;
+            x0 = FE_REAL_ONE;
+            x1 = FE_REAL_ONE;
 
             for k in 0..(1 << (log_length - LOG_SLICE_NUMBER)) {
               tst0 = tst0 + x0 * public_array[k + j * coef_slice_size];
@@ -624,12 +621,12 @@ impl PolyCommitVerifier {
             }
 
             {
-              alpha.0[j].0 = alpha_l.0[j].0 * tst0 - (rou[0] - REAL_ONE) * alpha_h.0[j].0;
+              alpha.0[j].0 = alpha_l.0[j].0 * tst0 - (rou[0] - FE_REAL_ONE) * alpha_h.0[j].0;
               alpha.0[j].0 = (alpha.0[j].0
                 * FieldElement::from_real((slice_size >> RS_CODE_RATE) as u64)
                 - all_sum[j])
                 * inv_x[0];
-              alpha.0[j].1 = alpha_l.0[j].1 * tst1 - (rou[1] - REAL_ONE) * alpha_h.0[j].1;
+              alpha.0[j].1 = alpha_l.0[j].1 * tst1 - (rou[1] - FE_REAL_ONE) * alpha_h.0[j].1;
               alpha.0[j].1 = (alpha.0[j].1
                 * FieldElement::from_real((slice_size >> RS_CODE_RATE) as u64)
                 - all_sum[j])
@@ -705,24 +702,24 @@ impl PolyCommitVerifier {
           }
         }
       }
-
       let fri_ctx = self
         .pc_prover
         .fri_ctx
-        .as_mut()
+        .as_ref()
         .expect("Failed to retrieve fri_ctx");
 
-      for i in 0..slice_count {
+      let check_failed = (0..slice_count).any(|i| {
         let template =
           fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(0 << (LOG_SLICE_NUMBER + 1)) | (i << 1)];
-        for j in 0..(1 << (RS_CODE_RATE - 1)) {
-          if fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(j << (LOG_SLICE_NUMBER + 1)) | (i << 1)]
-            != template
-          {
-            eprintln!("Fri rs code check fail {} {}", i, j);
-            return (v_time, proof_size, p_time, false);
-          }
-        }
+        !(0..(1 << (RS_CODE_RATE - 1))).all(|j| {
+          fri_ctx.cpd.rs_codeword[com.mx_depth - 1][(j << (LOG_SLICE_NUMBER + 1)) | (i << 1)]
+            == template
+        })
+      });
+
+      if check_failed {
+        eprintln!("Fri rs code check failed");
+        return (v_time, proof_size, p_time, false);
       }
     }
     (v_time, proof_size, p_time, true)

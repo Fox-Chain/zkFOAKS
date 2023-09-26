@@ -1,4 +1,5 @@
 use super::{my_mod, my_mult, verify_lt_mod_many, verify_lt_mod_once, FieldElement, MOD};
+//use rayon::prelude::*;
 
 impl core::ops::Add for FieldElement {
   type Output = Self;

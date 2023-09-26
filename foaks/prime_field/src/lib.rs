@@ -12,7 +12,7 @@ use std::{
 };
 
 use self::error::{PrimeFieldError, RootOfUnityError};
-
+use rayon::prelude::*;
 pub struct FieldElementContext {
   pub packed_mod: __m256i,
   pub packed_mod_minus_one: __m256i,
@@ -80,10 +80,13 @@ pub struct VecFieldElement {
 }
 
 impl VecFieldElement {
-  pub fn new(k: usize) -> Self {
-    Self {
-      vec: vec![FieldElement::zero(); k],
-    }
+  pub fn new_parallel(k: usize) -> Self {
+    let vec: Vec<FieldElement> = (0..k)
+      .into_par_iter()
+      .map(|_| FieldElement::zero())
+      .collect();
+
+    Self { vec }
   }
 }
 
@@ -167,9 +170,8 @@ impl FieldElement {
 
     let mut rou = FieldElement::new(2147483648, 1033321771269002680);
 
-    for _ in 0..(MAX_ORDER - log_order) {
-      rou = rou * rou;
-    }
+    let dif = MAX_ORDER - log_order;
+    rou = (0..dif).fold(rou, |acc, _| acc * acc);
 
     Ok(rou)
   }

@@ -1,10 +1,9 @@
 use std::{mem::size_of, time, usize, vec};
+extern crate rayon;
+use rayon::prelude::*;
 
+use global::constants::*;
 use infrastructure::{
-  constants::{
-    LOG_SLICE_NUMBER, MAX_BIT_LENGTH, MAX_FRI_DEPTH, REAL_ONE, REAL_ZERO, RS_CODE_RATE,
-    SLICE_NUMBER,
-  },
   merkle_tree,
   my_hash::{my_hash, HashDigest},
 };
@@ -125,19 +124,18 @@ pub fn request_init_commit(
     .expect("Failed to retrieve root of unity");
 
   if oracle_indicator == 0 {
-    l_group.push(FieldElement::from_real(1));
+    l_group.push(FE_REAL_ONE);
 
     for i in 1..(1 << *log_current_witness_size_per_slice) {
       l_group.push(l_group[i - 1] * root_of_unity);
     }
     assert_eq!(
       l_group[(1 << *log_current_witness_size_per_slice) - 1] * root_of_unity,
-      FieldElement::from_real(1)
+      FE_REAL_ONE
     );
   }
 
-  witness_rs_codeword_interleaved[oracle_indicator] =
-    vec![FieldElement::default(); 1 << (bit_len + RS_CODE_RATE)];
+  witness_rs_codeword_interleaved[oracle_indicator] = vec![FE_ZERO; 1 << (bit_len + RS_CODE_RATE)];
 
   let log_leaf_size = LOG_SLICE_NUMBER + 1;
   for i in 0..SLICE_NUMBER {
@@ -296,12 +294,15 @@ pub fn request_init_value_with_merkle(
 pub fn request_step_commit(lvl: usize, pow: usize, fri_ctx: &mut FRIContext) -> (TripleVec, usize) {
   let mut new_size = 0;
 
-  let mut pow_0: usize;
   let mut value_vec: Vec<(FieldElement, FieldElement)> = Vec::with_capacity(SLICE_NUMBER);
   let mut visited_element = false;
-  for i in 0..SLICE_NUMBER {
-    let pow_0 = fri_ctx.cpd.rs_codeword_mapping[lvl][pow << LOG_SLICE_NUMBER | i] / 2;
 
+  let pow_0_values: Vec<usize> = (0..SLICE_NUMBER)
+    .into_par_iter()
+    .map(|i| fri_ctx.cpd.rs_codeword_mapping[lvl][pow << LOG_SLICE_NUMBER | i] / 2)
+    .collect();
+
+  for &pow_0 in &pow_0_values {
     if !fri_ctx.visited[lvl][pow_0 * 2] {
       fri_ctx.visited[lvl][pow_0 * 2] = true;
     }
@@ -319,18 +320,21 @@ pub fn request_step_commit(lvl: usize, pow: usize, fri_ctx: &mut FRIContext) -> 
   }
 
   let mut com_hhash: Vec<HashDigest> = vec![];
-  pow_0 = (fri_ctx.cpd.rs_codeword_mapping[lvl][pow << LOG_SLICE_NUMBER] >> (LOG_SLICE_NUMBER + 1))
+  let mut pow_0 = (fri_ctx.cpd.rs_codeword_mapping[lvl][pow << LOG_SLICE_NUMBER]
+    >> (LOG_SLICE_NUMBER + 1))
     + fri_ctx.cpd.merkle_size[lvl];
 
   let val_hhash = fri_ctx.cpd.merkle[lvl][pow_0];
 
   while pow_0 != 1 {
     let pow1 = pow_0 ^ 1;
+
     if !fri_ctx.visited[lvl][pow1] {
       new_size += size_of::<HashDigest>();
       fri_ctx.visited[lvl][pow1] = true;
       fri_ctx.visited[lvl][pow_0] = true;
     }
+
     com_hhash.push(fri_ctx.cpd.merkle[lvl][pow1]);
     pow_0 /= 2;
   }

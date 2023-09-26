@@ -1,27 +1,16 @@
-use std::{
-  mem::swap,
-  time::{self, SystemTime},
-};
-
-use infrastructure::constants::{REAL_ONE, REAL_ZERO, SIZE};
+use global::constants::{FE_REAL_ONE, FE_ZERO, SIZE};
 use poly_commitment::PolyCommitProver;
 use prime_field::FieldElement;
+//use rayon::prelude::*;
+use std::{
+  mem::swap,
+  time::{self},
+};
 
 use crate::{
   circuit_fast_track::LayeredCircuit,
   polynomial::{LinearPoly, QuadraticPoly},
 };
-
-pub fn from_string(s: &str) -> FieldElement {
-  let mut ret = REAL_ZERO;
-
-  for byte in s.bytes() {
-    let digit = byte - b'0';
-    ret = ret * FieldElement::from_real(10) + FieldElement::from_real(digit.into());
-  }
-
-  ret
-}
 
 #[derive(Default, Debug, Clone)]
 pub struct ProverContext {
@@ -80,7 +69,6 @@ pub struct ZkProver {
 pub struct SumcheckInitArgs {
   pub sumcheck_layer_id: usize,
   pub length_g: usize,
-  pub length_u: usize,
   pub length_v: usize,
   pub alpha: FieldElement,
   pub beta: FieldElement,
@@ -101,22 +89,24 @@ impl ZkProver {
   pub fn init_array(&mut self, max_bit_length: usize, aritmetic_circuit: LayeredCircuit) {
     let half_length = (max_bit_length >> 1) + 1;
 
+    let poly_size = 1 << max_bit_length;
+    let fe_size = 1 << half_length;
     self.ctx.gate_meet = vec![false; 15];
-    self.ctx.v_mult_add_new = vec![LinearPoly::zero(); 1 << max_bit_length];
-    self.ctx.add_v_array_new = vec![LinearPoly::zero(); 1 << max_bit_length];
-    self.ctx.add_mult_sum_new = vec![LinearPoly::zero(); 1 << max_bit_length];
-    self.ctx.rets_prev = vec![QuadraticPoly::zero(); 1 << max_bit_length];
-    self.ctx.rets_cur = vec![QuadraticPoly::zero(); 1 << max_bit_length];
+    self.ctx.v_mult_add_new = vec![LinearPoly::zero(); poly_size];
+    self.ctx.add_v_array_new = vec![LinearPoly::zero(); poly_size];
+    self.ctx.add_mult_sum_new = vec![LinearPoly::zero(); poly_size];
+    self.ctx.rets_prev = vec![QuadraticPoly::zero(); poly_size];
+    self.ctx.rets_cur = vec![QuadraticPoly::zero(); poly_size];
 
-    self.beta_g_r0_fhalf = vec![REAL_ZERO; 1 << half_length];
-    self.beta_g_r0_shalf = vec![REAL_ZERO; 1 << half_length];
-    self.beta_g_r1_fhalf = vec![REAL_ZERO; 1 << half_length];
-    self.beta_g_r1_shalf = vec![REAL_ZERO; 1 << half_length];
-    self.beta_u_fhalf = vec![REAL_ZERO; 1 << half_length];
-    self.beta_u_shalf = vec![REAL_ZERO; 1 << half_length];
-    self.add_mult_sum = vec![LinearPoly::zero(); 1 << max_bit_length];
-    self.v_mult_add = vec![LinearPoly::zero(); 1 << max_bit_length];
-    self.add_v_array = vec![LinearPoly::zero(); 1 << max_bit_length];
+    self.beta_g_r0_fhalf = vec![FE_ZERO; fe_size];
+    self.beta_g_r0_shalf = vec![FE_ZERO; fe_size];
+    self.beta_g_r1_fhalf = vec![FE_ZERO; fe_size];
+    self.beta_g_r1_shalf = vec![FE_ZERO; fe_size];
+    self.beta_u_fhalf = vec![FE_ZERO; fe_size];
+    self.beta_u_shalf = vec![FE_ZERO; fe_size];
+    self.add_mult_sum = vec![LinearPoly::zero(); poly_size];
+    self.v_mult_add = vec![LinearPoly::zero(); poly_size];
+    self.add_v_array = vec![LinearPoly::zero(); poly_size];
 
     // In The original repo init, total_time, and get_circuit() are in the main fn()
     self.total_time = 0.0;
@@ -125,7 +115,6 @@ impl ZkProver {
 
   pub fn get_circuit(&mut self, from_verifier: LayeredCircuit) {
     self.a_c = from_verifier;
-
     self.ctx.inv_2 = FieldElement::from_real(2);
   }
 
@@ -151,75 +140,58 @@ impl ZkProver {
 
   pub fn evaluate(&mut self) -> Vec<FieldElement> {
     let t0 = time::Instant::now();
+
     for gate in &self.a_c.circuit[0].gates {
-      let ty = gate.ty;
-      assert!(ty == 3 || ty == 2);
+      assert!(gate.ty == 3 || gate.ty == 2);
     }
 
     assert!(self.a_c.total_depth < 1000000);
 
-    for i in 1..(self.a_c.total_depth) {
-      self.circuit_value[i] = vec![REAL_ZERO; self.a_c.circuit[i].gates.len()];
+    for i in 1..self.a_c.total_depth {
+      self.circuit_value[i] = vec![FE_ZERO; self.a_c.circuit[i].gates.len()];
 
       for (g, gate) in self.a_c.circuit[i].gates.iter().enumerate() {
-        let ty = gate.ty;
-        let u = gate.u;
-        let v = gate.v;
-
-        let value_u = self.circuit_value[i - 1][u];
-        let value_v = self.circuit_value[i - 1][v];
+        let (ty, u, v) = (gate.ty, gate.u, gate.v);
+        let (value_u, value_v) = (self.circuit_value[i - 1][u], self.circuit_value[i - 1][v]);
 
         self.circuit_value[i][g] = match ty {
           0 => value_u + value_v,
           1 => {
-            assert!(u < (self.a_c.circuit[i - 1].gates.len()));
-            assert!(v < (self.a_c.circuit[i - 1].gates.len()));
+            let (u_len, v_len) = (
+              self.a_c.circuit[i - 1].gates.len(),
+              self.a_c.circuit[i - 1].gates.len(),
+            );
+            assert!(u < u_len && v < v_len);
             value_u * value_v
           }
-          2 => FieldElement::from_real(0),
+          2 => FE_ZERO,
           3 => FieldElement::from_real(u as u64),
           4 | 10 => value_u,
-          5 => {
-            let mut value = FieldElement::from_real(0);
-            for k in u..v {
-              value = self.circuit_value[i][g] + self.circuit_value[i - 1][k];
-            }
-
-            value
-          }
-          6 => FieldElement::from_real(1) - value_u,
+          5 => (u..v)
+            .map(|k| self.circuit_value[i - 1][k])
+            .fold(FE_ZERO, |acc, val| acc + val),
+          6 => FE_REAL_ONE - value_u,
           7 => value_u - value_v,
           8 => value_u + value_v - FieldElement::from_real(2) * value_u * value_v,
           9 => {
-            assert!(u < (self.a_c.circuit[i - 1].gates.len()));
-            assert!(v < (self.a_c.circuit[i - 1].gates.len()));
+            let (u_len, v_len) = (
+              self.a_c.circuit[i - 1].gates.len(),
+              self.a_c.circuit[i - 1].gates.len(),
+            );
+            assert!(u < u_len && v < v_len);
             value_v - value_u * value_v
           }
-          12 => {
-            let mut value = FieldElement::from_real(0);
-            assert!(v - u < 60);
-            for k in u..=v {
-              value = self.circuit_value[i][g]
-                + self.circuit_value[i - 1][k] * FieldElement::from_real(1u64 << (k - u));
-            }
-
-            value
-          }
+          12 => (u..=v)
+            .map(|k| self.circuit_value[i - 1][k] * FieldElement::from_real(1u64 << (k - u)))
+            .fold(FE_ZERO, |acc, val| acc + val),
           13 => {
             assert_eq!(u, v);
-            assert!(u < (self.a_c.circuit[i - 1].gates.len()),);
-            value_u * (FieldElement::from_real(1) - value_v)
+            assert!(u < self.a_c.circuit[i - 1].gates.len());
+            value_u * (FE_REAL_ONE - value_v)
           }
-          14 => {
-            let mut value = FieldElement::from_real(0);
-            for k in 0..self.a_c.circuit[i].gates[g].parameter_length {
-              let weight = self.a_c.circuit[i].gates[g].weight[k];
-              let idx = self.a_c.circuit[i].gates[g].src[k];
-              value = value + self.circuit_value[i - 1][idx] * weight;
-            }
-
-            value
-          }
+          14 => (0..gate.parameter_length)
+            .map(|k| self.circuit_value[i - 1][gate.src[k]] * gate.weight[k])
+            .fold(FE_ZERO, |acc, val| acc + val),
           _ => panic!("gate type not supported"),
         };
       }
@@ -228,7 +200,7 @@ impl ZkProver {
     let time_span = t0.elapsed();
 
     println!(
-      "total evaluation time: {:?} seconds",
+      "total evaluation time: {:.6} seconds",
       time_span.as_secs_f64()
     );
     self.circuit_value[self.a_c.total_depth - 1].clone()
@@ -246,13 +218,11 @@ impl ZkProver {
     self.beta = zkprover.beta;
     self.sumcheck_layer_id = zkprover.sumcheck_layer_id;
     self.length_g = zkprover.length_g;
-    self.length_u = zkprover.length_u;
+    self.length_u = zkprover.length_v; // Since they are equal, we can refactor this function
     self.length_v = zkprover.length_v;
     self.one_minus_r_0 = zkprover.one_minus_r_0;
     self.one_minus_r_1 = zkprover.one_minus_r_1;
   }
-
-  pub fn total_time(&mut self, val: f64) { self.total_time = val; }
 
   pub fn sumcheck_phase1_init(&mut self) {
     let t0 = time::Instant::now();
@@ -261,19 +231,19 @@ impl ZkProver {
     for i in 0..self.total_uv {
       self.v_mult_add[i] =
         LinearPoly::new_single_input(self.circuit_value[self.sumcheck_layer_id - 1][i]);
-      self.add_v_array[i].a = REAL_ZERO;
-      self.add_v_array[i].b = REAL_ZERO;
-      self.add_mult_sum[i].a = REAL_ZERO;
-      self.add_mult_sum[i].b = REAL_ZERO;
+      self.add_v_array[i].a = FE_ZERO;
+      self.add_v_array[i].b = FE_ZERO;
+      self.add_mult_sum[i].a = FE_ZERO;
+      self.add_mult_sum[i].b = FE_ZERO;
     }
 
     self.beta_g_r0_fhalf[0] = self.alpha;
     self.beta_g_r1_fhalf[0] = self.beta;
-    self.beta_g_r0_shalf[0] = REAL_ONE;
-    self.beta_g_r1_shalf[0] = REAL_ONE;
+    self.beta_g_r0_shalf[0] = FE_REAL_ONE;
+    self.beta_g_r1_shalf[0] = FE_REAL_ONE;
 
     let first_half = self.length_g >> 1;
-    let _second_half = self.length_g - first_half;
+    let second_half = self.length_g - first_half;
 
     for i in 0..first_half {
       for j in 0..1 << i {
@@ -284,7 +254,7 @@ impl ZkProver {
       }
     }
 
-    for i in 0.._second_half {
+    for i in 0..second_half {
       for j in 0..1 << i {
         self.beta_g_r0_shalf[j | (1 << i)] = self.beta_g_r0_shalf[j] * self.r_0[i + first_half];
         self.beta_g_r0_shalf[j] = self.beta_g_r0_shalf[j] * self.one_minus_r_0[i + first_half];
@@ -295,8 +265,8 @@ impl ZkProver {
 
     let mask_fhalf = (1 << first_half) - 1;
 
-    let mut intermediates0 = vec![REAL_ZERO; 1 << self.length_g];
-    let mut intermediates1 = vec![REAL_ZERO; 1 << self.length_g];
+    let mut intermediates0 = vec![FE_ZERO; 1 << self.length_g];
+    let mut intermediates1 = vec![FE_ZERO; 1 << self.length_g];
 
     //todo
     //	#pragma omp parallel for
@@ -356,7 +326,6 @@ impl ZkProver {
           let tmp = self.beta_g_r0_fhalf[i & mask_fhalf] * self.beta_g_r0_shalf[i >> first_half]
             + self.beta_g_r1_fhalf[i & mask_fhalf] * self.beta_g_r1_shalf[i >> first_half];
           let tmp_v = tmp * self.circuit_value[self.sumcheck_layer_id - 1][v];
-          //let _tmp_2_v = tmp_v + tmp_v; // Never used
           intermediates0[i] = tmp_v;
           intermediates1[i] = tmp;
         }
@@ -603,20 +572,14 @@ impl ZkProver {
     ret
   }
 
-  pub fn sumcheck_phase2_init(
-    &mut self,
-    previous_random: FieldElement,
-    r_u: Vec<FieldElement>,
-    one_minus_r_u: Vec<FieldElement>,
-  ) {
-    let _t0 = SystemTime::now();
-    self.v_u = self.v_mult_add[0].eval(previous_random);
+  pub fn sumcheck_phase2_init(&mut self, r_u: &[FieldElement], one_minus_r_u: &[FieldElement]) {
+    let t0 = time::Instant::now();
 
     let first_half = self.length_u >> 1;
     let second_half = self.length_u - first_half;
 
-    self.beta_u_fhalf[0] = REAL_ONE;
-    self.beta_u_shalf[0] = REAL_ONE;
+    self.beta_u_fhalf[0] = FE_REAL_ONE;
+    self.beta_u_shalf[0] = FE_REAL_ONE;
 
     for i in 0..first_half {
       for j in 0..(1 << i) {
@@ -640,140 +603,66 @@ impl ZkProver {
     let total_g = self.a_c.circuit[self.sumcheck_layer_id].gates.len();
 
     for i in 0..self.total_uv {
-      self.add_mult_sum[i].a = REAL_ZERO;
-      self.add_mult_sum[i].b = REAL_ZERO;
-      self.add_v_array[i].a = REAL_ZERO;
-      self.add_v_array[i].b = REAL_ZERO;
+      self.add_mult_sum[i].a = FE_ZERO;
+      self.add_mult_sum[i].b = FE_ZERO;
+      self.add_v_array[i].a = FE_ZERO;
+      self.add_v_array[i].b = FE_ZERO;
 
       self.v_mult_add[i] =
         LinearPoly::new_single_input(self.circuit_value[self.sumcheck_layer_id - 1][i]);
     }
 
-    let mut intermediates0 = vec![REAL_ZERO; total_g];
-    let mut intermediates1 = vec![REAL_ZERO; total_g];
-    //let mut intermediates2 = vec![FieldElement::zero(); total_g]; //never used
+    let mut intermediates0 = vec![FE_ZERO; total_g];
+    let mut intermediates1 = vec![FE_ZERO; total_g];
 
     //todo
     //#pragma omp parallel for
     for i in 0..total_g {
       let ty = self.a_c.circuit[self.sumcheck_layer_id].gates[i].ty;
       let u = self.a_c.circuit[self.sumcheck_layer_id].gates[i].u;
-      let _v = self.a_c.circuit[self.sumcheck_layer_id].gates[i].v;
+
+      let tmp_u = self.beta_u_fhalf[u & mask_fhalf] * self.beta_u_shalf[u >> first_half];
+      let tmp_g = self.beta_g_r0_fhalf[i & mask_g_fhalf] * self.beta_g_r0_shalf[i >> first_g_half]
+        + self.beta_g_r1_fhalf[i & mask_g_fhalf] * self.beta_g_r1_shalf[i >> first_g_half];
+
       match ty {
-        1 =>
-        //mult gate
-        {
-          let tmp_u = self.beta_u_fhalf[u & mask_fhalf] * self.beta_u_shalf[u >> first_half];
-          let tmp_g = self.beta_g_r0_fhalf[i & mask_g_fhalf]
-            * self.beta_g_r0_shalf[i >> first_g_half]
-            + self.beta_g_r1_fhalf[i & mask_g_fhalf] * self.beta_g_r1_shalf[i >> first_g_half];
+        0 => {
+          // add gate
+          intermediates0[i] = tmp_g * tmp_u;
+          intermediates1[i] = intermediates0[i] * self.v_u;
+        }
+        1 => {
+          // mult gate
           intermediates0[i] = tmp_g * tmp_u * self.v_u;
         }
-        0 =>
-        //add gate
-        {
-          let tmp_u = self.beta_u_fhalf[u & mask_fhalf] * self.beta_u_shalf[u >> first_half];
-          let tmp_g = self.beta_g_r0_fhalf[i & mask_g_fhalf]
-            * self.beta_g_r0_shalf[i >> first_g_half]
-            + self.beta_g_r1_fhalf[i & mask_g_fhalf] * self.beta_g_r1_shalf[i >> first_g_half];
-          let tmp_g_u = tmp_g * tmp_u;
-          intermediates0[i] = tmp_g_u;
-          intermediates1[i] = tmp_g_u * self.v_u;
+        5 | 12 | 14 => {
+          // sum gate, exp sum gate, custom comb gate
+          intermediates0[i] = tmp_g * self.v_u;
         }
-        2 => {}
-        4 => {}
-        5 =>
-        //sum gate
-        {
-          let tmp_g = self.beta_g_r0_fhalf[i & mask_g_fhalf]
-            * self.beta_g_r0_shalf[i >> first_g_half]
-            + self.beta_g_r1_fhalf[i & mask_g_fhalf] * self.beta_g_r1_shalf[i >> first_g_half];
-          let tmp_g_vu = tmp_g * self.v_u;
-          intermediates0[i] = tmp_g_vu;
+        6 => {
+          // not gate
+          intermediates0[i] = tmp_g * tmp_u - tmp_g * tmp_u * self.v_u;
         }
-        12 =>
-        //exp sum gate
-        {
-          let tmp_g = self.beta_g_r0_fhalf[i & mask_g_fhalf]
-            * self.beta_g_r0_shalf[i >> first_g_half]
-            + self.beta_g_r1_fhalf[i & mask_g_fhalf] * self.beta_g_r1_shalf[i >> first_g_half];
-          let tmp_g_vu = tmp_g * self.v_u;
-          intermediates0[i] = tmp_g_vu;
+        7 => {
+          // minus gate
+          intermediates0[i] = tmp_g * tmp_u;
+          intermediates1[i] = intermediates0[i] * self.v_u;
         }
-        14 =>
-        //custom comb gate
-        {
-          let tmp_g = self.beta_g_r0_fhalf[i & mask_g_fhalf]
-            * self.beta_g_r0_shalf[i >> first_g_half]
-            + self.beta_g_r1_fhalf[i & mask_g_fhalf] * self.beta_g_r1_shalf[i >> first_g_half];
-          let tmp_g_vu = tmp_g * self.v_u;
-          intermediates0[i] = tmp_g_vu;
-        }
-
-        6 =>
-        //not gate
-        {
-          let tmp_u = self.beta_u_fhalf[u & mask_fhalf] * self.beta_u_shalf[u >> first_half];
-          let tmp_g = self.beta_g_r0_fhalf[i & mask_g_fhalf]
-            * self.beta_g_r0_shalf[i >> first_g_half]
-            + self.beta_g_r1_fhalf[i & mask_g_fhalf] * self.beta_g_r1_shalf[i >> first_g_half];
-          let tmp_g_u = tmp_g * tmp_u;
-          intermediates0[i] = tmp_g_u - tmp_g_u * self.v_u;
-        }
-        7 =>
-        //minus gate
-        {
-          let tmp_u = self.beta_u_fhalf[u & mask_fhalf] * self.beta_u_shalf[u >> first_half];
-          let tmp_g = self.beta_g_r0_fhalf[i & mask_g_fhalf]
-            * self.beta_g_r0_shalf[i >> first_g_half]
-            + self.beta_g_r1_fhalf[i & mask_g_fhalf] * self.beta_g_r1_shalf[i >> first_g_half];
-          let tmp = tmp_g * tmp_u;
-          intermediates0[i] = tmp;
-          intermediates1[i] = tmp * self.v_u;
-        }
-        8 =>
-        //xor gate
-        {
-          let tmp_u = self.beta_u_fhalf[u & mask_fhalf] * self.beta_u_shalf[u >> first_half];
-          let tmp_g = self.beta_g_r0_fhalf[i & mask_g_fhalf]
-            * self.beta_g_r0_shalf[i >> first_g_half]
-            + self.beta_g_r1_fhalf[i & mask_g_fhalf] * self.beta_g_r1_shalf[i >> first_g_half];
-          let tmp = tmp_g * tmp_u;
-          let tmp_v_u = tmp * self.v_u;
-          intermediates0[i] = tmp - tmp_v_u - tmp_v_u;
+        8 => {
+          // xor gate
+          let tmp_v_u = tmp_g * tmp_u * self.v_u;
+          intermediates0[i] = tmp_g * tmp_u - tmp_v_u - tmp_v_u;
           intermediates1[i] = tmp_v_u;
         }
-        13 =>
-        //bit-test gate
-        {
-          let tmp_u = self.beta_u_fhalf[u & mask_fhalf] * self.beta_u_shalf[u >> first_half];
-          let tmp_g = self.beta_g_r0_fhalf[i & mask_g_fhalf]
-            * self.beta_g_r0_shalf[i >> first_g_half]
-            + self.beta_g_r1_fhalf[i & mask_g_fhalf] * self.beta_g_r1_shalf[i >> first_g_half];
-          let tmp = tmp_g * tmp_u;
-          let tmp_v_u = tmp * self.v_u;
-          intermediates0[i] = tmp_v_u;
+        9 => {
+          // NAAB gate
+          intermediates0[i] = tmp_g * tmp_u - self.v_u * tmp_u;
         }
-        9 =>
-        //NAAB gate
-        {
-          let tmp_u = self.beta_u_fhalf[u & mask_fhalf] * self.beta_u_shalf[u >> first_half];
-          let tmp_g = self.beta_g_r0_fhalf[i & mask_g_fhalf]
-            * self.beta_g_r0_shalf[i >> first_g_half]
-            + self.beta_g_r1_fhalf[i & mask_g_fhalf] * self.beta_g_r1_shalf[i >> first_g_half];
-          let tmp = tmp_g * tmp_u;
-          intermediates0[i] = tmp - self.v_u * tmp;
+        10 => {
+          // relay gate
+          intermediates0[i] = tmp_g * tmp_u * self.v_u;
         }
-        10 =>
-        //relay gate
-        {
-          let tmp_u = self.beta_u_fhalf[u & mask_fhalf] * self.beta_u_shalf[u >> first_half];
-          let tmp_g = self.beta_g_r0_fhalf[i & mask_g_fhalf]
-            * self.beta_g_r0_shalf[i >> first_g_half]
-            + self.beta_g_r1_fhalf[i & mask_g_fhalf] * self.beta_g_r1_shalf[i >> first_g_half];
-          let tmp = tmp_g * tmp_u;
-          intermediates0[i] = tmp * self.v_u;
-        }
+        2 | 4 => { /* No operation required */ }
         _ => {
           println!("Warning Unknown gate {}", ty);
         }
@@ -867,6 +756,8 @@ impl ZkProver {
         }
       }
     }
+    let time_span = t0.elapsed();
+    self.total_time += time_span.as_secs_f64();
   }
 
   pub fn sumcheck_phase2_update(
