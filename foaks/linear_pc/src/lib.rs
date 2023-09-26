@@ -393,32 +393,29 @@ impl LinearPC {
     output_size_so_far: usize,
     depth: usize,
   ) -> (usize, usize) {
-    let mut depth = depth;
-    let mut input_size = input_size;
-    let mut output_size_so_far = output_size_so_far;
-
-    while input_size > DISTANCE_THRESHOLD {
-      // Calculate output size for the current depth
-      let output_size = output_size_so_far + input_size + self.lce_ctx.c[depth].r;
-      self.gates_count.insert(depth + 1, output_size);
-
-      // Prepare for the next depth
-      output_size_so_far = output_size;
-      input_size = self.lce_ctx.c[depth].r;
-
-      depth += 1;
+    if input_size <= DISTANCE_THRESHOLD {
+      return (depth, output_size_so_far);
     }
-
-    let output_depth = depth;
-    let output_size = output_size_so_far + self.lce_ctx.d[output_depth].r;
-    self.gates_count.insert(output_depth + 1, output_size);
-
+    // output
+    self.gates_count.insert(
+      depth + 1,
+      output_size_so_far + input_size + self.lce_ctx.c[depth].r,
+    );
+    let output_depth_output_size = self.prepare_enc_count(
+      self.lce_ctx.c[depth].r,
+      output_size_so_far + input_size,
+      depth + 1,
+    );
+    self.gates_count.insert(
+      output_depth_output_size.0 + 1,
+      output_depth_output_size.1 + self.lce_ctx.d[depth].r,
+    );
     (
-      output_depth + 1,
+      output_depth_output_size.0 + 1,
       *self
-        .gates_count
-        .get(&(output_depth + 1))
-        .expect("Failed to retrieve gates_count value"),
+          .gates_count
+          .get(&(output_depth_output_size.0 + 1))
+          .expect("Failed to retrieve gates_count value"),
     )
   }
 
