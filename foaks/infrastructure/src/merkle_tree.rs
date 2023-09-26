@@ -3,9 +3,8 @@ use std::{
   vec::Vec,
 };
 
+use crate::my_hash::{my_hash, HashDigest};
 use prime_field::FieldElement;
-
-use crate::my_hash::{HashDigest, my_hash};
 
 pub fn hash_single_field_element(x: FieldElement) -> HashDigest {
   let mut data = [HashDigest::default(); 2];

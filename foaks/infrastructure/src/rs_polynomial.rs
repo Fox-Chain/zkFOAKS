@@ -1,9 +1,7 @@
 use prime_field::FieldElement;
 
-use crate::{
-  constants::{MAX_ORDER_FFT, REAL_ONE},
-  utility::my_log,
-};
+use crate::utility::my_log;
+use global::constants::*;
 
 #[derive(Default, Debug, Clone)]
 pub struct ScratchPad {
@@ -16,9 +14,9 @@ pub struct ScratchPad {
 impl ScratchPad {
   pub fn from_order(order: usize) -> Self {
     let dst = [
-      vec![FieldElement::default(); order],
-      vec![FieldElement::default(); order],
-      vec![FieldElement::default(); order],
+      vec![FE_ZERO; order],
+      vec![FE_ZERO; order],
+      vec![FE_ZERO; order],
     ];
 
     let mut twiddle_factor = Vec::with_capacity(order);
@@ -31,8 +29,8 @@ impl ScratchPad {
 
     let inv_rou = rou.inverse();
 
-    twiddle_factor.push(REAL_ONE);
-    inv_twiddle_factor.push(REAL_ONE);
+    twiddle_factor.push(FE_REAL_ONE);
+    inv_twiddle_factor.push(FE_REAL_ONE);
 
     let twiddle_factor = std::iter::successors(Some(twiddle_factor[0]), |&prev| Some(rou * prev))
       .take(order)
@@ -61,8 +59,7 @@ pub fn fast_fourier_transform(
   scratch_pad: &mut ScratchPad,
   twiddle_fac: Option<Vec<FieldElement>>,
 ) {
-  // assert_eq!(coefficient_len, coefficients.len());
-  // println!("pass");
+  //assert_eq!(coefficient_len, coefficients.len());
   let twiddle_fac = twiddle_fac.unwrap_or_else(|| scratch_pad.twiddle_factor.clone());
   let mut rot_mul = Vec::with_capacity(MAX_ORDER_FFT);
 
@@ -87,7 +84,7 @@ pub fn fast_fourier_transform(
   assert!(log_coefficient.is_some());
 
   let log_order = log_order.expect("Expected log_order to have a value");
-  assert_eq!(rot_mul[log_order], REAL_ONE);
+  assert_eq!(rot_mul[log_order], FE_REAL_ONE);
 
   let log_coefficient = log_coefficient.expect("Expected log_coefficient to have a value");
   assert!(log_coefficient <= log_order);
@@ -164,14 +161,14 @@ pub fn inverse_fast_fourier_transform(
     evaluations.to_vec()
   };
 
-  let mut new_rou = REAL_ONE;
+  let mut new_rou = FE_REAL_ONE;
   (0..(order / coefficient_len)).for_each(|_| {
     new_rou = new_rou * root_of_unity;
   });
 
   order = coefficient_len;
 
-  let mut inv_rou = REAL_ONE;
+  let mut inv_rou = FE_REAL_ONE;
   let mut tmp = new_rou;
 
   let mut log_order: Option<usize> = None;
@@ -195,7 +192,7 @@ pub fn inverse_fast_fourier_transform(
     inv_rou = inv_rou * tmp;
     tmp = tmp * tmp;
   }
-  assert_eq!(inv_rou * new_rou, REAL_ONE);
+  assert_eq!(inv_rou * new_rou, FE_REAL_ONE);
   fast_fourier_transform(
     &sub_eval,
     order,
@@ -207,7 +204,7 @@ pub fn inverse_fast_fourier_transform(
   );
 
   let inv_n = FieldElement::inverse(FieldElement::from_real(order as u64));
-  assert_eq!(inv_n * FieldElement::from_real(order as u64), REAL_ONE);
+  assert_eq!(inv_n * FieldElement::from_real(order as u64), FE_REAL_ONE);
 
   (0..coefficient_len).for_each(|i| {
     dst[i] = dst[i] * inv_n;

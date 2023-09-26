@@ -1,3 +1,6 @@
+//use std::sync::{Arc, Mutex};
+//use std::thread;
+
 use prime_field::FieldElement;
 
 #[derive(Debug, Clone, Default)]
@@ -49,3 +52,24 @@ pub struct LayeredCircuit {
   pub total_depth: usize,
   pub inputs: Vec<FieldElement>,
 }
+//advice to implement parallelism
+
+//impl LayeredCircuit {
+// pub fn process_gates_in_parallel(&mut self) {
+//  let gates = Arc::new(Mutex::new(self.circuit[0].gates.clone()));
+// let mut handles = vec![];
+
+// for gate in gates.lock().unwrap().iter_mut() {
+//  let gate_clone = gate.clone();
+// let handle = thread::spawn(move || {
+
+//gate_clone.ty += 1;
+//});
+//handles.push(handle);
+// }
+
+//for handle in handles {
+//handle.join().unwrap();
+//}
+// }
+//}

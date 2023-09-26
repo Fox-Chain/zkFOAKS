@@ -11,3 +11,4 @@ linear_gkr = { path = "../linear_gkr" }
 infrastructure = { path = "../infrastructure" }
 rand = "0.8.5"
 lazy_static = "1.4.0"
+global = { path = "../global" }

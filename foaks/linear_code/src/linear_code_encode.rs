@@ -5,7 +5,7 @@ use prime_field::FieldElement;
 use crate::parameter::DISTANCE_THRESHOLD;
 use crate::parameter::*;
 
-use infrastructure::constants::REAL_ZERO;
+use global::constants::*;
 
 #[derive(Default, Clone)]
 pub struct Graph {
@@ -51,8 +51,8 @@ impl LinearCodeEncodeContext {
       let mut i = 0;
       while (n >> i) > 1 {
         let size = (2 * n) >> i;
-        self.scratch[0][i] = vec![FieldElement::default(); size];
-        self.scratch[1][i] = vec![FieldElement::default(); size];
+        self.scratch[0][i] = vec![FE_ZERO; size];
+        self.scratch[1][i] = vec![FE_ZERO; size];
         i += 1
       }
     }
@@ -60,7 +60,7 @@ impl LinearCodeEncodeContext {
     self.scratch[0][dep][..n].copy_from_slice(src);
     let mut r: usize = (ALPHA * (n as f64)) as usize;
 
-    self.scratch[1][dep].fill(REAL_ZERO);
+    self.scratch[1][dep].fill(FE_ZERO);
 
     //expander mult
     for (i, elem) in src.iter().enumerate() {
@@ -75,7 +75,7 @@ impl LinearCodeEncodeContext {
     assert_eq!(self.d[dep].l, l);
     // R consumed
     r = self.d[dep].r;
-    let zeros = vec![REAL_ZERO; r];
+    let zeros = vec![FE_ZERO; r];
     self.scratch[0][dep][n + l..n + l + r].copy_from_slice(&zeros);
 
     for (i, val) in self.scratch[0][dep][n..n + l].to_owned().iter().enumerate() {
@@ -100,7 +100,7 @@ impl LinearCodeEncodeContext {
     self.scratch[0][dep][..n].copy_from_slice(&slc);
 
     let mut r = (ALPHA * (n as f64)) as usize;
-    self.scratch[1][dep].fill(REAL_ZERO);
+    self.scratch[1][dep].fill(FE_ZERO);
 
     //expander mult
     for (i, val) in self.scratch[1][dep - 1]
@@ -119,7 +119,7 @@ impl LinearCodeEncodeContext {
     assert_eq!(self.d[dep].l, l);
     // R consumed
     r = self.d[dep].r;
-    let zeros = vec![REAL_ZERO; r];
+    let zeros = vec![FE_ZERO; r];
     self.scratch[0][dep][n + l..n + l + r].copy_from_slice(&zeros);
 
     for (i, val) in self.scratch[0][dep][n..n + l].to_owned().iter().enumerate() {
