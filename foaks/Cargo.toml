@@ -1,18 +1,18 @@
 [workspace]
 
 members = [
-    "infrastructure",
-    "linear_gkr",
-    "linear_code",
-    "intrinsics",
-    "poly_commitment",
-    "prime_field",
-		"linear_pc",
-		#"examples",
+  "infrastructure",
+  "linear_gkr",
+  "linear_code",
+  "intrinsics",
+  "poly_commitment",
+  "prime_field",
+  "linear_pc",
+  #"examples",
 ]
 [package]
-name = "foaks" # the name of the package
-version = "0.1.0"    # the current version, obeying semver
+name = "foaks"    # the name of the package
+version = "0.1.0" # the current version, obeying semver
 edition = "2021"
 
 [dependencies]
