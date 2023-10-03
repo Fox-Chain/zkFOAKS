@@ -97,8 +97,6 @@ checksum = "0198b9d0078e0f30dedc7acbb21c974e838fc8fae3ee170128658a98cb2c1c04"
 name = "foaks"
 version = "0.1.0"
 dependencies = [
- "ethnum",
- "linear_code",
  "linear_gkr",
  "linear_pc",
  "prime_field",

@@ -3,6 +3,6 @@ name = "global"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies]
 
+[dependencies]
 prime_field = { path = "../prime_field" }
