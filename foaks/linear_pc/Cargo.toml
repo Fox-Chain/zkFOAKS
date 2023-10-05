@@ -6,9 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-linear_gkr = { path = "../linear_gkr" }
+linear_gkr = { workspace = true }
 infrastructure = { path = "../infrastructure" }
-prime_field = { path = "../prime_field" }
+prime_field = { workspace = true }
 linear_code = { workspace = true, default-features = true }
 rand = "0.8.5"
 

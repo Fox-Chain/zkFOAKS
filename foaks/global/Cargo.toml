@@ -5,4 +5,4 @@ edition = "2021"
 
 
 [dependencies]
-prime_field = { path = "../prime_field" }
+prime_field = { workspace = true }

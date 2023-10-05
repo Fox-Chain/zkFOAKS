@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 
 serde = { version = "1.0.143", features = ["serde_derive"] }
-prime_field = { path = "../prime_field" }
 global = { path = "../global" }
+ring = "0.16.20"                                             #Temp library
 
-ring = "0.16.20" #Temp library
+prime_field = { workspace = true }

@@ -16,11 +16,13 @@ version = "0.1.0" # the current version, obeying semver
 edition = "2021"
 
 [dependencies]
-
-linear_gkr = { path = "./linear_gkr" }
 prime_field = { path = "./prime_field" }
+linear_gkr = { path = "./linear_gkr" }
 linear_pc = { path = "./linear_pc" }
 
 [workspace.dependencies]
 ethnum = "1.2.2"
 linear_code = { path = "./linear_code" }
+prime_field = { path = "./prime_field" }
+linear_pc = { path = "./linear_pc" }
+linear_gkr = { path = "./linear_gkr" }
