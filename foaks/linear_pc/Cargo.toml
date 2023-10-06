@@ -7,9 +7,9 @@ edition = "2021"
 
 [dependencies]
 linear_gkr = { workspace = true }
-infrastructure = { path = "../infrastructure" }
+infrastructure = { workspace = true }
 prime_field = { workspace = true }
 linear_code = { workspace = true, default-features = true }
 rand = "0.8.5"
 
-global = { path = "../global" }
+global = { workspace = true }

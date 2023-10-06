@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 
-infrastructure = { path = "../infrastructure" }
+infrastructure = { workspace = true }
 prime_field = { workspace = true }
 poly_commitment = { path = "../poly_commitment" }
-global = { path = "../global" }
+global = { workspace = true }

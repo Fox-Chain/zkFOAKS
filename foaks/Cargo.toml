@@ -20,9 +20,12 @@ prime_field = { path = "./prime_field" }
 linear_gkr = { path = "./linear_gkr" }
 linear_pc = { path = "./linear_pc" }
 
+
 [workspace.dependencies]
 ethnum = "1.2.2"
 linear_code = { path = "./linear_code" }
 prime_field = { path = "./prime_field" }
 linear_pc = { path = "./linear_pc" }
 linear_gkr = { path = "./linear_gkr" }
+infrastructure = { path = "./infrastructure" }
+global = { path = "./global" }
