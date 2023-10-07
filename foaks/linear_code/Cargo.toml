@@ -10,5 +10,5 @@ prime_field = { workspace = true }
 linear_gkr = { workspace = true }
 infrastructure = { workspace = true }
 rand = "0.8.5"
-lazy_static = "1.4.0"
+#lazy_static = "1.4.0"
 global = { workspace = true }
