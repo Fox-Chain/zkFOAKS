@@ -9,6 +9,6 @@ edition = "2021"
 
 #serde = { version = "1.0.143", features = ["serde_derive"] }
 global = { workspace = true }
-ring = "0.17"
+ring = "0.17.2"
 
 prime_field = { workspace = true }

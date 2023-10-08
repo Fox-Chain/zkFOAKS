@@ -10,4 +10,4 @@ rand = "0.8.5"
 infrastructure = { workspace = true }
 prime_field = { workspace = true }
 global = { workspace = true }
-rayon = "1.6"
+rayon = "1.8"
