@@ -193,7 +193,6 @@ impl ZkVerifier {
         let poly = zk_prover.sumcheck_phase1_update(previous_random, j);
         self.proof_size += mem::size_of::<QuadraticPoly>();
         previous_random = *elem;
-        //todo: Debug eval() fn
         let eval_zero = poly.eval(&FE_ZERO);
         let eval_one = poly.eval(&FE_REAL_ONE);
 
@@ -299,7 +298,6 @@ impl ZkVerifier {
           + bit_test_value * (FE_REAL_ONE - v_v) * v_u)
           + direct_relay_value * v_u
       {
-        //Todo: impove error handling
         eprintln!("Verification fail, semi final, circuit level {}", i,);
         return (false, 0.0);
       }
@@ -1102,7 +1100,6 @@ impl ZkVerifier {
       let first_half_g = self.a_c.circuit[depth].bit_length / 2;
       let first_half_uv = self.a_c.circuit[depth - 1].bit_length / 2;
 
-      //Todo: Debug tmp_u_val
       let mut tmp_u_val = vec![FE_ZERO; self.a_c.circuit[depth - 1].gates.len()];
       let zero_v = self.beta_v_first_half[0] * self.beta_v_second_half[0];
       let mut relay_set = false;

@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 rand = "0.8.5"
-infrastructure = { path = "../infrastructure" }
-prime_field = { path = "../prime_field" }
-global = { path = "../global" }
-rayon = "1.6"
+infrastructure = { workspace = true }
+prime_field = { workspace = true }
+global = { workspace = true }
+rayon = "1.8"
