@@ -109,7 +109,6 @@ pub fn fast_fourier_transform(
         let half_blk_size = blk_size >> 1;
         let cur = dep & 1;
         let pre = cur ^ 1;
-        //Todo: check this
         let pre_ptr = scratch_pad.dst[pre].clone();
         let cur_ptr = &mut scratch_pad.dst[cur];
         let gap = (twiddle_size / order) * (1 << (dep));
