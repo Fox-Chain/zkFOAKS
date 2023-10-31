@@ -1,9 +1,5 @@
-use std::{fs, time::Instant};
-use std::{
-  fs::File,
-  io::{Error, Write},
-  mem,
-};
+use std::time::Instant;
+use std::{io::Write, mem};
 
 use global::constants::{FE_REAL_ONE, FE_ZERO, LOG_SLICE_NUMBER, SLICE_NUMBER};
 use infrastructure::my_hash::HashDigest;

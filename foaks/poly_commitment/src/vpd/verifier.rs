@@ -1,8 +1,8 @@
 use std::mem;
 use std::time::Instant;
 
-use global::constants::FE_ZERO;
-use global::constants::*;
+use global::constants::{FE_ZERO, LOG_SLICE_NUMBER, RS_CODE_RATE, SLICE_NUMBER};
+
 use infrastructure::merkle_tree::create_tree;
 use infrastructure::my_hash::my_hash;
 use infrastructure::my_hash::{self, HashDigest};
@@ -53,6 +53,7 @@ pub fn verify_merkle(
 }
 
 impl FRIContext {
+  /// Given fold parameter r, return the root of the merkle tree of next level.
   pub fn commit_phase_step(&mut self, r: FieldElement, slice_count: usize) -> HashDigest {
     let nxt_witness_size = (1 << self.log_current_witness_size_per_slice) / 2;
     if self.cpd.rs_codeword[self.current_step_no].is_empty() {
@@ -161,6 +162,7 @@ impl FRIContext {
     self.cpd.merkle[self.current_step_no - 1][1] // since we increment current_step_no up there
   }
 
+  /// Return the final rs code since it is only constant size
   pub fn commit_phase_final(&self) -> Vec<FieldElement> {
     self.cpd.rs_codeword[self.current_step_no - 1].clone()
   }
@@ -170,6 +172,7 @@ impl FRIContext {
 
     let log_current_witness_size_per_slice_cp = self.log_current_witness_size_per_slice;
     let mut codeword_size = 1 << (log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
+    // repeat until the codeword is constant
     let mut ret: Vec<HashDigest> = Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);
     let mut randomness: Vec<FieldElement> =
       Vec::with_capacity(log_length + RS_CODE_RATE - LOG_SLICE_NUMBER);

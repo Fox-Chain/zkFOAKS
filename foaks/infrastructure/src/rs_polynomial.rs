@@ -1,8 +1,7 @@
 use prime_field::FieldElement;
 
 use crate::utility::my_log;
-use global::constants::*;
-
+use global::constants::{FE_REAL_ONE, FE_ZERO, MAX_ORDER_FFT};
 #[derive(Default, Debug, Clone)]
 pub struct ScratchPad {
   pub dst: [Vec<FieldElement>; 3],

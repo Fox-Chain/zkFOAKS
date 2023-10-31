@@ -1,6 +1,4 @@
-use std::{collections::HashMap, time::Instant};
-
-use global::constants::*;
+use global::constants::{FE_REAL_ONE, FE_ZERO};
 use infrastructure::{
   merkle_tree::{self, create_tree},
   my_hash::HashDigest,
@@ -15,6 +13,7 @@ use linear_gkr::{
   verifier::ZkVerifier,
 };
 use prime_field::FieldElement;
+use std::{collections::HashMap, time::Instant};
 
 use crate::parameters::*;
 

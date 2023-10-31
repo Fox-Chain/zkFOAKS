@@ -1,13 +1,12 @@
 use std::{mem::size_of, time, usize, vec};
 extern crate rayon;
-use rayon::prelude::*;
-
 use global::constants::*;
 use infrastructure::{
   merkle_tree,
   my_hash::{my_hash, HashDigest},
 };
 use prime_field::FieldElement;
+use rayon::prelude::*;
 
 use crate::PolyCommitContext;
 
@@ -240,6 +239,9 @@ pub fn request_init_value_with_merkle(
       fri_ctx.witness_rs_codeword_interleaved[oracle_indicator][idx0],
       fri_ctx.witness_rs_codeword_interleaved[oracle_indicator][idx0 | 1],
     ));
+    // Thi assert_eq! was `pow_0 << log_leaf_size | i << 1 | 1` but this makes the number be added by 1,
+    // As C++ returns the number calculated in the left part of this expression `70 << 7 | 0 << 1 | 1 == 3` the assert pass
+    // but in Rust the equals is actually evaluated.
 
     let idx1 = fri_ctx.witness_rs_mapping[oracle_indicator][i][pow1];
     assert_eq!(idx0, idx1);
