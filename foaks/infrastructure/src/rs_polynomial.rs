@@ -69,7 +69,7 @@ pub fn fast_fourier_transform(
     let prev_value = rot_mul[i - 1];
     rot_mul.push(prev_value * prev_value);
 
-    if log_order.is_none() && (1usize << i) == order {
+    if 1usize << i == order {
       log_order = Some(i);
     }
   }
