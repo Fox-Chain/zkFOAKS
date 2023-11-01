@@ -1,13 +1,12 @@
 use std::{mem::size_of, time, usize, vec};
 extern crate rayon;
-use rayon::prelude::*;
-
 use global::constants::*;
 use infrastructure::{
   merkle_tree,
   my_hash::{my_hash, HashDigest},
 };
 use prime_field::FieldElement;
+use rayon::prelude::*;
 
 use crate::PolyCommitContext;
 
@@ -213,46 +212,49 @@ pub fn request_init_commit(
 
 //Refactored
 pub fn request_init_value_with_merkle(
-  mut pow_0: usize,
-  mut pow_1: usize,
+  pow_0: usize,
+  pow_1: usize,
   oracle_indicator: usize,
   fri_ctx: &mut FRIContext,
 ) -> (TripleVec, usize) {
-  if pow_0 > pow_1 {
-    std::mem::swap(&mut pow_0, &mut pow_1);
-  }
+  let (pow0, pow1) = if pow_0 > pow_1 {
+    (pow_1, pow_0)
+  } else {
+    (pow_0, pow_1)
+  };
 
   assert_eq!(
-    pow_0 + (1 << fri_ctx.log_current_witness_size_per_slice) / 2,
-    pow_1
+    pow0 + (1 << fri_ctx.log_current_witness_size_per_slice) / 2,
+    pow1
   );
 
-  let mut value: Vec<(FieldElement, FieldElement)> = vec![];
-  let log_leaf_size = LOG_SLICE_NUMBER + 1;
   let mut new_size = 0;
+  let mut value: Vec<(FieldElement, FieldElement)> = Vec::with_capacity(SLICE_NUMBER);
+
+  let log_leaf_size = LOG_SLICE_NUMBER + 1;
 
   for i in 0..SLICE_NUMBER {
+    let idx0 = pow0 << log_leaf_size | i << 1;
     value.push((
-      fri_ctx.witness_rs_codeword_interleaved[oracle_indicator][pow_0 << log_leaf_size | i << 1],
-      fri_ctx.witness_rs_codeword_interleaved[oracle_indicator]
-        [pow_0 << log_leaf_size | i << 1 | 1],
+      fri_ctx.witness_rs_codeword_interleaved[oracle_indicator][idx0],
+      fri_ctx.witness_rs_codeword_interleaved[oracle_indicator][idx0 | 1],
     ));
-
     // Thi assert_eq! was `pow_0 << log_leaf_size | i << 1 | 1` but this makes the number be added by 1,
     // As C++ returns the number calculated in the left part of this expression `70 << 7 | 0 << 1 | 1 == 3` the assert pass
     // but in Rust the equals is actually evaluated.
-    assert_eq!(
-      pow_0 << log_leaf_size | i << 1,
-      fri_ctx.witness_rs_mapping[oracle_indicator][i][pow_1]
-    );
 
-    if !fri_ctx.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1] {
-      fri_ctx.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1] = true;
+    let idx1 = fri_ctx.witness_rs_mapping[oracle_indicator][i][pow1];
+    assert_eq!(idx0, idx1);
+
+    let visited_idx0 = idx0 / 2;
+    if !fri_ctx.visited_witness[oracle_indicator][visited_idx0] {
+      fri_ctx.visited_witness[oracle_indicator][visited_idx0] = true;
       new_size += size_of::<FieldElement>();
     }
 
-    if !fri_ctx.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 1] {
-      fri_ctx.visited_witness[oracle_indicator][pow_0 << log_leaf_size | i << 1 | 1] = true;
+    let visited_idx1 = (idx0 | 1) / 2;
+    if !fri_ctx.visited_witness[oracle_indicator][visited_idx1] {
+      fri_ctx.visited_witness[oracle_indicator][visited_idx1] = true;
       new_size += size_of::<FieldElement>();
     }
   }
@@ -260,32 +262,35 @@ pub fn request_init_value_with_merkle(
   let depth = fri_ctx.log_current_witness_size_per_slice - 1;
   let mut com_hhash = vec![HashDigest::default(); depth + 1];
 
-  let mut pos = pow_0 + (1 << (fri_ctx.log_current_witness_size_per_slice - 1));
+  let mut pos = pow0 + (1 << depth);
   let mut test_hash = fri_ctx.witness_merkle[oracle_indicator][pos];
   com_hhash[depth] = fri_ctx.witness_merkle[oracle_indicator][pos];
   let mut data = [HashDigest::default(); 2];
 
-  (0..depth).for_each(|i| {
-    if !fri_ctx.visited_init[oracle_indicator][pos ^ 1] {
+  for i in 0..depth {
+    let pow1 = pos ^ 1;
+
+    if !fri_ctx.visited_init[oracle_indicator][pow1] {
       new_size += size_of::<HashDigest>();
     }
 
     fri_ctx.visited_init[oracle_indicator][pos] = true;
-    fri_ctx.visited_init[oracle_indicator][pos ^ 1] = true;
+    fri_ctx.visited_init[oracle_indicator][pow1] = true;
 
-    if (pos & 1) == 1 {
-      data[0] = fri_ctx.witness_merkle[oracle_indicator][pos ^ 1];
-      data[1] = test_hash;
+    let (data0, data1) = if (pos & 1) == 1 {
+      (fri_ctx.witness_merkle[oracle_indicator][pow1], test_hash)
     } else {
-      data[0] = test_hash;
-      data[1] = fri_ctx.witness_merkle[oracle_indicator][pos ^ 1];
-    }
+      (test_hash, fri_ctx.witness_merkle[oracle_indicator][pow1])
+    };
+
+    data[0] = data0;
+    data[1] = data1;
     test_hash = my_hash(data);
 
-    com_hhash[i] = fri_ctx.witness_merkle[oracle_indicator][pos ^ 1];
+    com_hhash[i] = fri_ctx.witness_merkle[oracle_indicator][pow1];
     pos /= 2;
     assert_eq!(test_hash, fri_ctx.witness_merkle[oracle_indicator][pos]);
-  });
+  }
 
   assert_eq!(pos, 1);
   ((value, com_hhash), new_size)
@@ -293,8 +298,8 @@ pub fn request_init_value_with_merkle(
 
 pub fn request_step_commit(lvl: usize, pow: usize, fri_ctx: &mut FRIContext) -> (TripleVec, usize) {
   let mut new_size = 0;
-
   let mut value_vec: Vec<(FieldElement, FieldElement)> = Vec::with_capacity(SLICE_NUMBER);
+
   let mut visited_element = false;
 
   let pow_0_values: Vec<usize> = (0..SLICE_NUMBER)
@@ -309,10 +314,9 @@ pub fn request_step_commit(lvl: usize, pow: usize, fri_ctx: &mut FRIContext) -> 
 
     visited_element |= fri_ctx.visited[lvl][pow_0 * 2];
 
-    value_vec.push((
-      fri_ctx.cpd.rs_codeword[lvl][pow_0 * 2],
-      fri_ctx.cpd.rs_codeword[lvl][pow_0 * 2 + 1],
-    ));
+    let val0 = fri_ctx.cpd.rs_codeword[lvl][pow_0 * 2];
+    let val1 = fri_ctx.cpd.rs_codeword[lvl][pow_0 * 2 + 1];
+    value_vec.push((val0, val1));
   }
 
   if !visited_element {
@@ -323,7 +327,6 @@ pub fn request_step_commit(lvl: usize, pow: usize, fri_ctx: &mut FRIContext) -> 
   let mut pow_0 = (fri_ctx.cpd.rs_codeword_mapping[lvl][pow << LOG_SLICE_NUMBER]
     >> (LOG_SLICE_NUMBER + 1))
     + fri_ctx.cpd.merkle_size[lvl];
-
   let val_hhash = fri_ctx.cpd.merkle[lvl][pow_0];
 
   while pow_0 != 1 {

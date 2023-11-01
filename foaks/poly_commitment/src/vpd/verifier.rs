@@ -1,11 +1,11 @@
 use std::mem;
 use std::time::Instant;
 
-use global::constants::FE_ZERO;
+use global::constants::{FE_ZERO, LOG_SLICE_NUMBER, RS_CODE_RATE, SLICE_NUMBER};
+
 use infrastructure::merkle_tree::create_tree;
 use infrastructure::my_hash::my_hash;
 use infrastructure::my_hash::{self, HashDigest};
-use global::constants::*;
 use prime_field::FieldElement;
 
 use crate::vpd::fri::FRIContext;
@@ -110,14 +110,11 @@ impl FRIContext {
         let c = i << log_leaf_size | (j << 1);
         let d = c | 1;
 
-        let rs_codeword_mapping = &mut self.cpd.rs_codeword_mapping;
-        let rs_codeword = &self.cpd.rs_codeword;
+        self.cpd.rs_codeword_mapping[self.current_step_no][a] = c;
+        self.cpd.rs_codeword_mapping[self.current_step_no][b] = c;
 
-        rs_codeword_mapping[self.current_step_no][a] = c;
-        rs_codeword_mapping[self.current_step_no][b] = c;
-
-        tmp[c] = rs_codeword[self.current_step_no][a];
-        tmp[d] = rs_codeword[self.current_step_no][b];
+        tmp[c] = self.cpd.rs_codeword[self.current_step_no][a];
+        tmp[d] = self.cpd.rs_codeword[self.current_step_no][b];
 
         assert!(a < nxt_witness_size * SLICE_NUMBER);
         assert!(b < nxt_witness_size * SLICE_NUMBER);

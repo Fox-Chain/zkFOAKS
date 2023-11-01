@@ -1,8 +1,7 @@
 use prime_field::FieldElement;
 
 use crate::utility::my_log;
-use global::constants::*;
-
+use global::constants::{FE_REAL_ONE, FE_ZERO, MAX_ORDER_FFT};
 #[derive(Default, Debug, Clone)]
 pub struct ScratchPad {
   pub dst: [Vec<FieldElement>; 3],
@@ -67,9 +66,10 @@ pub fn fast_fourier_transform(
   rot_mul.push(root_of_unity);
 
   for i in 1..MAX_ORDER_FFT {
-    rot_mul.push(rot_mul[i - 1] * rot_mul[i - 1]);
+    let prev_value = rot_mul[i - 1];
+    rot_mul.push(prev_value * prev_value);
 
-    if (1usize << i) == order {
+    if 1usize << i == order {
       log_order = Some(i);
     }
   }
@@ -143,12 +143,11 @@ pub fn inverse_fast_fourier_transform(
   dst: &mut [FieldElement],
 ) {
   if coefficient_len > order {
-    let error_message = format!(
+    eprintln!(
       "Got insufficient number {} of evaluations for inverse fast fourier transform. Creating \
-         polynomial of order {} instead.",
+        polynomial of order {} instead.",
       coefficient_len, order
     );
-    eprintln!("{}", error_message);
     coefficient_len = order;
   }
 

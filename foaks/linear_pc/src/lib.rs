@@ -1,11 +1,9 @@
-use std::{collections::HashMap, time::Instant};
-
+use global::constants::{FE_REAL_ONE, FE_ZERO};
 use infrastructure::{
   merkle_tree::{self, create_tree},
   my_hash::HashDigest,
   utility::my_log,
 };
-use global::constants::*;
 use linear_code::{
   linear_code_encode::LinearCodeEncodeContext,
   parameter::{CN, COLUMN_SIZE, DISTANCE_THRESHOLD, DN, TARGET_DISTANCE},
@@ -15,6 +13,7 @@ use linear_gkr::{
   verifier::ZkVerifier,
 };
 use prime_field::FieldElement;
+use std::{collections::HashMap, time::Instant};
 
 use crate::parameters::*;
 
@@ -44,7 +43,7 @@ impl LinearPC {
     }
   }
   pub fn commit(&mut self, src: &[FieldElement]) -> Vec<HashDigest> {
-    //Todo: Refactor, delete self.codeword_size field
+    // Todo: Refactor, delete self.codeword_size field
     let n: usize = src.len();
 
     assert_eq!(n % COLUMN_SIZE, 0);
@@ -76,6 +75,7 @@ impl LinearPC {
       .collect();
 
     create_tree(&mut self.mt, &stash, true);
+
     self.mt.clone()
   }
 
@@ -413,9 +413,9 @@ impl LinearPC {
     (
       output_depth_output_size.0 + 1,
       *self
-          .gates_count
-          .get(&(output_depth_output_size.0 + 1))
-          .expect("Failed to retrieve gates_count value"),
+        .gates_count
+        .get(&(output_depth_output_size.0 + 1))
+        .expect("Failed to retrieve gates_count value"),
     )
   }
 

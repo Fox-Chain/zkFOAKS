@@ -2,7 +2,7 @@
 pub mod constants;
 pub mod error;
 pub mod ops;
-use constants::{MAX_ORDER, MOD, PRIME};
+use constants::{MAX_ORDER, MOD};
 use ethnum::{i256, AsI256};
 use rand::Rng;
 use serde::Serialize;
@@ -13,6 +13,7 @@ use std::{
 
 use self::error::{PrimeFieldError, RootOfUnityError};
 use rayon::prelude::*;
+
 pub struct FieldElementContext {
   pub packed_mod: __m256i,
   pub packed_mod_minus_one: __m256i,
@@ -39,13 +40,12 @@ impl FieldElementContext {
 }
 
 pub fn my_mod(x: u64) -> u64 { (x >> 61) + (x & MOD) }
-
 // tested ok, well implemented
 pub fn my_mult(x: u64, y: u64) -> u64 {
   // return a value between [0, 2PRIME) = x * y mod PRIME
   // return ((hi << 3) | (lo >> 61)) + (lo & PRIME)
   let (lo, hi) = x.widening_mul(y);
-  ((hi << 3) | (lo >> 61)) + (lo & PRIME)
+  ((hi << 3) | (lo >> 61)) + (lo & MOD)
 }
 
 pub fn packed_my_mult(x: i256, y: i256) -> i256 {
@@ -64,16 +64,12 @@ pub fn packed_my_mult(x: i256, y: i256) -> i256 {
 
   let hi = ac + ad_bc_srl32;
   let lo = bc + ad_bc_sll32;
-
   // ((hi << 3) | (lo >> 61)) + (lo & PRIME)
-  (intrinsics::i256::sll(&hi, 3) | intrinsics::i256::srl(&lo, 61)) + (lo & PRIME.as_i256())
+  (intrinsics::i256::sll(&hi, 3) | intrinsics::i256::srl(&lo, 61)) + (lo & MOD.as_i256())
 }
 
-pub fn packed_my_mod(x: i256) -> i256 {
-  // (x >> 61) + (x & mod)
-  intrinsics::i256::srl(&x, 61) + (x & MOD.as_i256())
-}
-
+pub fn packed_my_mod(x: i256) -> i256 { intrinsics::i256::srl(&x, 61) + (x & MOD.as_i256()) }
+// (x >> 61) + (x & mod)
 #[derive(Serialize, Default, Debug, PartialEq, Eq, Clone)]
 pub struct VecFieldElement {
   pub vec: Vec<FieldElement>,

@@ -1,9 +1,5 @@
-use std::{fs, time::Instant};
-use std::{
-  fs::File,
-  io::{Error, Write},
-  mem,
-};
+use std::time::Instant;
+use std::{io::Write, mem};
 
 use global::constants::{FE_REAL_ONE, FE_ZERO, LOG_SLICE_NUMBER, SLICE_NUMBER};
 use infrastructure::my_hash::HashDigest;
@@ -368,29 +364,30 @@ impl ZkVerifier {
     if !input_0_verify {
       eprintln!("Verification fail, input vpd");
       return (false, 0.0);
-    } else {
-      println!("Verification pass");
-      println!("Prove time {}", zk_prover.total_time);
-      println!("Verification rdl time {}", verification_rdl_time);
-      println!(
-        "Verification time {}",
-        verification_time - verification_rdl_time
-      );
-      self.v_time = verification_time - verification_rdl_time;
-      println!("Proof size (bytes) {}", self.proof_size);
-
-      let output_path = &String::from("log.txt");
-
-      ZkVerifier::write_file(
-        output_path,
-        zk_prover.total_time,
-        verification_time,
-        predicates_calc_time,
-        verification_rdl_time,
-        self.proof_size,
-      )
-      .expect("Error while writing file");
     }
+
+    println!("Verification pass");
+    println!("Prove time {}", zk_prover.total_time);
+    println!("Verification rdl time {}", verification_rdl_time);
+    println!(
+      "Verification time {}",
+      verification_time - verification_rdl_time
+    );
+    self.v_time = verification_time - verification_rdl_time;
+    println!("Proof size (bytes) {}", self.proof_size);
+
+    let output_path = "log.txt";
+
+    ZkVerifier::write_file(
+      &String::from(output_path),
+      zk_prover.total_time,
+      verification_time,
+      predicates_calc_time,
+      verification_rdl_time,
+      self.proof_size,
+    )
+    .expect("Error while writing file");
+
     // Code added from tensor_product()
     let sample_t0 = Instant::now();
     for i in 0..query_count {
@@ -405,21 +402,20 @@ impl ZkVerifier {
   }
 
   pub fn write_file(
-    output_path: &String,
+    output_path: &str,
     total_time: f64,
     verification_time: f64,
     predicates_calc_time: f64,
     verification_rdl_time: f64,
     proof_size: usize,
-  ) -> Result<(), Error> {
+  ) -> Result<(), std::io::Error> {
     let full_path = std::path::Path::new(output_path);
-    let prefix = full_path
-      .parent()
-      .expect("Failed to retrieve parent directory");
-    fs::create_dir_all(prefix).expect("Failed to create directory");
-
-    let mut result_file = File::create(full_path)?;
-
+    std::fs::create_dir_all(
+      full_path
+        .parent()
+        .expect("Failed to retrieve parent directory"),
+    )?;
+    let mut result_file = std::fs::File::create(full_path)?;
     writeln!(
       result_file,
       "{} {} {} {} {}",
